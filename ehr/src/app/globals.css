@@ -1,0 +1,212 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   HealthOS Design System — Layer 1: Foundation Tokens
+   Tailwind v4 @theme block: every token below becomes a CSS custom property
+   AND a Tailwind utility class (bg-*, text-*, border-*, ring-*, etc.)
+   ───────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* ── Typeface ─────────────────────────────────────────────────────────────── */
+  --font-sans: "Inter", "system-ui", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+
+  /* ── Primary — Clinical Blue (trust, professionalism) ───────────────────── */
+  --color-primary-50:  #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  --color-primary-950: #172554;
+
+  /* ── Neutral — Slate (backgrounds, borders, text) ───────────────────────── */
+  --color-neutral-50:  #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+  --color-neutral-950: #020617;
+
+  /* ── Critical — Red (emergencies, critical values, allergies) ───────────── */
+  --color-critical-50:  #fef2f2;
+  --color-critical-100: #fee2e2;
+  --color-critical-200: #fecaca;
+  --color-critical-300: #fca5a5;
+  --color-critical-400: #f87171;
+  --color-critical-500: #ef4444;
+  --color-critical-600: #dc2626;
+  --color-critical-700: #b91c1c;
+  --color-critical-800: #991b1b;
+  --color-critical-900: #7f1d1d;
+  --color-critical-950: #450a0a;
+
+  /* ── Warning — Amber (caution, borderline values, pending) ──────────────── */
+  --color-warning-50:  #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+  --color-warning-950: #451a03;
+
+  /* ── Stable — Emerald (normal values, stable status, success) ───────────── */
+  --color-stable-50:  #ecfdf5;
+  --color-stable-100: #d1fae5;
+  --color-stable-200: #a7f3d0;
+  --color-stable-300: #6ee7b7;
+  --color-stable-400: #34d399;
+  --color-stable-500: #10b981;
+  --color-stable-600: #059669;
+  --color-stable-700: #047857;
+  --color-stable-800: #065f46;
+  --color-stable-900: #064e3b;
+  --color-stable-950: #022c22;
+
+  /* ── Info — Teal (informational, read-only, system messages) ────────────── */
+  --color-info-50:  #f0fdfa;
+  --color-info-100: #ccfbf1;
+  --color-info-200: #99f6e4;
+  --color-info-300: #5eead4;
+  --color-info-400: #2dd4bf;
+  --color-info-500: #14b8a6;
+  --color-info-600: #0d9488;
+  --color-info-700: #0f766e;
+  --color-info-800: #115e59;
+  --color-info-900: #134e4a;
+  --color-info-950: #042f2e;
+
+  /* ── Accent — Clinical Teal (secondary brand, highlights) ──────────────── */
+  --color-accent-50:  #ecfeff;
+  --color-accent-100: #cffafe;
+  --color-accent-200: #a5f3fc;
+  --color-accent-300: #67e8f9;
+  --color-accent-400: #22d3ee;
+  --color-accent-500: #06b6d4;
+  --color-accent-600: #0891b2;
+  --color-accent-700: #0e7490;
+  --color-accent-800: #155e75;
+  --color-accent-900: #164e63;
+  --color-accent-950: #083344;
+
+  /* ── Semantic surface tokens ────────────────────────────────────────────── */
+  --color-surface-default:  #ffffff;
+  --color-surface-subtle:   #f8fafc;
+  --color-surface-raised:   #ffffff;
+  --color-surface-overlay:  #ffffff;
+  --color-surface-inverted: #0f172a;
+
+  /* ── Border tokens ──────────────────────────────────────────────────────── */
+  --color-border-default: #e2e8f0;
+  --color-border-subtle:  #f1f5f9;
+  --color-border-strong:  #cbd5e1;
+  --color-border-focus:   #2563eb;
+
+  /* ── Typography scale ───────────────────────────────────────────────────── */
+  --text-2xs:  0.625rem;   /* 10px */
+  --text-xs:   0.75rem;    /* 12px */
+  --text-sm:   0.875rem;   /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg:   1.125rem;   /* 18px */
+  --text-xl:   1.25rem;    /* 20px */
+  --text-2xl:  1.5rem;     /* 24px */
+  --text-3xl:  1.875rem;   /* 30px */
+  --text-4xl:  2.25rem;    /* 36px */
+
+  /* ── Elevation / Shadows ────────────────────────────────────────────────── */
+  --shadow-xs:    0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm:    0 1px 3px 0 rgb(0 0 0 / 0.10), 0 1px 2px -1px rgb(0 0 0 / 0.10);
+  --shadow-md:    0 4px 6px -1px rgb(0 0 0 / 0.10), 0 2px 4px -2px rgb(0 0 0 / 0.10);
+  --shadow-lg:    0 10px 15px -3px rgb(0 0 0 / 0.10), 0 4px 6px -4px rgb(0 0 0 / 0.10);
+  --shadow-xl:    0 20px 25px -5px rgb(0 0 0 / 0.10), 0 8px 10px -6px rgb(0 0 0 / 0.10);
+  --shadow-2xl:   0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+  /* ── Border radius ──────────────────────────────────────────────────────── */
+  --radius-none: 0px;
+  --radius-xs:   2px;
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-xl:   12px;
+  --radius-2xl:  16px;
+  --radius-full: 9999px;
+
+  /* ── Motion ─────────────────────────────────────────────────────────────── */
+  --duration-instant: 0ms;
+  --duration-fast:    100ms;
+  --duration-normal:  200ms;
+  --duration-slow:    300ms;
+  --duration-slower:  500ms;
+
+  --ease-linear:   linear;
+  --ease-in:       cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:      cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out:   cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Z-index layers ─────────────────────────────────────────────────────── */
+  --z-base:         0;
+  --z-raised:       10;
+  --z-dropdown:     100;
+  --z-sticky:       200;
+  --z-overlay:      300;
+  --z-modal:        400;
+  --z-notification: 500;
+  --z-tooltip:      600;
+}
+
+/* ── Base reset & defaults ──────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-variation-settings: normal;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-neutral-900);
+  background-color: var(--color-neutral-50);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Global focus ring (WCAG 2.1 AA) ─────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-primary-600);
+  outline-offset: 2px;
+}
+
+/* ── Reduced-motion guard ─────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── High-contrast mode support ───────────────────────────────────────────── */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 3px solid ButtonText;
+  }
+}

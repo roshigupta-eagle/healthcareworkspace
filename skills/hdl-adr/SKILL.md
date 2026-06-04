@@ -1,0 +1,221 @@
+---
+skill: hdl-adr
+module: hdl
+version: 1.0.0
+type: workflow
+description: >
+  Generate, amend, and index Architecture Decision Records (ADRs) for healthcare
+  software projects. ADRs capture technology choices with explicit healthcare context
+  (FHIR version, jurisdiction, naming systems, terminology bindings, regulatory posture).
+  All ADRs are written to architecture/adrs/ and indexed in architecture/adrs/index.md.
+---
+
+# hdl-adr
+
+Generate and maintain Architecture Decision Records for the active healthcare project.
+
+---
+
+## Capabilities
+
+| User says | Capability |
+|---|---|
+| "generate ADR set", "create ADRs", "generate initial ADRs" | [Generate ADR Set](#generate-adr-set) |
+| "amend ADR", "update ADR NNN", "revise ADR" | [Amend ADR](#amend-adr) |
+| "index ADRs", "refresh ADR index" | [ADR Index](#adr-index) |
+
+---
+
+## Generate ADR Set
+
+Produces a baseline set of ADRs for a new healthcare project based on the discovery and
+architecture inputs available.
+
+### Pre-conditions
+
+Read these files before generating (use what is available; skip gracefully if absent):
+
+| File | Used for |
+|---|---|
+| `_bmad/memory/hdl/discovery/use-case-brief.md` | Product context, jurisdiction, actors |
+| `_bmad/memory/hdl/discovery/data-element-inventory.md` | FHIR resource candidates |
+| `_bmad/config.toml` `[modules.hdl]` section | `fhir_version`, `jurisdiction`, `hapi_port`, `ig_publisher_path` |
+
+### ADRs to Generate
+
+Always generate these ADRs for a healthcare project. Use sequential numbering starting
+at the next available number (scan `_bmad/memory/hdl/architecture/adrs/` first).
+
+| # | Decision topic | Trigger |
+|---|---|---|
+| ADR-001 | FHIR Version | Always |
+| ADR-002 | Jurisdiction & Naming Systems | Always |
+| ADR-003 | Terminology Bindings Strategy | Always |
+| ADR-004 | HAPI FHIR Server Configuration | Always |
+| ADR-005 | IG Publisher & Validation Tooling | If `ig_publisher_path` is set |
+| ADR-006 | AI / ML Model Integration | If use-case-brief mentions AI/ML |
+| ADR-007 | Authentication & Authorization | Always |
+| ADR-008 | Data Residency & Privacy | Always |
+
+Generate only the triggered ADRs. Do not generate placeholder ADRs for topics not in scope.
+
+### ADR Template
+
+Write each ADR to `_bmad/memory/hdl/architecture/adrs/ADR-{NNN}-{slug}.md` using this template:
+
+```markdown
+# ADR-{NNN} — {Title}
+
+**Status:** Proposed
+**Date:** {today}
+**Deciders:** {team_lead}, {responsible_architect}
+**Tags:** {comma-separated tags, e.g. fhir, terminology, security}
+
+---
+
+## Context
+
+{1-3 paragraphs describing the technical problem and healthcare-specific constraints that
+require a decision. Reference jurisdiction, regulatory posture, or FHIR standard where relevant.}
+
+## Decision
+
+{1 clear paragraph stating the decision made. Start with "We will..." or "We have decided to..."}
+
+## Options Considered
+
+| Option | Pros | Cons |
+|---|---|---|
+| {option 1} | {pros} | {cons} |
+| {option 2} | {pros} | {cons} |
+
+## Consequences
+
+**Positive:**
+- {consequence 1}
+- {consequence 2}
+
+**Negative / Trade-offs:**
+- {trade-off 1}
+
+## Healthcare Compliance Notes
+
+{Any jurisdiction-specific, FHIR conformance, or regulatory notes relevant to this decision.
+For Canadian projects: reference Health Infoway standards, pan-Canadian guidelines, or
+provincial requirements. For US projects: reference ONC/CMS, US Core, TEFCA where applicable.}
+
+## References
+
+- {link or citation 1}
+- {link or citation 2}
+```
+
+### Status After Generation
+
+All generated ADRs start with `Status: Proposed`. They become `Accepted` only after
+architect review (Winston) confirms. This is enforced by gate rule `ARCH-003`.
+
+### Output
+
+After writing all ADR files, run [ADR Index](#adr-index) automatically.
+
+Print a summary:
+
+```
+─────────────────────────────────────────────
+  HDL ADR GENERATION COMPLETE
+─────────────────────────────────────────────
+  ADRs generated: {count}
+  Output dir    : _bmad/memory/hdl/architecture/adrs/
+  Status        : All → Proposed (awaiting architect review)
+─────────────────────────────────────────────
+  Files:
+    ADR-001-fhir-version.md
+    ADR-002-jurisdiction-naming-systems.md
+    ... (one line per file)
+─────────────────────────────────────────────
+  Next step: Winston reviews ADRs and sets Status → Accepted
+```
+
+---
+
+## Amend ADR
+
+Update an existing ADR — typically to change status, update consequences, or supersede it.
+
+### Steps
+
+1. Ask the user (or infer from context) which ADR to amend and what to change.
+2. Read the target ADR file.
+3. Apply only the requested changes. Preserve all other content.
+4. If superseding: set `Status: Superseded by ADR-{NNN}` and add a supersession note.
+5. If accepting: set `Status: Accepted` and record the acceptance date in a new line:
+   `**Accepted:** {date}`
+6. Write the updated file.
+7. Refresh the ADR index.
+
+---
+
+## ADR Index
+
+Write or overwrite `_bmad/memory/hdl/architecture/adrs/index.md`:
+
+```markdown
+# ADR Index
+
+_Auto-generated by hdl-adr on {date}_
+
+| ADR | Title | Status | Tags | Date |
+|---|---|---|---|---|
+| [ADR-001](ADR-001-fhir-version.md) | FHIR Version | Accepted | fhir | 2026-05-03 |
+| [ADR-002](ADR-002-jurisdiction-naming-systems.md) | Jurisdiction & Naming Systems | Accepted | fhir, jurisdiction | 2026-05-03 |
+...
+```
+
+Scan all `ADR-*.md` files in the `adrs/` directory. Parse the `Status:`, `Date:`, and
+`Tags:` frontmatter lines from each file to populate the table. Sort by ADR number ascending.
+
+---
+
+## Healthcare ADR Content Guide
+
+Use this reference when populating ADR bodies.
+
+### FHIR Version ADR
+
+- State the FHIR version (R4, R4B, R5) and justify relative to pan-Canadian / US Core baseline.
+- Note: Health Infoway pan-Canadian standards baseline is FHIR R4. US Core 7 is FHIR R4.
+- If R5: document the migration path and tooling maturity risks.
+
+### Jurisdiction & Naming Systems ADR
+
+**Canada:**
+- OID root: `2.16.840.1.113883.3.239` (Health Infoway)
+- Provincial OIDs vary; document the target province.
+- Naming system: `https://fhir.infoway-inforoute.ca/NamingSystem/`
+- SNOMED CT Canadian Edition: `http://snomed.info/sct` with module `20721000087101`
+- pCLOCD (pan-Canadian LOINC-based lab): `https://fhir.infoway-inforoute.ca/CodeSystem/pCLOCD`
+
+**United States:**
+- NPI: `http://hl7.org/fhir/sid/us-npi`
+- SSN: `http://hl7.org/fhir/sid/us-ssn`
+- US Core base URL: `http://hl7.org/fhir/us/core/`
+
+### Terminology Bindings ADR
+
+- State the binding strength policy (preferred, extensible, required) for each resource class.
+- Reference the ValueSet registry (VSAC for US; Health Infoway ValueSet registry for Canada).
+- Note any locally-defined CodeSystems and their maintenance plan.
+
+### Authentication & Authorization ADR
+
+- State the SMART on FHIR version (v1 or v2).
+- Note scopes strategy: patient-facing vs clinician-facing.
+- Reference PKCE requirement for public clients.
+
+### Data Residency & Privacy ADR
+
+- Canada: reference PIPEDA / provincial PHIPA / HIPA equivalents.
+- US: reference HIPAA, 21st Century Cures, information blocking rules.
+- State where data at rest resides (region, cloud provider).
+- State encryption standard (AES-256 at rest, TLS 1.2+ in transit).

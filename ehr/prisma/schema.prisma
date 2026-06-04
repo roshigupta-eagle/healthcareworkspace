@@ -1,0 +1,399 @@
+// Healthcare EHR - Prisma Schema
+// FHIR-style resources: Patient, Practitioner, Encounter, Condition,
+// Observation, DiagnosticReport, ServiceRequest, Procedure,
+// Medication, CarePlan, Consent, AuditEvent, Provenance
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Authentication & Authorization ────────────────────────────────
+
+enum Role {
+  ADMIN
+  DOCTOR
+  PATIENT
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  role          Role
+  name          String
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations based on role
+  patient      Patient?
+  practitioner Practitioner?
+  sessions     Session[]
+  accounts     Account[]
+  auditEvents  AuditEvent[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ─── FHIR-Style Clinical Resources ────────────────────────────────
+
+model Patient {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  healthCardNumber String?   @unique
+  mrn              String?   @unique
+  givenName        String
+  familyName       String
+  birthDate        DateTime
+  gender           String
+  phone            String?
+  address          Json?
+  language         String    @default("en")
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  encounters       Encounter[]
+  conditions       Condition[]
+  observations     Observation[]
+  allergies        AllergyIntolerance[]
+  medications      MedicationRequest[]
+  serviceRequests  ServiceRequest[]
+  procedures       Procedure[]
+  diagnosticReports DiagnosticReport[]
+  carePlans        CarePlan[]
+  consents         Consent[]
+  provenance       Provenance[]
+
+  @@map("patients")
+}
+
+model Practitioner {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  licenseNumber  String?  @unique
+  givenName      String
+  familyName     String
+  specialty      String?
+  qualification  String?
+  phone          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  encounters        Encounter[]
+  conditions        Condition[]       @relation("ConditionRecorder")
+  observations      Observation[]
+  medications       MedicationRequest[] @relation("MedicationRequester")
+  serviceRequests   ServiceRequest[]
+  procedures        Procedure[]
+  diagnosticReports DiagnosticReport[]
+  carePlans         CarePlan[]
+
+  @@map("practitioners")
+}
+
+model Encounter {
+  id              String   @id @default(cuid())
+  status          String   // planned, arrived, in-progress, on-leave, finished, cancelled
+  class           String   // AMB, IMP, EMER, VR, HH
+  type            String?  // visit type
+  priority        String?  // CTAS level for ED
+  patientId       String
+  practitionerId  String
+  periodStart     DateTime
+  periodEnd       DateTime?
+  reasonCode      String?  // chief complaint (SNOMED CT)
+  reasonDisplay   String?
+  location        String?
+  serviceType     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  practitioner    Practitioner     @relation(fields: [practitionerId], references: [id])
+  conditions      Condition[]
+  observations    Observation[]
+  procedures      Procedure[]
+  serviceRequests ServiceRequest[]
+  diagnosticReports DiagnosticReport[]
+
+  @@index([patientId])
+  @@index([practitionerId])
+  @@index([status])
+  @@map("encounters")
+}
+
+model Condition {
+  id                  String   @id @default(cuid())
+  clinicalStatus      String   // active, recurrence, relapse, inactive, remission, resolved
+  verificationStatus  String   // unconfirmed, provisional, differential, confirmed
+  category            String   // problem-list-item, encounter-diagnosis
+  code                String   // SNOMED CT or ICD-10-CA code
+  codeDisplay         String
+  patientId           String
+  encounterId         String?
+  recorderId          String?
+  onsetDateTime       DateTime?
+  abatementDateTime   DateTime?
+  recordedDate        DateTime @default(now())
+
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  encounter    Encounter?    @relation(fields: [encounterId], references: [id])
+  recorder     Practitioner? @relation("ConditionRecorder", fields: [recorderId], references: [id])
+
+  @@index([patientId])
+  @@index([clinicalStatus])
+  @@map("conditions")
+}
+
+model Observation {
+  id              String   @id @default(cuid())
+  status          String   // registered, preliminary, final, amended
+  category        String   // vital-signs, laboratory, exam, social-history
+  code            String   // LOINC code
+  codeDisplay     String
+  valueQuantity   Float?
+  valueUnit       String?
+  valueString     String?
+  interpretation  String?  // normal, abnormal, critical
+  patientId       String
+  encounterId     String?
+  practitionerId  String?
+  effectiveDateTime DateTime
+  issued          DateTime @default(now())
+
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  encounter    Encounter?    @relation(fields: [encounterId], references: [id])
+  practitioner Practitioner? @relation(fields: [practitionerId], references: [id])
+
+  @@index([patientId])
+  @@index([category])
+  @@index([code])
+  @@map("observations")
+}
+
+model AllergyIntolerance {
+  id                 String   @id @default(cuid())
+  clinicalStatus     String   // active, inactive, resolved
+  verificationStatus String   // unconfirmed, confirmed, refuted
+  type               String   // allergy, intolerance
+  category           String   // food, medication, environment, biologic
+  criticality        String?  // low, high, unable-to-assess
+  code               String   // substance code
+  codeDisplay        String
+  patientId          String
+  reactionManif      String?  // reaction manifestation
+  reactionSeverity   String?  // mild, moderate, severe
+  recordedDate       DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@map("allergy_intolerances")
+}
+
+model MedicationRequest {
+  id               String   @id @default(cuid())
+  status           String   // active, on-hold, cancelled, completed, stopped
+  intent           String   // proposal, plan, order
+  medicationCode   String   // DIN or drug code
+  medicationDisplay String
+  patientId        String
+  requesterId      String?
+  dosageInstruction String?
+  frequency        String?
+  route            String?
+  startDate        DateTime?
+  endDate          DateTime?
+  createdAt        DateTime @default(now())
+
+  patient   Patient       @relation(fields: [patientId], references: [id])
+  requester Practitioner? @relation("MedicationRequester", fields: [requesterId], references: [id])
+
+  @@index([patientId])
+  @@index([status])
+  @@map("medication_requests")
+}
+
+model ServiceRequest {
+  id              String   @id @default(cuid())
+  status          String   // draft, active, completed, revoked
+  intent          String   // proposal, plan, order
+  category        String   // laboratory, imaging, referral, procedure
+  code            String   // service code (LOINC, SNOMED CT)
+  codeDisplay     String
+  patientId       String
+  encounterId     String?
+  requesterId     String?
+  priority        String?  // routine, urgent, asap, stat
+  reasonCode      String?
+  authoredOn      DateTime @default(now())
+
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  encounter    Encounter?    @relation(fields: [encounterId], references: [id])
+  requester    Practitioner? @relation(fields: [requesterId], references: [id])
+
+  @@index([patientId])
+  @@index([category])
+  @@map("service_requests")
+}
+
+model Procedure {
+  id              String    @id @default(cuid())
+  status          String    // preparation, in-progress, completed, not-done
+  code            String    // SNOMED CT or CCI code
+  codeDisplay     String
+  patientId       String
+  encounterId     String?
+  performerId     String?
+  performedStart  DateTime?
+  performedEnd    DateTime?
+  outcome         String?
+  note            String?   @db.Text
+  createdAt       DateTime  @default(now())
+
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  encounter    Encounter?    @relation(fields: [encounterId], references: [id])
+  performer    Practitioner? @relation(fields: [performerId], references: [id])
+
+  @@index([patientId])
+  @@map("procedures")
+}
+
+model DiagnosticReport {
+  id              String   @id @default(cuid())
+  status          String   // registered, preliminary, final, amended
+  category        String   // LAB, RAD, PAT, etc.
+  code            String   // LOINC report code
+  codeDisplay     String
+  patientId       String
+  encounterId     String?
+  performerId     String?
+  issued          DateTime @default(now())
+  conclusion      String?  @db.Text
+  resultData      Json?    // embedded observation results
+
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  encounter    Encounter?    @relation(fields: [encounterId], references: [id])
+  performer    Practitioner? @relation(fields: [performerId], references: [id])
+
+  @@index([patientId])
+  @@index([category])
+  @@map("diagnostic_reports")
+}
+
+model CarePlan {
+  id             String    @id @default(cuid())
+  status         String    // draft, active, on-hold, revoked, completed
+  intent         String    // proposal, plan, order
+  title          String
+  description    String?   @db.Text
+  patientId      String
+  authorId       String?
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  goals          Json?     // array of goal descriptions
+  activities     Json?     // array of planned activities
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  patient Patient       @relation(fields: [patientId], references: [id])
+  author  Practitioner? @relation(fields: [authorId], references: [id])
+
+  @@index([patientId])
+  @@map("care_plans")
+}
+
+model Consent {
+  id         String   @id @default(cuid())
+  status     String   // draft, proposed, active, rejected, inactive
+  scope      String   // patient-privacy, treatment, research
+  category   String   // advance directive, privacy consent, treatment consent
+  patientId  String
+  dateTime   DateTime @default(now())
+  policyUri  String?
+  provision  Json?    // permit/deny rules
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@map("consents")
+}
+
+model AuditEvent {
+  id          String   @id @default(cuid())
+  type        String   // rest, login, logout, access, update, delete
+  action      String   // C, R, U, D (create, read, update, delete)
+  outcome     String   // success, failure
+  recorded    DateTime @default(now())
+  agentId     String   // who performed the action
+  entityType  String?  // resource type accessed
+  entityId    String?  // resource id accessed
+  detail      Json?    // additional context
+
+  agent User @relation(fields: [agentId], references: [id])
+
+  @@index([agentId])
+  @@index([recorded])
+  @@index([entityType, entityId])
+  @@map("audit_events")
+}
+
+model Provenance {
+  id          String   @id @default(cuid())
+  targetType  String   // resource type
+  targetId    String   // resource id
+  recorded    DateTime @default(now())
+  activity    String   // create, update, delete
+  agentType   String   // author, performer, verifier
+  agentId     String
+  patientId   String?
+  reason      String?
+  signature   String?
+
+  patient Patient? @relation(fields: [patientId], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([patientId])
+  @@map("provenance")
+}
