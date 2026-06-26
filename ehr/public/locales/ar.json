@@ -1,0 +1,18 @@
+{
+  "title": "السجل الطبي الإلكتروني",
+  "signInTitle": "تسجيل الدخول إلى السجل الطبي الإلكتروني",
+  "signInButton": "تسجيل الدخول",
+  "toggleTheme": "تبديل النسق",
+  "themeDark": "داكن",
+  "themeLight": "فاتح",
+  "translate": "ترجمة",
+  "translatedTo": "مترجم إلى",
+  "speak": "استمع",
+  "captionsOn": "التسميات التوضيحية مفعلة",
+  "captionsOff": "التسميات التوضيحية معطلة",
+  "doctorView": "عرض الطبيب",
+  "completedAppointments": "المواعيد المكتملة",
+  "activePatients": "المرضى النشطون / قيد المتابعة",
+  "pendingPatients": "المرضى المنتظرون",
+  "completionRate": "معدل الإكمال"
+}

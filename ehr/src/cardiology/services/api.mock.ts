@@ -450,6 +450,20 @@ export async function fetchVisitDetail(visitId: string): Promise<CardiovascularV
 }
 
 /**
+ * Fetch procedure detail by procedure id. Returns both procedure and its visit context.
+ */
+export async function fetchProcedureDetail(procId: string): Promise<{ procedure: CardiovascularProcedure; visit: CardiovascularVisit } | null> {
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  for (const v of mockVisits) {
+    if (v.proceduresOrdered) {
+      const p = v.proceduresOrdered.find((pr) => pr.id === procId);
+      if (p) return { procedure: p, visit: v } as any;
+    }
+  }
+  return null;
+}
+
+/**
  * Fetch queue items
  */
 export async function fetchQueueItems(

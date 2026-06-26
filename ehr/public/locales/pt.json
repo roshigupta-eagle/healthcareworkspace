@@ -1,0 +1,18 @@
+{
+  "title": "EHR de Saúde",
+  "signInTitle": "Entrar no EHR de Saúde",
+  "signInButton": "Entrar",
+  "toggleTheme": "Alternar tema",
+  "themeDark": "Escuro",
+  "themeLight": "Claro",
+  "translate": "Traduzir",
+  "translatedTo": "Traduzido para",
+  "speak": "Falar",
+  "captionsOn": "Legendas ativadas",
+  "captionsOff": "Legendas desativadas",
+  "doctorView": "Visualização do médico",
+  "completedAppointments": "Consultas concluídas",
+  "activePatients": "Pacientes ativos / em andamento",
+  "pendingPatients": "Pacientes pendentes",
+  "completionRate": "Taxa de conclusão"
+}

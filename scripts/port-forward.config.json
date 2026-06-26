@@ -1,0 +1,16 @@
+[
+  {
+    "name": "ehr-ui",
+    "kubeTarget": "svc/ehr",
+    "namespace": "default",
+    "localPort": 3000,
+    "remotePort": 3000
+  },
+  {
+    "name": "postgres",
+    "kubeTarget": "svc/postgres",
+    "namespace": "default",
+    "localPort": 5432,
+    "remotePort": 5432
+  }
+]

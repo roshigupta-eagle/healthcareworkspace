@@ -167,6 +167,28 @@
   --z-tooltip:      600;
 }
 
+/* Landing page full-bleed mode: hide sidebar and header for a clean hero */
+body.landing-no-sidebar .min-h-screen > aside {
+  display: none;
+}
+
+body.landing-no-sidebar header {
+  display: none;
+}
+
+body.landing-no-sidebar main#main-content {
+  padding: 0;
+}
+
+body.landing-no-sidebar main#main-content > .bg-white {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  min-height: 100vh;
+}
+
+
 /* ── Base reset & defaults ──────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -210,3 +232,224 @@ body {
     outline: 3px solid ButtonText;
   }
 }
+
+/* Page transition overlay used by AnimatedLink */
+.page-transition-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(245,246,252,0.98));
+  opacity: 0;
+  transition: opacity 360ms var(--ease-in-out);
+  pointer-events: none;
+}
+.page-transition-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Dev helper: disable overlay transitions when running locally to help
+   debug layout shift issues without the overlay interfering. This rule is
+   intentionally broad and safe to remove for production. */
+html.dev .page-transition-overlay,
+html.dev .page-transition-overlay.show {
+  transition: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Page drop-down transition for primary content */
+.page-transition {
+  will-change: transform, opacity;
+}
+.page-transition.page-enter-active {
+  /* Shorter, less dramatic entrance to reduce visible content shift */
+  animation: pageDropDown 360ms cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes pageDropDown {
+  0% {
+    transform: translateY(-8px);
+    opacity: 0;
+    filter: blur(1px);
+  }
+  60% {
+    transform: translateY(2px);
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+/* Dark mode tweaks: when `dark` class is on html, invert surface tokens slightly */
+:root.dark {
+  --color-surface-default: #0f1724;
+  --color-surface-subtle:  #0b1220;
+  --color-surface-raised:  #0c1420;
+  --color-surface-overlay: #0b1220;
+  --color-surface-inverted: #ffffff;
+
+  --color-neutral-50:  #0f1724;
+  --color-neutral-100: #0b1220;
+  --color-neutral-200: #111827;
+  --color-neutral-300: #374151;
+  --color-neutral-400: #9ca3af;
+  --color-neutral-500: #d1d5db;
+  --color-neutral-600: #e5e7eb;
+  --color-neutral-700: #f3f4f6;
+  --color-neutral-800: #ffffff;
+  --color-neutral-900: #ffffff;
+
+  color-scheme: dark;
+}
+
+/* Small helper to darken primary slightly in dark mode */
+:root.dark {
+  --color-primary-500: #1f6fe6;
+  --color-primary-600: #1758c4;
+}
+
+/* Smooth theme transition when toggling */
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition: background-color 220ms var(--ease-in-out), color 220ms var(--ease-in-out), border-color 220ms var(--ease-in-out), box-shadow 220ms var(--ease-in-out);
+}
+
+/* Darker surface shades for a stronger dark mode */
+:root.dark {
+  --color-surface-default: #071021;
+  --color-surface-subtle:  #04101a;
+  --color-surface-raised:  #06121c;
+  --color-surface-overlay: #04101a;
+
+  --color-primary-500: #194f9a;
+  --color-primary-600: #163f7f;
+  --color-border-default: #0b1220;
+  --color-neutral-500: #9aa6b2;
+}
+
+/* Make dark backgrounds slightly darker for depth */
+body.dark,
+html.dark {
+  background-color: var(--color-surface-default) !important;
+  color: var(--color-neutral-600) !important;
+}
+
+/* Make Tailwind `bg-white/95` elements adapt in dark mode */
+html.dark .bg-white\/95,
+body.dark .bg-white\/95 {
+  background-color: var(--color-surface-raised) !important;
+  color: var(--color-neutral-200) !important;
+  border-color: var(--color-border-default) !important;
+  box-shadow: none !important;
+}
+
+/* Make Tailwind `bg-white` elements adapt in dark mode (cards, panels) */
+html.dark .bg-white,
+body.dark .bg-white {
+  background-color: var(--color-surface-raised) !important;
+  color: var(--color-neutral-200) !important;
+  border-color: var(--color-border-default) !important;
+  box-shadow: none !important;
+}
+
+/* Glass surfaces: apply glassmorphism to typical card surfaces that use `bg-white`.
+   This gives a subtle translucent background with blur and soft border. */
+.bg-white,
+.bg-white\/95 {
+  background-color: rgba(255,255,255,0.78) !important;
+  border-color: rgba(15,20,36,0.06) !important;
+  color: var(--color-neutral-900) !important;
+  box-shadow: var(--shadow-sm) !important;
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+}
+
+/* Reduced-transparency guard for accessibility */
+@media (prefers-reduced-transparency: reduce) {
+  .bg-white,
+  .bg-white\/95 {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: rgba(255,255,255,0.96) !important;
+  }
+}
+
+/* Dark mode glass surface variant (navy tinted glass) */
+html.dark .bg-white,
+body.dark .bg-white,
+html.dark .bg-white\/95,
+body.dark .bg-white\/95 {
+  background-color: rgba(6,34,58,0.42) !important; /* semi-transparent navy */
+  border-color: rgba(255,255,255,0.06) !important;
+  color: var(--color-surface-inverted) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(8px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
+}
+
+/* Navy-blue dark mode overrides: use navy shades instead of black, make text white, and darken sidebar/background */
+:root.dark {
+  --color-surface-default: #041427; /* deep navy */
+  --color-surface-subtle:  #031927;
+  --color-surface-raised:  #06223a; /* slightly lighter navy for cards */
+  --color-surface-overlay: #041427;
+  --color-surface-inverted: #ffffff;
+
+  --color-primary-500: #2b6cb0;
+  --color-primary-600: #24578f;
+  --color-border-default: #0b1b2b;
+
+  --color-neutral-50:  #041427;
+  --color-neutral-100: #061623;
+  --color-neutral-200: #0a2233;
+  --color-neutral-300: #12344e;
+  --color-neutral-400: #8899a8;
+  --color-neutral-500: #b7c7d6;
+  --color-neutral-600: #dfeefc;
+  --color-neutral-700: #ffffff;
+  --color-neutral-800: #ffffff;
+  --color-neutral-900: #ffffff;
+
+  color-scheme: dark;
+}
+
+/* Ensure the page background, sidebar, and main content go navy, and text is white */
+body.dark,
+html.dark {
+  background-color: var(--color-surface-default) !important;
+  color: var(--color-surface-inverted) !important;
+}
+
+html.dark aside,
+body.dark aside {
+  background-color: var(--color-surface-raised) !important;
+  color: var(--color-surface-inverted) !important;
+}
+
+/* Make common form controls readable in dark mode */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: var(--color-surface-raised) !important;
+  color: var(--color-surface-inverted) !important;
+  border-color: var(--color-border-default) !important;
+}
+
+/* Ensure most visible text becomes white in dark mode */
+html.dark :where(h1,h2,h3,h4,h5,h6,p,span,label,li,button,a,input,textarea,select) {
+  color: var(--color-surface-inverted) !important;
+}
+
+/* Links and interactive elements get a lighter blue in dark mode */
+html.dark a,
+body.dark a {
+  color: var(--color-primary-300) !important;
+}
+
+

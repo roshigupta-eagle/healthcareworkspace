@@ -1,0 +1,167 @@
+{
+  "info": {
+    "_postman_id": "9a2b3c4d-5e6f-47a1-8b2c-1234567890ab",
+    "name": "Healthcare EHR API (Dev) - Postman",
+    "description": "Developer Postman collection for Healthcare EHR (dev). Use {{baseUrl}} and set {{playwright}}=1 to bypass auth in dev.\n\nIncludes success and error case requests for API endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001" },
+    { "key": "playwright", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register - Success",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"postman+user1@example.com\",\n  \"password\": \"Pa$$w0rd!\",\n  \"name\": \"Postman User\",\n  \"role\": \"PATIENT\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/register", "host": ["{{baseUrl}}"], "path": ["api","register"] },
+            "description": "Create a new user. Expect 201 on success. Run twice to observe 409 conflict for duplicate users."
+          }
+        },
+        {
+          "name": "Register - Validation error (missing password)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"email\": \"bad@example.com\", \"name\": \"No Password\", \"role\": \"PATIENT\" }" },
+            "url": { "raw": "{{baseUrl}}/api/register" },
+            "description": "Expect 400 with Zod validation details when required fields are missing."
+          }
+        },
+        {
+          "name": "Debug Auth Check - Dev login",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"email\": \"admin@example.com\", \"password\": \"password\" }" },
+            "url": { "raw": "{{baseUrl}}/api/debug/auth-check?playwright={{playwright}}", "query": [ { "key": "playwright", "value": "{{playwright}}" } ] },
+            "description": "Development-only endpoint to verify credentials against the dev auth store. Only works when DATABASE_URL is unset."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cardiology",
+      "item": [
+        {
+          "name": "Dashboard - Success",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/api/cardiology/dashboard?playwright={{playwright}}", "query": [ { "key": "playwright", "value": "{{playwright}}" } ] },
+            "description": "Get aggregated dashboard data. Use ?playwright=1 in dev to bypass middleware auth. Expect 200 and dashboard JSON."
+          }
+        },
+        {
+          "name": "Dashboard - Auth required (no bypass)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/api/cardiology/dashboard" },
+            "description": "When called without dev bypass this should redirect to /login (307) if auth is not present. Use this to validate middleware behavior."
+          }
+        },
+        {
+          "name": "QueueItems - List",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/api/cardiology/queueitems?playwright={{playwright}}", "query": [ { "key": "playwright", "value": "{{playwright}}" } ] },
+            "description": "List current queue items. Expect 200 with array of items."
+          }
+        },
+        {
+          "name": "Visits - List",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/api/cardiology/visits?playwright={{playwright}}", "query": [ { "key": "playwright", "value": "{{playwright}}" } ] },
+            "description": "List all visits. Expect 200 with visit array."
+          }
+        },
+        {
+          "name": "Visits - Create - Success",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"patientName\": \"Jane Doe\", \"chiefComplaint\": \"Shortness of breath\", \"priority\": 50 }" },
+            "url": { "raw": "{{baseUrl}}/api/cardiology/visits?playwright={{playwright}}", "query": [ { "key": "playwright", "value": "{{playwright}}" } ] },
+            "description": "Create a new visit. `patientName` is required. Expect 201 and created visit object."
+          }
+        },
+        {
+          "name": "Visits - Create - Missing patientName (validation)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"chiefComplaint\": \"Cough\" }" },
+            "url": { "raw": "{{baseUrl}}/api/cardiology/visits?playwright={{playwright}}" },
+            "description": "Expected 400 if server validates; current implementation will create a visit only if patientName provided, so this may return 400 or 201 depending on server code."
+          }
+        },
+        {
+          "name": "Visit - Get by ID (exists)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/api/cardiology/visits/visit-001?playwright={{playwright}}", "path": ["api","cardiology","visits","visit-001"], "query": [ { "key": "playwright", "value": "{{playwright}}" } ] },
+            "description": "Fetch a known visit (example id `visit-001`). Adjust id to match your environment. Expect 200 or 404 if not present."
+          }
+        },
+        {
+          "name": "Visit - Get by ID (not found)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/api/cardiology/visits/visit-notfound?playwright={{playwright}}" },
+            "description": "Expected 404 when visit id does not exist."
+          }
+        },
+        {
+          "name": "Users - List",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/api/cardiology/users?playwright={{playwright}}" },
+            "description": "List mock users. Expect 200 with array of users."
+          }
+        },
+        {
+          "name": "Stream (SSE) - Subscribe",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Accept", "value": "text/event-stream" } ],
+            "url": { "raw": "{{baseUrl}}/api/cardiology/stream?playwright={{playwright}}" },
+            "description": "Server-Sent Events stream: use `curl -N` or Postman's stream view to see events. Example: `curl -N "{{baseUrl}}/api/cardiology/stream?playwright=1"`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assign",
+      "item": [
+        {
+          "name": "Assign - Create Queue Item (admin)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Accept", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{ \"doctorId\": \"user-dr-chen\", \"doctorName\": \"Dr. Chen\", \"patientName\": \"New Patient\", \"diagnosis\": \"Suspected MI\", \"assignedBy\": \"admin@example.com\" }" },
+            "url": { "raw": "{{baseUrl}}/api/assign?playwright={{playwright}}" },
+            "description": "Assign a patient to a doctor; expects ok:true and returns created queueItem and visit."
+          }
+        }
+      ]
+    }
+  ]
+}

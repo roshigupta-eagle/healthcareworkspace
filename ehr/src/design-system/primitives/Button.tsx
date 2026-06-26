@@ -43,11 +43,11 @@ export interface ButtonProps
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary-600 text-white shadow-xs ' +
+    'bg-primary-600 text-white shadow-sm ' +
     'hover:bg-primary-700 active:bg-primary-800 ' +
     'focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2',
   secondary:
-    'bg-neutral-100 text-neutral-800 shadow-xs ' +
+    'bg-neutral-100 text-neutral-800 shadow-sm ' +
     'hover:bg-neutral-200 active:bg-neutral-300 ' +
     'focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2',
   outline:
@@ -59,7 +59,7 @@ const variantClasses: Record<ButtonVariant, string> = {
     'hover:bg-neutral-100 active:bg-neutral-200 ' +
     'focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2',
   destructive:
-    'bg-critical-600 text-white shadow-xs ' +
+    'bg-critical-600 text-white shadow-sm ' +
     'hover:bg-critical-700 active:bg-critical-800 ' +
     'focus-visible:ring-2 focus-visible:ring-critical-600 focus-visible:ring-offset-2',
 };
@@ -111,11 +111,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         aria-busy={loading || undefined}
         aria-label={computedAriaLabel}
         className={cn(
-          'inline-flex items-center justify-center',
-          'font-medium whitespace-nowrap select-none',
-          'transition-colors duration-[100ms]',
-          'focus-visible:outline-none',
-          'disabled:pointer-events-none disabled:opacity-50',
+            'inline-flex items-center justify-center',
+            'font-medium whitespace-nowrap select-none',
+            'transition duration-150 ease-in-out transform-gpu',
+            'focus-visible:outline-none',
+            'disabled:pointer-events-none disabled:opacity-50',
+            'hover:-translate-y-0.5 hover:shadow-md active:translate-y-0',
           variantClasses[variant],
           isIconOnly ? iconOnlySizeClasses[size] : sizeClasses[size],
           fullWidth && 'w-full',

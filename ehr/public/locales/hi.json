@@ -1,0 +1,18 @@
+{
+  "title": "हेल्थकेयर ईएचआर",
+  "signInTitle": "हेल्थकेयर ईएचआर में साइन इन करें",
+  "signInButton": "साइन इन",
+  "toggleTheme": "थीम बदलें",
+  "themeDark": "डार्क",
+  "themeLight": "लाइट",
+  "translate": "अनुवाद करें",
+  "translatedTo": "में अनुवाद किया गया",
+  "speak": "बोलो",
+  "captionsOn": "कैप्शन चालू",
+  "captionsOff": "कैप्शन बंद",
+  "doctorView": "डॉक्टर व्यू",
+  "completedAppointments": "पूर्ण किए गए अपॉइंटमेंट",
+  "activePatients": "सक्रिय / प्रगति में रोगी",
+  "pendingPatients": "लंबित रोगी",
+  "completionRate": "समाप्ति दर"
+}

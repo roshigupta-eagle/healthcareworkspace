@@ -1,0 +1,18 @@
+{
+  "title": "হেল্থকেয়ার ইএইচআর",
+  "signInTitle": "হেল্থকেয়ার ইএইচআর-এ সাইন ইন করুন",
+  "signInButton": "সাইন ইন",
+  "toggleTheme": "থিম পরিবর্তন করুন",
+  "themeDark": "ডার্ক",
+  "themeLight": "লাইট",
+  "translate": "অনুবাদ",
+  "translatedTo": "অনুবাদ করা হয়েছে",
+  "speak": "বলো",
+  "captionsOn": "ক্যাপশন চালু",
+  "captionsOff": "ক্যাপশন বন্ধ",
+  "doctorView": "ডক্টর ভিউ",
+  "completedAppointments": "সম্পন্ন অ্যাপয়েন্টমেন্ট",
+  "activePatients": "সক্রিয় / চলমান রোগী",
+  "pendingPatients": "মুলতুবি রোগী",
+  "completionRate": "সম্পন্নতার হার"
+}

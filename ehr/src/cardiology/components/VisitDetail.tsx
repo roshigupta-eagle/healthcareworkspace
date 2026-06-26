@@ -189,7 +189,7 @@ export const VisitDetail: React.FC<VisitDetailProps> = ({
     >
       <div className="space-y-6">
         {/* Patient Header */}
-        <Card variant="outlined" className="p-4 bg-blue-50 border-2 border-blue-200">
+        <Card variant="outlined" className="p-4">
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div>
               <Text variant="caption" className="text-neutral-600 uppercase">

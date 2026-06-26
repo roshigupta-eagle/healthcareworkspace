@@ -1,0 +1,18 @@
+{
+  "title": "ਹੈਲਥਕੇਅਰ EHR",
+  "signInTitle": "ਹੈਲਥਕੇਅਰ EHR ਵਿੱਚ ਸਾਈਨ ਇਨ ਕਰੋ",
+  "signInButton": "ਸਾਈਨ ਇਨ",
+  "toggleTheme": "ਥੀਮ ਬਦਲੋ",
+  "themeDark": "ਡਾਰਕ",
+  "themeLight": "ਲਾਈਟ",
+  "translate": "ਅਨੁਵਾਦ ਕਰੋ",
+  "translatedTo": "ਅਨੁਵਾਦ ਕੀਤਾ ਗਿਆ",
+  "speak": "ਬੋਲੋ",
+  "captionsOn": "ਕੈਪਸ਼ਨ ਚਾਲੂ",
+  "captionsOff": "ਕੈਪਸ਼ਨ ਬੰਦ",
+  "doctorView": "ਡਾਕਟਰ ਵਿਊ",
+  "completedAppointments": "ਪੂਰੇ ਕੀਤੇ ਗਏ ਨਿਯੁਕਤੀਆਂ",
+  "activePatients": "ਸਰਗਰਮ / ਚਲ ਰਹੇ ਮਰੀਜ਼",
+  "pendingPatients": "ਬਕਾਇਆ ਮਰੀਜ਼",
+  "completionRate": "ਪੂਰਾ ਕਰਨ ਦੀ ਦਰ"
+}

@@ -32,11 +32,15 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const variantClasses: Record<CardVariant, string> = {
-  default:  'bg-white border border-neutral-200 shadow-xs',
-  flush:    'bg-white',
-  outlined: 'bg-white border-2 border-neutral-300 shadow-sm',
-  critical: 'bg-critical-50 border border-critical-300 shadow-xs',
-  warning:  'bg-warning-50  border border-warning-300  shadow-xs',
+  default:
+    'bg-white/60 dark:bg-neutral-900/40 backdrop-blur-sm border border-neutral-200/30 shadow-sm',
+  flush: 'bg-transparent',
+  outlined:
+    'bg-white/50 dark:bg-neutral-900/30 backdrop-blur-sm border-2 border-neutral-300/30 shadow-md',
+  critical:
+    'bg-critical-50/70 dark:bg-critical-900/30 backdrop-blur-sm border border-critical-300/40 shadow-sm',
+  warning:
+    'bg-warning-50/70 dark:bg-warning-900/30 backdrop-blur-sm border border-warning-300/40 shadow-sm',
 };
 
 export const Card: React.FC<CardProps> = ({
@@ -49,19 +53,24 @@ export const Card: React.FC<CardProps> = ({
   ...props
 }) => (
   <div
-    className={cn('rounded-xl overflow-hidden', variantClasses[variant], className)}
+    className={cn(
+      'rounded-lg overflow-hidden transition-shadow duration-150 transform-gpu',
+      variantClasses[variant],
+      'hover:shadow-md',
+      className,
+    )}
     {...props}
   >
     {header && (
-      <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-neutral-200">
+      <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-neutral-100/30">
         {header}
       </div>
     )}
 
-    <div className={cn(!noPadding && 'px-5 py-4')}>{children}</div>
+    <div className={cn(!noPadding && 'px-4 py-3')}>{children}</div>
 
     {footer && (
-      <div className="px-5 py-3 border-t border-neutral-200 bg-neutral-50">
+      <div className="px-4 py-3 border-t border-neutral-100/30 bg-white/30 dark:bg-neutral-900/20">
         {footer}
       </div>
     )}

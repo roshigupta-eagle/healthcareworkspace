@@ -147,6 +147,12 @@ export interface CardiovascularVisit {
   fhirPatientId?: string; // Links to FHIR Patient
   notes?: string;
   isNewPatient: boolean;
+  carePlan?: {
+    symptoms?: string[];
+    diagnosis?: string;
+    nextSteps?: string;
+    recommendedProcedure?: string;
+  };
   proceduresOrdered?: CardiovascularProcedure[];
   vitals?: VitalSigns;
 }
@@ -237,6 +243,7 @@ export interface QueueItem {
   completedAt?: string; // ISO 8601
   notes?: string;
   estimatedDurationMinutes?: number;
+  assignedTo?: string; // optional assigned user id (dev-assignment)
 }
 
 export interface QueueStats {

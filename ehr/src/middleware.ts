@@ -4,10 +4,22 @@ import { NextResponse } from "next/server";
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
+  // Allow the root landing page to be public (restore intro/first page)
+  if (pathname === "/") {
+    return NextResponse.next();
+  }
+
   // Public routes
   const publicRoutes = ["/login", "/register", "/api/auth", "/api/register"];
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
+  }
+
+  // Allow Playwright-driven tests to bypass auth in non-production environments.
+  // Tests should set the `x-playwright: 1` header when navigating.
+  if (process.env.NODE_ENV !== 'production') {
+    if (req.headers.get('x-playwright') === '1') return NextResponse.next();
+    if (req.nextUrl.searchParams.get('playwright') === '1') return NextResponse.next();
   }
 
   // Check authentication

@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global layout helpers */
+html, body, #__next {
+  height: 100%;
+}
+
+/* Accessible focus ring enhancement */
+:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}

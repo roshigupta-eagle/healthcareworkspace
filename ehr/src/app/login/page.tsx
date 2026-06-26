@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import AnimatedLink from "@/components/AnimatedLink";
+import ThemeLangControlsClient from '@/components/ThemeLangControlsClient';
+import { useThemeLang } from '@/components/ThemeLangProvider';
 
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { t } = useThemeLang();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -17,16 +20,23 @@ export default function LoginPage() {
 
     const formData = new FormData(e.currentTarget);
 
+    const rawEmail = (formData.get("email") as string) || '';
+    const email = rawEmail.trim().toLowerCase();
+    const password = formData.get("password") as string;
+
     const result = await signIn("credentials", {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
+      email,
+      password,
       redirect: false,
     });
 
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password");
+      // Normalize known provider error tokens to friendly messages
+      const err = String(result.error || '');
+      if (/credentials/i.test(err)) setError(t('invalidCredentials'));
+      else setError(err || t('invalidCredentials'));
     } else {
       router.push("/dashboard");
       router.refresh();
@@ -34,11 +44,12 @@ export default function LoginPage() {
   }
 
   return (
-    <main id="main-content" className="flex-1 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center text-gray-900 mb-8">
-          Sign in to Healthcare EHR
-        </h1>
+    <main id="main-content" className="flex-1 flex items-center justify-center px-4 min-h-screen bg-gradient-to-b from-sky-50 via-white to-indigo-50">
+      <div className="w-full max-w-md bg-white/95 rounded-xl shadow-lg p-8 ring-1 ring-sky-100 border-l-4 border-sky-500 backdrop-blur-sm">
+        <div className="flex justify-center mb-4">
+          <div className="h-12 w-12 rounded-lg bg-sky-500/90 flex items-center justify-center text-white font-bold text-lg">H</div>
+        </div>
+        <h1 className="text-2xl font-bold text-center text-sky-800 mb-6">{t('signInTitle')}</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           {error && (
@@ -51,8 +62,8 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email address
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700" data-i18n="emailAddress">
+              {t('emailAddress')}
             </label>
             <input
               id="email"
@@ -63,14 +74,14 @@ export default function LoginPage() {
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               aria-describedby="email-hint"
             />
-            <p id="email-hint" className="mt-1 text-xs text-gray-500">
-              Enter your registered email address
+            <p id="email-hint" className="mt-1 text-xs text-gray-500" data-i18n="emailHint">
+              {t('emailHint')}
             </p>
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700" data-i18n="password">
+              {t('password')}
             </label>
             <input
               id="password"
@@ -86,19 +97,22 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-md bg-gradient-to-r from-sky-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:from-sky-500 hover:to-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             aria-busy={loading}
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? t('signingIn') : t('signInButton')}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-            Register here
-          </Link>
+        <p className="mt-6 text-center text-sm text-slate-700">
+          {t('dontHaveAccount')} {" "}
+          <AnimatedLink href="/register" className="font-medium text-sky-700 hover:underline">
+            {t('registerHere')}
+          </AnimatedLink>
         </p>
+        <div className="mt-4">
+          <ThemeLangControlsClient />
+        </div>
       </div>
     </main>
   );

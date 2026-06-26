@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "outDir": ".build",
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "jsx": "react-jsx",
+    "allowJs": true
+  },
+  "include": ["test/cardiology.test.ts", "src/cardiology/**/*"]
+}

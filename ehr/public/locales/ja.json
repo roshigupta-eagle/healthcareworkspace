@@ -1,0 +1,18 @@
+{
+  "title": "ヘルスケアEHR",
+  "signInTitle": "ヘルスケアEHRにサインイン",
+  "signInButton": "サインイン",
+  "toggleTheme": "テーマ切替",
+  "themeDark": "ダーク",
+  "themeLight": "ライト",
+  "translate": "翻訳",
+  "translatedTo": "に翻訳されました",
+  "speak": "読み上げ",
+  "captionsOn": "字幕オン",
+  "captionsOff": "字幕オフ",
+  "doctorView": "医師ビュー",
+  "completedAppointments": "完了した予約",
+  "activePatients": "アクティブ / 進行中の患者",
+  "pendingPatients": "保留中の患者",
+  "completionRate": "完了率"
+}

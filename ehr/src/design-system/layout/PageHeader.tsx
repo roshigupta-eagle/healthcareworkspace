@@ -38,7 +38,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 }) => (
   <header
     className={cn(
-      'border-b border-neutral-200 bg-white px-6 py-4',
+      'border-b border-neutral-100 bg-white/95 backdrop-blur-sm px-6 py-3 shadow-sm',
       className,
     )}
   >
@@ -74,7 +74,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     {/* Title row */}
     <div className="flex items-start justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-xl font-bold text-neutral-900 leading-tight truncate">
+        <h1 className="text-2xl font-bold text-neutral-900 leading-tight truncate">
           {title}
         </h1>
         {subtitle && (
@@ -82,7 +82,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         )}
       </div>
       {actions && (
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-3">
           {actions}
         </div>
       )}

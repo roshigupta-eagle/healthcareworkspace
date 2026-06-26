@@ -1,0 +1,18 @@
+{
+  "title": "Электронная медицинская карта",
+  "signInTitle": "Войдите в электронную медицинскую карту",
+  "signInButton": "Войти",
+  "toggleTheme": "Переключить тему",
+  "themeDark": "Тёмная",
+  "themeLight": "Светлая",
+  "translate": "Перевести",
+  "translatedTo": "Переведено на",
+  "speak": "Озвучить",
+  "captionsOn": "Субтитры включены",
+  "captionsOff": "Субтитры отключены",
+  "doctorView": "Вид врача",
+  "completedAppointments": "Завершённые приёмы",
+  "activePatients": "Активные / в процессе пациенты",
+  "pendingPatients": "Ожидающие пациенты",
+  "completionRate": "Процент завершения"
+}
