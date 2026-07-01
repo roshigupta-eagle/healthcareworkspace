@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 /**
  * Cardiology Practice Dashboard
@@ -204,7 +204,44 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
   const [activeTab, setActiveTab] = useState<'overview' | 'myQueue' | 'rooms' | 'allQueues'>(
     'overview',
   );
-  const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Appointments UI state
+  const [apptView, setApptView] = useState<'day' | 'week' | 'month'>('week');
+  const [apptDate, setApptDate] = useState<string>(new Date().toISOString().slice(0,10));
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [apptSettings, setApptSettings] = useState<{ defaultView: string; showMRN: boolean; compact: boolean }>({ defaultView: 'week', showMRN: true, compact: false });
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('cardioAppointmentsSettings');
+      if (raw) setApptSettings(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const start = new Date(apptDate);
+        let end = new Date(start);
+        if (apptView === 'week') end.setDate(start.getDate() + 6);
+        else if (apptView === 'month') end.setDate(start.getDate() + 29);
+        const sStr = start.toISOString().slice(0,10);
+        const eStr = end.toISOString().slice(0,10);
+        const res = await fetch(`/api/appointments?practitionerId=${encodeURIComponent(userId)}&start=${sStr}&end=${eStr}`);
+        if (!res.ok) { setAppointments([]); return; }
+        const data = await res.json();
+        if (cancelled) return;
+        setAppointments(data.appointments || []);
+      } catch (err) {
+        setAppointments([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [apptView, apptDate, userId]);
 
   // Client-side polling: fetch latest dashboard from server API so assignments show up in real-time
   const [dashboardData, setDashboardData] = useState<CardiologyDashboard>(dashboard);
@@ -489,7 +526,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
   // Compute role-specific queue items for current user
   const userQueueItems = useMemo(() => {
     if (userRole === CardiologyRole.ADMIN) return [];
-    // Filter to queues owned by this role — simplified mapping
+    // Filter to queues owned by this role â€” simplified mapping
     const queuesByRole: Record<CardiologyRole, string[]> = {
       [CardiologyRole.RECEPTIONIST]: [
         'CHECK_IN',
@@ -603,7 +640,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">HealthOS Cardiology</h1>
           <p className="text-sm text-neutral-600">
-            {userName} • {userRole.charAt(0).toUpperCase() + userRole.slice(1).toLowerCase()}
+            {userName} â€¢ {userRole.charAt(0).toUpperCase() + userRole.slice(1).toLowerCase()}
           </p>
         </div>
         <Button
@@ -623,7 +660,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
       {/* Admin assign panel (only visible to Admin role) */}
       {userRole === CardiologyRole.ADMIN && (
         <Card variant="outlined" className="p-4 min-h-[120px]">
-          <h3 className="font-semibold text-neutral-900 mb-2">Admin — Assign Patient</h3>
+          <h3 className="font-semibold text-neutral-900 mb-2">Admin â€” Assign Patient</h3>
           <AdminAssignPanel onAssigned={() => onRefresh?.()} />
         </Card>
       )}
@@ -631,12 +668,12 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
       {/* Urgent Alerts */}
       {dashboardData.visits.urgent.length > 0 && (
         <Alert severity="critical">
-          <strong>⚠️ Urgent Alerts ({dashboardData.visits.urgent.length})</strong>
+          <strong>âš ï¸ Urgent Alerts ({dashboardData.visits.urgent.length})</strong>
           <div className="mt-2 space-y-1">
             {dashboardData.visits.urgent.map((visit) => (
               <div key={visit.id} className="flex items-center justify-between text-sm">
                 <span>
-                  {visit.patientName} • {visit.chiefComplaint}
+                  {visit.patientName} â€¢ {visit.chiefComplaint}
                 </span>
                   <Button
                     variant="ghost"
@@ -654,7 +691,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
       {/* Main Tabs */}
       <div className="bg-white rounded-lg p-4">
         <div className="flex gap-2 border-b border-neutral-200 mb-4">
-          {(['overview', 'myQueue', 'rooms', 'allQueues'] as const).map((tab) => (
+          {(['overview', 'myQueue', 'appointments', 'rooms', 'allQueues'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -665,7 +702,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
               }`}
             >
               {tab === 'overview' && 'Overview'}
-              {tab === 'myQueue' && 'My Queue'}
+              {tab === 'myQueue' && 'My Queue'}\n              {tab === 'appointments' && 'Appointments'}
               {tab === 'rooms' && 'Rooms'}
               {tab === 'allQueues' && 'All Queues'}
             </button>
@@ -733,7 +770,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
                   <p className="mt-1 text-xs text-neutral-500">in use</p>
                 </Card>
 
-                {/* Completion Rate — numeric only (no chart) */}
+                {/* Completion Rate â€” numeric only (no chart) */}
                 <Card variant="outlined" className="p-4 flex items-center justify-between min-h-[120px]">
                   <div>
                     <p className="text-xs font-medium text-neutral-600 uppercase">Completion Rate</p>
@@ -796,7 +833,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
                     >
                       <p className="text-xs font-bold text-neutral-700">{room.roomNumber}</p>
                       <p className="mt-1 text-xs text-neutral-600">
-                        {room.isAvailable ? '✓ Available' : `${room.currentOccupancy}/${room.capacity}`}
+                        {room.isAvailable ? 'âœ“ Available' : `${room.currentOccupancy}/${room.capacity}`}
                       </p>
                     </Card>
                   ))}
@@ -871,7 +908,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
                       <div>
                         <p className="font-medium text-neutral-900">{event.eventType}</p>
                         <p className="text-xs text-neutral-600">
-                          {event.fromState} → {event.toState} by {event.actorRole}
+                          {event.fromState} â†’ {event.toState} by {event.actorRole}
                         </p>
                       </div>
                       <span className="text-xs text-neutral-500 whitespace-nowrap">
@@ -901,7 +938,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="font-medium text-neutral-900">{item.patientName}</p>
-                              <p className="text-sm text-neutral-600">{item.queueName} • {item.estimatedDurationMinutes}m</p>
+                              <p className="text-sm text-neutral-600">{item.queueName} â€¢ {item.estimatedDurationMinutes}m</p>
                               <div className="mt-1 text-sm text-neutral-600">
                                 {visit?.carePlan?.symptoms?.length ? `Symptoms: ${visit.carePlan.symptoms.join(', ')}` : visit?.chiefComplaint}
                               </div>
@@ -931,7 +968,116 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
             </div>
           )}
 
-          {/* Tab: Rooms */}
+          {
+          {/* Tab: Appointments */}
+          {activeTab === 'appointments' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-neutral-900">Appointments</h3>
+                <div className="flex items-center gap-3">
+                  <div className="hidden sm:flex gap-2">
+                    <Button variant={apptView === 'day' ? 'primary' : 'ghost'} size='sm' onClick={() => setApptView('day')}>Today</Button>
+                    <Button variant={apptView === 'week' ? 'primary' : 'ghost'} size='sm' onClick={() => setApptView('week')}>This Week</Button>
+                    <Button variant={apptView === 'month' ? 'primary' : 'ghost'} size='sm' onClick={() => setApptView('month')}>This Month</Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input value={searchTerm} onChange={(e) => setSearchTerm((e.target as HTMLInputElement).value)} placeholder="Search patient, MRN or reason" className="px-3 py-2 border border-neutral-200 rounded-md text-sm focus:ring-2 focus:ring-sky-500" />
+                    <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>Settings</Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Simple Day view list */}
+              {apptView === 'day' && (
+                <div>
+                  {appointments.filter(a => (a.start || '').slice(0,10) === apptDate).length === 0 ? (
+                    <Alert severity="info">No appointments for this day.</Alert>
+                  ) : (
+                    <div className="space-y-2">
+                      {appointments.filter(a => (a.start || '').slice(0,10) === apptDate).sort((a,b)=> (a.start||'').localeCompare(b.start||'')).filter(a => !searchTerm || ((a.patientName||'') + ' ' + (a.mrn||'') + ' ' + (a.reason||'')).toLowerCase().includes(searchTerm.toLowerCase())).map(a => (
+                        <Card key={a.id} variant="outlined" className="p-3 flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-neutral-900">{a.patientName || 'Booking'}</p>
+                            <p className="text-sm text-neutral-500">{new Date(a.start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} — {a.reason || ''}{apptSettings.showMRN && a.mrn ? ` • ${a.mrn}` : ''}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => router.push(`/doctor/health-records/${a.visitId || a.patientId || ''}`)}>Open</Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Week view: 7-column summary */}
+              {apptView === 'week' && (
+                <div className="grid grid-cols-7 gap-2">
+                  {(() => { const start = new Date(apptDate); const days = Array.from({length:7}).map((_,i)=>{ const d=new Date(start); d.setDate(start.getDate()+i); return d; });
+                    return days.map(day => {
+                      const ds = day.toISOString().slice(0,10);
+                      const list = appointments.filter(a => (a.start||'').slice(0,10) === ds).filter(a => !searchTerm || ((a.patientName||'') + ' ' + (a.mrn||'') + ' ' + (a.reason||'')).toLowerCase().includes(searchTerm.toLowerCase()));
+                      return (
+                        <div key={ds} className="bg-neutral-50 rounded-lg border border-neutral-100 p-2">
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium">{day.toLocaleDateString()}</div>
+                            <div className="text-xs text-neutral-400">{list.length} appt</div>
+                          </div>
+                          <div className="mt-2 space-y-1">
+                            {list.slice(0,4).map(a => (
+                              <div key={a.id} className="text-sm text-neutral-700">{new Date(a.start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} — {a.patientName}</div>
+                            ))}
+                            {list.length > 4 && <div className="text-xs text-neutral-400">+{list.length-4} more</div>}
+                          </div>
+                        </div>
+                      );
+                    }); })()}
+                </div>
+              )}
+
+              {/* Month view: simple month grid */}
+              {apptView === 'month' && (
+                <div className="grid grid-cols-7 gap-2">
+                  {(() => { const start = new Date(apptDate); start.setDate(1); const daysInMonth = new Date(start.getFullYear(), start.getMonth()+1,0).getDate(); const days = Array.from({length: daysInMonth}).map((_,i)=>{ const d=new Date(start); d.setDate(1+i); return d; });
+                    return days.map(day => {
+                      const ds = day.toISOString().slice(0,10);
+                      const count = appointments.filter(a=> (a.start||'').slice(0,10)===ds).filter(a => !searchTerm || ((a.patientName||'') + ' ' + (a.mrn||'') + ' ' + (a.reason||'')).toLowerCase().includes(searchTerm.toLowerCase())).length;
+                      return (
+                        <div key={ds} className={`h-20 p-2 rounded-lg border ${day.toISOString().slice(0,10)===new Date().toISOString().slice(0,10)? 'border-primary-600 bg-primary-50':'border-neutral-100 bg-neutral-50'}`}>
+                          <div className="text-xs font-medium">{day.getDate()}</div>
+                          {count>0 && <div className="mt-1 text-xs text-neutral-700">{count} appt</div>}
+                        </div>
+                      );
+                    }); })()}
+                </div>
+              )}
+
+              <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title="Appointments Settings">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700">Default View</label>
+                    <select value={apptSettings.defaultView} onChange={(e)=> setApptSettings(s=>({...s, defaultView: (e.target as HTMLSelectElement).value}))} className="mt-1 block w-48 rounded-md border-neutral-200">
+                      <option value="day">Day</option>
+                      <option value="week">Week</option>
+                      <option value="month">Month</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={apptSettings.showMRN} onChange={(e)=> setApptSettings(s=>({...s, showMRN: (e.target as HTMLInputElement).checked}))} />
+                    <label className="text-sm text-neutral-600">Show MRN in lists</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={apptSettings.compact} onChange={(e)=> setApptSettings(s=>({...s, compact: (e.target as HTMLInputElement).checked}))} />
+                    <label className="text-sm text-neutral-600">Compact mode</label>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" onClick={()=> setSettingsOpen(false)}>Cancel</Button>
+                    <Button variant="primary" size="sm" onClick={()=> { localStorage.setItem('cardioAppointmentsSettings', JSON.stringify(apptSettings)); setSettingsOpen(false); }}>Save</Button>
+                  </div>
+                </div>
+              </Modal>
+            </div>
+          )}\n\n          /* Tab: Rooms */}
           {activeTab === 'rooms' && (
             <div className="space-y-4">
               <h3 className="font-semibold text-neutral-900">Room Management</h3>
@@ -966,7 +1112,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
                       <div className="flex-1">
                         <p className="font-medium text-neutral-900">{queue.queueName}</p>
                         <p className="mt-1 text-sm text-neutral-600">
-                          {queue.pendingCount} pending • {queue.inProgressCount} in progress
+                          {queue.pendingCount} pending â€¢ {queue.inProgressCount} in progress
                         </p>
                         <div className="mt-2 h-2 bg-neutral-200 rounded-full overflow-hidden">
                           <div
