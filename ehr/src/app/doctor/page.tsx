@@ -1,8 +1,11 @@
-import { auth } from '@/lib/auth';
+﻿import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { fetchDashboard, getAllMockUsers } from '@/cardiology/services/api.mock';
 import { CardiovascularDashboard } from '@/cardiology/components/CardiovascularDashboard';
-import { PageHeader } from '@/design-system';
+import { CardiologyRole } from '@/cardiology/types/fhir-domain';
+import React from 'react';
+import DoctorCalendar from '@/components/DoctorCalendar';
 
 export default async function DoctorPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
   let session: any = null;
@@ -29,19 +32,47 @@ export default async function DoctorPage({ searchParams }: { searchParams?: Reco
 
   const dashboard = await fetchDashboard();
 
+  // Map application-level role names to cardiology domain roles
+  const cardioRole = role === 'DOCTOR' ? CardiologyRole.CARDIOLOGIST : CardiologyRole.ADMIN;
+
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <PageHeader title="Clinician Dashboard" subtitle="Real-time patient flow and your queue." />
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900">{session.user.name}</h1>
+          <p className="text-sm text-neutral-600">Overview of all</p>
+        </div>
 
-      <div className="mt-4">
-        {/* CardiovascularDashboard is a client component that will take over realtime polling */}
-        <CardiovascularDashboard
-          userId={session.user.id}
-          userName={session.user.name}
-          // types in the cardiology component accept CardiologyRole, which maps to the same strings
-          userRole={role}
-          dashboard={dashboard}
-        />
+        <div className="flex items-center gap-2">
+          <Link href="/doctor/patients" className="inline-flex items-center px-3 py-1.5 rounded-md bg-neutral-100 text-sm text-neutral-900 hover:bg-neutral-200">View Patients</Link>
+          <Link href="/doctor/encounters" className="inline-flex items-center px-3 py-1.5 rounded-md bg-neutral-100 text-sm text-neutral-900 hover:bg-neutral-200">View Encounters</Link>
+          <Link href="/doctor/orders" className="inline-flex items-center px-3 py-1.5 rounded-md bg-neutral-100 text-sm text-neutral-900 hover:bg-neutral-200">View Orders</Link>
+          <Link href="/doctor/health-records" className="inline-flex items-center px-3 py-1.5 rounded-md bg-neutral-100 text-sm text-neutral-900 hover:bg-neutral-200">View Health Records</Link>
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <CardiovascularDashboard
+            userId={session.user.id}
+            userName={session.user.name}
+            // types in the cardiology component accept CardiologyRole, which maps to the same strings
+            userRole={cardioRole}
+            dashboard={dashboard}
+          />
+        </div>
+
+        <div className="lg:col-span-1 space-y-4">
+          {/* Place the interactive doctor calendar in the sidebar area for quick access */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          {/* Client component — load dynamically in the browser */}
+          {/* @ts-ignore */}
+          <React.Suspense fallback={<div className="p-4 bg-white rounded-lg border">Loading calendar...</div>}>
+            {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+            {/* @ts-ignore */}
+            <DoctorCalendar practitionerId={session.user.id} />
+          </React.Suspense>
+        </div>
       </div>
     </div>
   );
