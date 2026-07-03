@@ -970,7 +970,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
 
           {
           {/* Tab: Appointments */}
-          {activeTab === 'appointments' && (
+            {activeTab === 'appointments' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-neutral-900">Appointments</h3>

@@ -1,16 +1,22 @@
-import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { getAllMockUsers } from '@/cardiology/services/api.mock';
-import { PageHeader } from '@/design-system';
-import { Card, DataTable } from '@/design-system';
-import AuditTableClient from './AuditTableClient';
+﻿import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { PageHeader, Card } from "@/design-system";
+import AuditTableClient from "./AuditTableClient";
 
-// Simple mock audit events to present until a real audit store is wired
-const mockEvents = [
-  { id: 'e1', ts: new Date().toISOString(), user: 'system', action: 'System started' },
-  { id: 'e2', ts: new Date().toISOString(), user: 'admin@example.com', action: 'Created user: ui-register+1@example.com' },
-  { id: 'e3', ts: new Date().toISOString(), user: 'dr.chen@example.com', action: 'Claimed queue item: queue-item-002' },
-];
+async function getAuditEvents(limit = 200) {
+  try {
+    return await prisma.auditEvent.findMany({
+      orderBy: { recorded: "desc" },
+      take: limit,
+      include: {
+        agent: { select: { id: true, name: true, email: true, role: true } },
+      },
+    });
+  } catch {
+    return [];
+  }
+}
 
 export default async function AuditPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
   let session: any = null;
