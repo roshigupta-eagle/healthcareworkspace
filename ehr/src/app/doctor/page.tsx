@@ -5,7 +5,6 @@ import { fetchDashboard, getAllMockUsers } from '@/cardiology/services/api.mock'
 import { CardiovascularDashboard } from '@/cardiology/components/CardiovascularDashboard';
 import { CardiologyRole } from '@/cardiology/types/fhir-domain';
 import React from 'react';
-import DoctorCalendar from '@/components/DoctorCalendar';
 
 export default async function DoctorPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
   let session: any = null;
@@ -63,15 +62,19 @@ export default async function DoctorPage({ searchParams }: { searchParams?: Reco
         </div>
 
         <div className="lg:col-span-1 space-y-4">
-          {/* Place the interactive doctor calendar in the sidebar area for quick access */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          {/* Client component — load dynamically in the browser */}
-          {/* @ts-ignore */}
-          <React.Suspense fallback={<div className="p-4 bg-white rounded-lg border">Loading calendar...</div>}>
-            {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
-            {/* @ts-ignore */}
-            <DoctorCalendar practitionerId={session.user.id} />
-          </React.Suspense>
+          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-neutral-800">Appointments</h3>
+                <p className="mt-1 text-sm text-neutral-600">Open the full schedule and manage bookings.</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2">
+              <Link href="/dashboard/appointments" className="inline-flex items-center px-3 py-1.5 rounded-md bg-sky-600 text-white text-sm hover:bg-sky-700">Open Appointments</Link>
+              <Link href="/dashboard/appointments#book" className="inline-flex items-center px-3 py-1.5 rounded-md bg-neutral-100 text-sm text-neutral-900 hover:bg-neutral-200">Book New</Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
