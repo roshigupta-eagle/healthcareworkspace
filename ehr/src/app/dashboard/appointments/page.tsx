@@ -1,5 +1,6 @@
-import { auth } from '@/lib/auth';
+﻿import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import DoctorCalendar from '@/components/DoctorCalendar';
 
 export default async function AppointmentsPage() {
   const session = await auth();
@@ -51,7 +52,7 @@ export default async function AppointmentsPage() {
   const role = session.user?.role ?? 'PATIENT';
   const userId = session.user?.id ?? '';
 
-  // Role-based filtering
+  // Role-based filtering (kept for non-doctor views)
   let appointments = mockAppointments;
   if (role === 'PATIENT') {
     appointments = mockAppointments.filter((a) => a.patientId === userId);
@@ -77,63 +78,70 @@ export default async function AppointmentsPage() {
         </div>
       </div>
 
-      <div className="mt-6 space-y-4">
-        {appointments.length === 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-            <p className="text-sm text-gray-600">No appointments found for your role.</p>
-          </div>
-        )}
-
-        {appointments.map((a) => (
-          <div key={a.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">{a.displayDatetime}</p>
-              <p className="mt-1 font-medium text-gray-900">
-                {role === 'PATIENT' ? a.clinician : `${a.patientName} — ${a.type}`}
-                <span className="text-sm text-gray-600"> {role === 'PATIENT' ? `— ${a.location}` : `• ${a.location}`}</span>
-              </p>
+      {/* For doctors/admins show the interactive calendar (client) */}
+      {(role === 'DOCTOR' || role === 'ADMIN') ? (
+        <div className="mt-6">
+          <DoctorCalendar practitionerId={userId} />
+        </div>
+      ) : (
+        <div className="mt-6 space-y-4">
+          {appointments.length === 0 && (
+            <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+              <p className="text-sm text-gray-600">No appointments found for your role.</p>
             </div>
-            <div className="text-right">
-              <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${a.status === 'Confirmed' ? 'bg-success-50 text-success-900' : 'bg-warning-50 text-warning-900'}`}>
-                {a.status}
-              </span>
-              <div className="mt-3 text-right space-x-3">
-                {role === 'PATIENT' && (
-                  <>
-                    <a href={`/dashboard/encounters/${a.visitId}`} className="text-sm text-sky-600 hover:underline">View details</a>
-                    <a href="#" className="text-sm text-gray-600 hover:underline">Request reschedule</a>
-                  </>
-                )}
+          )}
 
-                {role === 'DOCTOR' && (
-                  <>
-                    <a href={`/dashboard/encounters/${a.visitId}`} className="text-sm text-sky-600 hover:underline">Open patient</a>
-                    <a href="#" className="text-sm text-gray-600 hover:underline">Mark as completed</a>
-                  </>
-                )}
+          {appointments.map((a) => (
+            <div key={a.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">{a.displayDatetime}</p>
+                <p className="mt-1 font-medium text-gray-900">
+                  {role === 'PATIENT' ? a.clinician : `${a.patientName} — ${a.type}`}
+                  <span className="text-sm text-gray-600"> {role === 'PATIENT' ? `— ${a.location}` : `• ${a.location}`}</span>
+                </p>
+              </div>
+              <div className="text-right">
+                <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${a.status === 'Confirmed' ? 'bg-success-50 text-success-900' : 'bg-warning-50 text-warning-900'}`}>
+                  {a.status}
+                </span>
+                <div className="mt-3 text-right space-x-3">
+                  {role === 'PATIENT' && (
+                    <>
+                      <a href={`/dashboard/encounters/${a.visitId}`} className="text-sm text-sky-600 hover:underline">View details</a>
+                      <a href="#" className="text-sm text-gray-600 hover:underline">Request reschedule</a>
+                    </>
+                  )}
 
-                {role === 'NURSE' && (
-                  <>
-                    <a href={`/dashboard/encounters/${a.visitId}`} className="text-sm text-sky-600 hover:underline">Prepare room</a>
-                    <a href="#" className="text-sm text-gray-600 hover:underline">Mark arrived</a>
-                  </>
-                )}
+                  {role === 'DOCTOR' && (
+                    <>
+                      <a href={`/dashboard/encounters/${a.visitId}`} className="text-sm text-sky-600 hover:underline">Open patient</a>
+                      <a href="#" className="text-sm text-gray-600 hover:underline">Mark as completed</a>
+                    </>
+                  )}
 
-                {role === 'ADMIN' && (
-                  <>
-                    <a href={`/dashboard/encounters/${a.visitId}`} className="text-sm text-sky-600 hover:underline">Manage</a>
-                    <a href="#" className="text-sm text-gray-600 hover:underline">Cancel</a>
-                  </>
-                )}
+                  {role === 'NURSE' && (
+                    <>
+                      <a href={`/dashboard/encounters/${a.visitId}`} className="text-sm text-sky-600 hover:underline">Prepare room</a>
+                      <a href="#" className="text-sm text-gray-600 hover:underline">Mark arrived</a>
+                    </>
+                  )}
 
-                {!['PATIENT', 'DOCTOR', 'NURSE', 'ADMIN'].includes(role) && (
-                  <a href={`/dashboard/encounters/${a.visitId}`} className="text-sm text-sky-600 hover:underline">View</a>
-                )}
+                  {role === 'ADMIN' && (
+                    <>
+                      <a href={`/dashboard/encounters/${a.visitId}`} className="text-sm text-sky-600 hover:underline">Manage</a>
+                      <a href="#" className="text-sm text-gray-600 hover:underline">Cancel</a>
+                    </>
+                  )}
+
+                  {!['PATIENT', 'DOCTOR', 'NURSE', 'ADMIN'].includes(role) && (
+                    <a href={`/dashboard/encounters/${a.visitId}`} className="text-sm text-sky-600 hover:underline">View</a>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
