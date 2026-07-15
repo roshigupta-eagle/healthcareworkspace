@@ -33,6 +33,11 @@ export default function CalBookingClient({ initialAppointments = [], currentUser
     return () => { mountedFlag = false }
   }, [])
 
+  useEffect(() => {
+    // clear selection when date changes to avoid stale selected slot
+    setSelectedSlot(null)
+  }, [selectedDate])
+
   const days = useMemo(() => {
     const out: Date[] = []
     const start = new Date(cursor)
@@ -120,17 +125,20 @@ export default function CalBookingClient({ initialAppointments = [], currentUser
 
           <div className="mt-3 space-y-2">
             {visibleSlots.length === 0 && <div className="text-sm text-neutral-500 p-4">No slots</div>}
-            {visibleSlots.map(s => (
-              <div key={s.id} className={`p-3 rounded border flex items-center justify-between ${s.status === 'free' ? 'bg-white' : 'bg-neutral-50 text-neutral-400'}`}>
-                <div>
-                  <div className="font-medium">{fmtTime(s.start)} — {fmtTime(s.end)}</div>
-                  <div className="text-sm text-neutral-500">{providers.find((p:any)=>p.id===s.practitionerId)?.name} • {locations.find((l:any)=>l.id===s.locationId)?.name}</div>
+            {visibleSlots.map(s => {
+              const isSelected = selectedSlot && (selectedSlot.id === s.id || selectedSlot.slotId === s.id)
+              return (
+                <div key={s.id} onClick={() => { if (s.status === 'free') setSelectedSlot(s) }} role="button" className={`p-3 rounded border flex items-center justify-between ${s.status === 'free' ? 'bg-white' : 'bg-neutral-50 text-neutral-400'} ${isSelected ? 'ring-2 ring-sky-100 border-sky-200 bg-sky-50' : ''} cursor-pointer`}>
+                  <div>
+                    <div className="font-medium">{fmtTime(s.start)} — {fmtTime(s.end)}</div>
+                    <div className="text-sm text-neutral-500">{providers.find((p:any)=>p.id===s.practitionerId)?.name} • {locations.find((l:any)=>l.id===s.locationId)?.name}</div>
+                  </div>
+                  <div>
+                    <button onClick={(e) => { e.stopPropagation(); if (s.status === 'free') handleBook(s) }} disabled={s.status!=='free'} className={`px-3 py-1 rounded ${s.status==='free' ? 'bg-sky-600 text-white' : 'bg-neutral-200 text-neutral-500'}`}>{s.status==='free' ? 'Book' : 'Booked'}</button>
+                  </div>
                 </div>
-                <div>
-                  <button disabled={s.status!=='free'} onClick={() => handleBook(s)} className={`px-3 py-1 rounded ${s.status==='free' ? 'bg-sky-600 text-white' : 'bg-neutral-200 text-neutral-500'}`}>{s.status==='free' ? 'Book' : 'Booked'}</button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
