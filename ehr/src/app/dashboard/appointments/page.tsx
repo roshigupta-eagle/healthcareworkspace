@@ -1,6 +1,5 @@
 ﻿import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import CalBookingClient from '@/app/dashboard/appointments/CalBookingClient';
 import { fetchAppointments, fetchSlots, providers, locations } from '@/scheduling/services/scheduling.mock';
 import { getCurrentUser } from '@/cardiology/services/api.mock';
 
@@ -39,7 +38,7 @@ export default async function AppointmentsPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <a href="#book" className="inline-flex items-center px-4 py-2 rounded-md bg-sky-600 text-white text-sm shadow-sm hover:bg-sky-700">Book appointment</a>
+          <a href="/dashboard/appointments/book" className="inline-flex items-center px-4 py-2 rounded-md bg-sky-600 text-white text-sm shadow-sm hover:bg-sky-700">Book appointment</a>
           <a href="/scheduling" className="inline-flex items-center px-4 py-2 rounded-md bg-white border text-sm text-neutral-900 hover:bg-neutral-50">Find slots</a>
         </div>
       </div>
@@ -83,15 +82,32 @@ export default async function AppointmentsPage() {
         </div>
       </div>
 
-      {/* Main grid: quick actions / dashboard client / upcoming */}
+      {/* Cal.com embed area (restored demo) */}
       <div className="mt-6">
-        {/* @ts-expect-error Server -> Client prop serialization */}
-        <CalBookingClient
-          initialAppointments={appointments}
-          providers={providers}
-          locations={locations}
-          currentUser={currentUser}
-        />
+        <div className="cal-theme w-full p-6 rounded-lg bg-white">
+          <div className="max-w-7xl mx-auto">
+            <h2 className="text-lg font-semibold">Cal.com meetings</h2>
+            <p className="text-sm text-neutral-500 mt-1">Embedded scheduling & meeting links (demo)</p>
+            <div className="mt-4 border rounded overflow-hidden">
+              <iframe src="https://cal.com/demo" className="w-full h-96" />
+            </div>
+
+            <div className="mt-6">
+              <h3 className="text-sm font-medium text-neutral-700">Upcoming meetings</h3>
+              <ul className="mt-2 space-y-2">
+                {upcoming.map((a:any) => (
+                  <li key={a.id} className="p-3 border rounded bg-neutral-50 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{a.patient?.name || 'Unknown patient'}</div>
+                      <div className="text-sm text-neutral-500">{new Date(a.start).toLocaleString()}</div>
+                    </div>
+                    <div className="text-sm text-neutral-600">{a.status}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
