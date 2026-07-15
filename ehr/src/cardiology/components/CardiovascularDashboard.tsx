@@ -201,321 +201,33 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
   className,
 }) => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'overview' | 'myQueue' | 'rooms' | 'allQueues'>(
-    'overview',
+  const [activeTab, setActiveTab] = useState<'myQueue' | 'rooms' | 'allQueues'>(
+    'myQueue',
   );
-    const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Appointments UI state
-  const [apptView, setApptView] = useState<'day' | 'week' | 'month'>('week');
-  const [apptDate, setApptDate] = useState<string>(new Date().toISOString().slice(0,10));
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [apptSettings, setApptSettings] = useState<{ defaultView: string; showMRN: boolean; compact: boolean }>({ defaultView: 'week', showMRN: true, compact: false });
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('cardioAppointmentsSettings');
-      if (raw) setApptSettings(JSON.parse(raw));
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const start = new Date(apptDate);
-        let end = new Date(start);
-        if (apptView === 'week') end.setDate(start.getDate() + 6);
-        else if (apptView === 'month') end.setDate(start.getDate() + 29);
-        const sStr = start.toISOString().slice(0,10);
-        const eStr = end.toISOString().slice(0,10);
-        const res = await fetch(`/api/appointments?practitionerId=${encodeURIComponent(userId)}&start=${sStr}&end=${eStr}`);
-        if (!res.ok) { setAppointments([]); return; }
-        const data = await res.json();
-        if (cancelled) return;
-        setAppointments(data.appointments || []);
-      } catch (err) {
-        setAppointments([]);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [apptView, apptDate, userId]);
-
-  // Client-side polling: fetch latest dashboard from server API so assignments show up in real-time
   const [dashboardData, setDashboardData] = useState<CardiologyDashboard>(dashboard);
   const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
   const [visitDetails, setVisitDetails] = useState<Record<string, CardiovascularVisit>>({});
   const [allVisits, setAllVisits] = useState<CardiovascularVisit[]>([]);
   const [alertVisitId, setAlertVisitId] = useState<string | null>(null);
   const prevAssignedRef = useRef<string[]>([]);
-  // Keep serialized last payloads to avoid no-op state updates that cause
-  // unnecessary re-renders (which can look like flicker when frequent).
   const lastDashboardJsonRef = useRef<string | null>(null);
   const lastQueueJsonRef = useRef<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  // Prefer Server-Sent Events (SSE) for efficient updates with a polling fallback.
   const [useSSE, setUseSSE] = useState(true);
   const [sseConnected, setSseConnected] = useState(false);
-
-  // Dev-only instrumentation: TEMPORARILY DISABLED
-  /*
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return;
-    if (typeof window === 'undefined') return;
-
-    const root = rootRef.current || document.querySelector('#main-content .page-transition > .bg-white') as HTMLElement | null;
-
-    let ro: ResizeObserver | null = null;
-    try {
-      ro = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const { width, height } = entry.contentRect;
-          // eslint-disable-next-line no-console
-          console.debug('[dev] dashboard-resize', { time: Date.now(), width, height });
-        }
-      });
-      if (root) ro.observe(root);
-    } catch (e) {
-      // ResizeObserver may not be available in some test environments
-    }
-
-    const overlay = document.querySelector('.page-transition-overlay') as HTMLElement | null;
-    let overlayMo: MutationObserver | null = null;
-    if (overlay) {
-      overlayMo = new MutationObserver((mutations) => {
-        for (const m of mutations) {
-          if (m.type === 'attributes' && m.target instanceof HTMLElement) {
-            const el = m.target as HTMLElement;
-            const hasShow = el.classList.contains('show');
-            // eslint-disable-next-line no-console
-            console.debug('[dev] overlay-class-change', { time: Date.now(), hasShow });
-          }
-        }
-      });
-      overlayMo.observe(overlay, { attributes: true, attributeFilter: ['class'] });
-    }
-
-    const docMo = new MutationObserver(() => {
-      // eslint-disable-next-line no-console
-      console.debug('[dev] document-style-change', { time: Date.now(), opacity: document.documentElement.style.opacity });
-    });
-    docMo.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
-
-    const onBeforeUnload = () => console.debug('[dev] beforeunload', { time: Date.now() });
-    const onUnload = () => console.debug('[dev] unload', { time: Date.now() });
-    window.addEventListener('beforeunload', onBeforeUnload);
-    window.addEventListener('unload', onUnload);
-
-    const originalPush = (window.history as any).pushState;
-    const originalReplace = (window.history as any).replaceState;
-    (window.history as any).pushState = function (...args: any[]) {
-      console.debug('[dev] history.pushState', { time: Date.now(), args });
-      return originalPush.apply(this, args);
-    };
-    (window.history as any).replaceState = function (...args: any[]) {
-      console.debug('[dev] history.replaceState', { time: Date.now(), args });
-      return originalReplace.apply(this, args);
-    };
-
-    return () => {
-      try {
-        if (ro) ro.disconnect();
-        if (overlayMo) overlayMo.disconnect();
-        docMo.disconnect();
-        window.removeEventListener('beforeunload', onBeforeUnload);
-        window.removeEventListener('unload', onUnload);
-        (window.history as any).pushState = originalPush;
-        (window.history as any).replaceState = originalReplace;
-      } catch (e) {
-        // ignore
-      }
-    };
-  }, []);
-  */
 
   useEffect(() => {
     if (!enableRealtime) return;
     let cancelled = false;
-
-    // SSE path: TEMPORARILY DISABLED to isolate flicker source
-    // Re-enable by uncommenting the block below and setting useSSE to true
-    if (false && typeof window !== 'undefined' && (window as any).EventSource && useSSE) {
-      const es = new (window as any).EventSource('/api/cardiology/stream');
-
-      es.addEventListener('update', (ev: MessageEvent) => {
-        try {
-          const payload = JSON.parse(ev.data);
-          if (cancelled) return;
-          if (payload.dashboard) {
-            const s = JSON.stringify(payload.dashboard);
-            if (lastDashboardJsonRef.current !== s) {
-              lastDashboardJsonRef.current = s;
-              if (process.env.NODE_ENV === 'development') console.debug('[dev] SSE dashboard -> updating', { time: Date.now() });
-              setDashboardData(payload.dashboard as CardiologyDashboard);
-            } else {
-              if (process.env.NODE_ENV === 'development') console.debug('[dev] SSE dashboard -> no-op (identical payload)', { time: Date.now() });
-            }
-          }
-          if (payload.queueItems) {
-            const s2 = JSON.stringify(payload.queueItems);
-            if (lastQueueJsonRef.current !== s2) {
-              lastQueueJsonRef.current = s2;
-              if (process.env.NODE_ENV === 'development') console.debug('[dev] SSE queueItems -> updating', { time: Date.now() });
-              setQueueItems(payload.queueItems as QueueItem[]);
-            } else {
-              if (process.env.NODE_ENV === 'development') console.debug('[dev] SSE queueItems -> no-op (identical payload)', { time: Date.now() });
-            }
-          }
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error('SSE parse error', err);
-        }
-      });
-
-      es.addEventListener('error', (err: any) => {
-        // eslint-disable-next-line no-console
-        console.error('SSE error', err);
-        try { es.close(); } catch (_) { /* ignore */ }
-        setUseSSE(false);
-        setSseConnected(false);
-      });
-
-      es.onopen = () => setSseConnected(true);
-
-      return () => {
-        cancelled = true;
-        try { es.close(); } catch (_) { /* ignore */ }
-      };
-    }
-
-    // Polling fallback: DISABLED to prevent refresh flicker
-    // Rely on SSE for real-time updates; users can manually refresh via button.
-    // If SSE fails, the component stays at last-known state until manual refresh.
-    // To re-enable: uncomment poll() and setInterval below, adjust interval as needed
-    /*
     let id: any = null;
-    async function poll() {
-      try {
-        const [dashRes, qRes] = await Promise.all([
-          fetch('/api/cardiology/dashboard'),
-          fetch('/api/cardiology/queueitems'),
-        ]);
-        if (dashRes.ok) {
-          const dashJson = await dashRes.json();
-          if (!cancelled) {
-            const s = JSON.stringify(dashJson);
-            if (lastDashboardJsonRef.current !== s) {
-              lastDashboardJsonRef.current = s;
-              if (process.env.NODE_ENV === 'development') console.debug('[dev] poll dashboard -> updating', { time: Date.now() });
-              setDashboardData(dashJson as CardiologyDashboard);
-            } else {
-              if (process.env.NODE_ENV === 'development') console.debug('[dev] poll dashboard -> no-op', { time: Date.now() });
-            }
-          }
-        }
-        if (qRes.ok) {
-          const q = await qRes.json();
-          if (!cancelled) {
-            const s2 = JSON.stringify(q);
-            if (lastQueueJsonRef.current !== s2) {
-              lastQueueJsonRef.current = s2;
-              if (process.env.NODE_ENV === 'development') console.debug('[dev] poll queueItems -> updating', { time: Date.now() });
-              setQueueItems(q as QueueItem[]);
-            } else {
-              if (process.env.NODE_ENV === 'development') console.debug('[dev] poll queueItems -> no-op', { time: Date.now() });
-            }
-          }
-        }
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Dashboard poll error', err);
-      }
-    }
-
-    poll();
-    id = setInterval(poll, 30000); // was 5000ms; increase if re-enabling
-    */
-    let id: any = null;
-
     return () => {
       cancelled = true;
       if (id) clearInterval(id);
     };
   }, [enableRealtime, useSSE]);
-
-  // TEMPORARILY DISABLED to isolate flicker source: all effects that fetch/update state
-  // Render only static initial data from server prop
-  /*
-  // Fetch visit details for queue items assigned/claimed to this user
-  useEffect(() => {
-    const relevant = queueItems.filter((i) => i.assignedTo === userId || i.claimedBy === userId).map((i) => i.visitId);
-    const unique = Array.from(new Set(relevant));
-    const toFetch = unique.filter((id) => !visitDetails[id]);
-    if (toFetch.length === 0) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const promises = toFetch.map((id) => fetch(`/api/cardiology/visits/${id}`).then((r) => (r.ok ? r.json() : null)));
-        const results = await Promise.all(promises);
-        if (cancelled) return;
-        setVisitDetails((prev) => {
-          const copy = { ...prev };
-          results.forEach((v, idx) => {
-            if (v) copy[toFetch[idx]] = v as CardiovascularVisit;
-          });
-          return copy;
-        });
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('visit details fetch error', err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [queueItems, userId, visitDetails]);
-
-  // Fetch all visits for encounters/orders list
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const res = await fetch('/api/cardiology/visits');
-        if (!res.ok) return;
-        const json = await res.json();
-        if (!mounted) return;
-        setAllVisits(json as CardiovascularVisit[]);
-      } catch (err) {
-        // ignore
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // Detect newly assigned queue items and pop a modal for the doctor
-  useEffect(() => {
-    const currentAssigned = queueItems.filter((i) => i.assignedTo === userId || i.claimedBy === userId).map((i) => i.id);
-    const prev = prevAssignedRef.current || [];
-    const newly = currentAssigned.filter((id) => !prev.includes(id));
-    if (newly.length > 0) {
-      const newItem = queueItems.find((i) => i.id === newly[0]);
-      if (newItem) setAlertVisitId(newItem.visitId);
-    }
-    prevAssignedRef.current = currentAssigned;
-  }, [queueItems, userId]);
-
-  // Auto-close alert modal after a short timeout
-  useEffect(() => {
-    if (!alertVisitId) return;
-    const t = setTimeout(() => setAlertVisitId(null), 10000);
-    return () => clearTimeout(t);
-  }, [alertVisitId]);
-  */
 
   const navigateToPatient = useCallback((visitId?: string) => {
     if (!visitId) return;
@@ -523,10 +235,8 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
     router.push(`/doctor/patients/${visitId}`);
   }, [onViewPatientDetail, router]);
 
-  // Compute role-specific queue items for current user
   const userQueueItems = useMemo(() => {
-    if (userRole === CardiologyRole.ADMIN) return [];
-    // Filter to queues owned by this role â€” simplified mapping
+    if (userRole === CardiologyRole.ADMIN) return [] as any;
     const queuesByRole: Record<CardiologyRole, string[]> = {
       [CardiologyRole.RECEPTIONIST]: [
         'CHECK_IN',
@@ -668,7 +378,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
       {/* Urgent Alerts */}
       {dashboardData.visits.urgent.length > 0 && (
         <Alert severity="critical">
-          <strong>âš ï¸ Urgent Alerts ({dashboardData.visits.urgent.length})</strong>
+          <strong>âš ï¸Urgent Alerts ({dashboardData.visits.urgent.length})</strong>
           <div className="mt-2 space-y-1">
             {dashboardData.visits.urgent.map((visit) => (
               <div key={visit.id} className="flex items-center justify-between text-sm">
@@ -691,7 +401,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
       {/* Main Tabs */}
       <div className="bg-white rounded-lg p-4">
         <div className="flex gap-2 border-b border-neutral-200 mb-4">
-          {(['overview', 'myQueue', 'appointments', 'rooms', 'allQueues'] as const).map((tab) => (
+          {(['myQueue', 'rooms', 'allQueues'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -701,225 +411,13 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
                   : 'text-neutral-600 border-transparent hover:text-neutral-900'
               }`}
             >
-              {tab === 'overview' && 'Overview'}
-              {tab === 'myQueue' && 'My Queue'}\n              {tab === 'appointments' && 'Appointments'}
+              {tab === 'myQueue' && 'My Queue'}
               {tab === 'rooms' && 'Rooms'}
               {tab === 'allQueues' && 'All Queues'}
             </button>
           ))}
         </div>
         <div className="space-y-6">
-          {/* Tab: Overview */}
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              {/* Analytics CTA (replaces direct charts in the primary overview) */}
-              <Card variant="outlined" className="p-6 mb-4 flex flex-col md:flex-row items-center justify-between ring-1 ring-primary-200">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-neutral-900">Detailed Analytics</h3>
-                  <p className="text-sm text-neutral-600 mt-1">Open the analytics portal for full charts, patient timelines, and operational KPIs.</p>
-                  <div className="mt-3 grid grid-cols-3 gap-3 max-w-md">
-                    <div>
-                      <div className="text-xs text-neutral-500">Completed</div>
-                      <div className="text-lg font-semibold text-neutral-900">{completedCount} / {totalVisits}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-neutral-500">To go</div>
-                      <div className="text-lg font-semibold text-amber-600">{Math.max(0, totalVisits - completedCount)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-neutral-500">Assigned to you</div>
-                      <div className="text-lg font-semibold text-primary-600">{userQueueItems}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 md:mt-0">
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    aria-label="View detailed analytics"
-                    onClick={() => router.push('/doctor/analytics')}
-                  >
-                    View Detailed Analytics
-                    <svg xmlns="http://www.w3.org/2000/svg" className="ml-3 h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                      <path fillRule="evenodd" d="M10.293 15.293a1 1 0 010-1.414L13.586 10 10.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                      <path fillRule="evenodd" d="M3 10a1 1 0 011-1h9a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </Button>
-                </div>
-              </Card>
-
-              {/* KPI Cards (no charts) */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                <Card variant="outlined" className="p-4 min-h-[120px]">
-                  <p className="text-xs font-medium text-neutral-600 uppercase">Patients Today</p>
-                  <p className="mt-1 text-3xl font-bold text-neutral-900">{urgentVisits}</p>
-                  <p className="mt-1 text-xs text-neutral-500">across all states</p>
-                </Card>
-
-                <Card variant="outlined" className="p-4 min-h-[120px]">
-                  <p className="text-xs font-medium text-neutral-600 uppercase">Your Queue</p>
-                  <p className="mt-1 text-3xl font-bold text-primary-600">{userQueueItems}</p>
-                  <p className="mt-1 text-xs text-neutral-500">pending items</p>
-                </Card>
-
-                <Card variant="outlined" className="p-4 min-h-[120px]">
-                  <p className="text-xs font-medium text-neutral-600 uppercase">Rooms</p>
-                  <p className="mt-1 text-3xl font-bold text-neutral-900">
-                    {dashboardData.rooms.occupied}/{dashboardData.rooms.total}
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-500">in use</p>
-                </Card>
-
-                {/* Completion Rate â€” numeric only (no chart) */}
-                <Card variant="outlined" className="p-4 flex items-center justify-between min-h-[120px]">
-                  <div>
-                    <p className="text-xs font-medium text-neutral-600 uppercase">Completion Rate</p>
-                    <p className="mt-2 text-sm text-neutral-500">Completed consults & procedures</p>
-                  </div>
-                  {
-                    (() => {
-                      const totalVisits = Object.values(dashboardData.visits.byState).reduce((a, b) => a + b, 0) || 0;
-                      const completedStates = [
-                        CardiovascularVisitState.PROCEDURE_COMPLETE,
-                        CardiovascularVisitState.CONSULTATION_COMPLETE,
-                        CardiovascularVisitState.CHECKOUT_COMPLETE,
-                        CardiovascularVisitState.DISCHARGED,
-                      ];
-                      const completedCount = completedStates.reduce((sum, s) => sum + (dashboardData.visits.byState[s] || 0), 0);
-                      const pct = totalVisits > 0 ? Math.round((completedCount / totalVisits) * 100) : 0;
-                      return (
-                        <div className="text-center">
-                          <p className="text-3xl font-bold text-neutral-900">{pct}%</p>
-                          <p className="mt-1 text-xs text-neutral-500">{completedCount} / {totalVisits} completed</p>
-                        </div>
-                      );
-                    })()
-                  }
-                </Card>
-              </div>
-
-              {/* My Queue (if user is not admin) */}
-              {userRole !== CardiologyRole.ADMIN && userRole !== CardiologyRole.PATIENT && (
-                <Card variant="outlined" className="p-4 min-h-[120px]">
-                  <h3 className="font-semibold text-neutral-900">My Queue</h3>
-                  <p className="mt-1 text-sm text-neutral-600">
-                    {userQueueItems === 0 ? 'No pending items' : `${userQueueItems} items waiting`}
-                  </p>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="mt-4"
-                    onClick={() => setActiveTab('myQueue')}
-                  >
-                    View All Items
-                  </Button>
-                </Card>
-              )}
-
-              {/* Room Status Grid */}
-              <div>
-                <h3 className="mb-3 font-semibold text-neutral-900">Room Status</h3>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
-                  {Object.values(dashboardData.rooms.byType).flat().map((room) => (
-                    <Card
-                      key={room.id}
-                      variant="outlined"
-                      className={`p-3 text-center cursor-pointer hover:shadow-md ${
-                        room.isAvailable
-                          ? 'bg-success-50 border-2 border-success-200'
-                          : 'bg-warning-50 border-2 border-warning-200'
-                      }`}
-                      onClick={() => onViewQueue?.('ROOM_DETAIL')}
-                    >
-                      <p className="text-xs font-bold text-neutral-700">{room.roomNumber}</p>
-                      <p className="mt-1 text-xs text-neutral-600">
-                        {room.isAvailable ? 'âœ“ Available' : `${room.currentOccupancy}/${room.capacity}`}
-                      </p>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-
-              {/* Quick Lists: Recent Patients, Encounters, Orders */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Card variant="outlined" className="p-4 min-h-[120px]">
-                  <h3 className="font-semibold text-neutral-900">Recent Patients</h3>
-                  <div className="mt-3 space-y-2">
-                    {recentPatientsList.length === 0 && <div className="text-sm text-neutral-500">No recent patients</div>}
-                    {recentPatientsList.map((v) => (
-                      <div key={v.id} className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-neutral-900">{v.patientName}</div>
-                          <div className="text-xs text-neutral-600">{v.chiefComplaint}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => navigateToPatient(v.id)}>View</Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-
-                <Card variant="outlined" className="p-4 min-h-[120px]">
-                  <h3 className="font-semibold text-neutral-900">Encounters</h3>
-                  <div className="mt-3 space-y-2">
-                    {encountersList.length === 0 && <div className="text-sm text-neutral-500">No encounters</div>}
-                    {encountersList.map((v) => (
-                      <div key={v.id} className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-neutral-900">{v.patientName}</div>
-                          <div className="text-xs text-neutral-600">{v.currentState}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => router.push(`/doctor/encounters/${v.id}`)}>View</Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-
-                <Card variant="outlined" className="p-4 min-h-[120px]">
-                  <h3 className="font-semibold text-neutral-900">Recent Orders</h3>
-                  <div className="mt-3 space-y-2">
-                    {proceduresList.length === 0 && <div className="text-sm text-neutral-500">No recent orders</div>}
-                    {proceduresList.map((p: any) => (
-                      <div key={p.id} className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-neutral-900">{p.procedureType}</div>
-                          <div className="text-xs text-neutral-600">for {p.patientName}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => router.push(`/doctor/orders/${p.id}`)}>View</Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </div>
-
-              {/* Recent Events */}
-              <Card variant="outlined" className="p-4 min-h-[120px]">
-                <h3 className="mb-3 font-semibold text-neutral-900">Recent Activity</h3>
-                <div className="space-y-3">
-                  {dashboardData.recentEvents.slice(0, 10).map((event) => (
-                    <div key={event.id} className={`flex items-start justify-between border-b border-neutral-200 pb-2 text-sm ${
-                      event.eventType === 'STATE_TRANSITION' ? '' : ''
-                    }`}>
-                      <div>
-                        <p className="font-medium text-neutral-900">{event.eventType}</p>
-                        <p className="text-xs text-neutral-600">
-                          {event.fromState} â†’ {event.toState} by {event.actorRole}
-                        </p>
-                      </div>
-                      <span className="text-xs text-neutral-500 whitespace-nowrap">
-                        {new Date(event.createdAt).toLocaleTimeString()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
-          )}
 
           {/* Tab: My Queue */}
           {activeTab === 'myQueue' && (
@@ -968,116 +466,7 @@ export const CardiovascularDashboard: React.FC<CardiovascularDashboardProps> = (
             </div>
           )}
 
-          {
-          {/* Tab: Appointments */}
-            {activeTab === 'appointments' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-neutral-900">Appointments</h3>
-                <div className="flex items-center gap-3">
-                  <div className="hidden sm:flex gap-2">
-                    <Button variant={apptView === 'day' ? 'primary' : 'ghost'} size='sm' onClick={() => setApptView('day')}>Today</Button>
-                    <Button variant={apptView === 'week' ? 'primary' : 'ghost'} size='sm' onClick={() => setApptView('week')}>This Week</Button>
-                    <Button variant={apptView === 'month' ? 'primary' : 'ghost'} size='sm' onClick={() => setApptView('month')}>This Month</Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input value={searchTerm} onChange={(e) => setSearchTerm((e.target as HTMLInputElement).value)} placeholder="Search patient, MRN or reason" className="px-3 py-2 border border-neutral-200 rounded-md text-sm focus:ring-2 focus:ring-sky-500" />
-                    <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>Settings</Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Simple Day view list */}
-              {apptView === 'day' && (
-                <div>
-                  {appointments.filter(a => (a.start || '').slice(0,10) === apptDate).length === 0 ? (
-                    <Alert severity="info">No appointments for this day.</Alert>
-                  ) : (
-                    <div className="space-y-2">
-                      {appointments.filter(a => (a.start || '').slice(0,10) === apptDate).sort((a,b)=> (a.start||'').localeCompare(b.start||'')).filter(a => !searchTerm || ((a.patientName||'') + ' ' + (a.mrn||'') + ' ' + (a.reason||'')).toLowerCase().includes(searchTerm.toLowerCase())).map(a => (
-                        <Card key={a.id} variant="outlined" className="p-3 flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-neutral-900">{a.patientName || 'Booking'}</p>
-                            <p className="text-sm text-neutral-500">{new Date(a.start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} — {a.reason || ''}{apptSettings.showMRN && a.mrn ? ` • ${a.mrn}` : ''}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => router.push(`/doctor/health-records/${a.visitId || a.patientId || ''}`)}>Open</Button>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Week view: 7-column summary */}
-              {apptView === 'week' && (
-                <div className="grid grid-cols-7 gap-2">
-                  {(() => { const start = new Date(apptDate); const days = Array.from({length:7}).map((_,i)=>{ const d=new Date(start); d.setDate(start.getDate()+i); return d; });
-                    return days.map(day => {
-                      const ds = day.toISOString().slice(0,10);
-                      const list = appointments.filter(a => (a.start||'').slice(0,10) === ds).filter(a => !searchTerm || ((a.patientName||'') + ' ' + (a.mrn||'') + ' ' + (a.reason||'')).toLowerCase().includes(searchTerm.toLowerCase()));
-                      return (
-                        <div key={ds} className="bg-neutral-50 rounded-lg border border-neutral-100 p-2">
-                          <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium">{day.toLocaleDateString()}</div>
-                            <div className="text-xs text-neutral-400">{list.length} appt</div>
-                          </div>
-                          <div className="mt-2 space-y-1">
-                            {list.slice(0,4).map(a => (
-                              <div key={a.id} className="text-sm text-neutral-700">{new Date(a.start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} — {a.patientName}</div>
-                            ))}
-                            {list.length > 4 && <div className="text-xs text-neutral-400">+{list.length-4} more</div>}
-                          </div>
-                        </div>
-                      );
-                    }); })()}
-                </div>
-              )}
-
-              {/* Month view: simple month grid */}
-              {apptView === 'month' && (
-                <div className="grid grid-cols-7 gap-2">
-                  {(() => { const start = new Date(apptDate); start.setDate(1); const daysInMonth = new Date(start.getFullYear(), start.getMonth()+1,0).getDate(); const days = Array.from({length: daysInMonth}).map((_,i)=>{ const d=new Date(start); d.setDate(1+i); return d; });
-                    return days.map(day => {
-                      const ds = day.toISOString().slice(0,10);
-                      const count = appointments.filter(a=> (a.start||'').slice(0,10)===ds).filter(a => !searchTerm || ((a.patientName||'') + ' ' + (a.mrn||'') + ' ' + (a.reason||'')).toLowerCase().includes(searchTerm.toLowerCase())).length;
-                      return (
-                        <div key={ds} className={`h-20 p-2 rounded-lg border ${day.toISOString().slice(0,10)===new Date().toISOString().slice(0,10)? 'border-primary-600 bg-primary-50':'border-neutral-100 bg-neutral-50'}`}>
-                          <div className="text-xs font-medium">{day.getDate()}</div>
-                          {count>0 && <div className="mt-1 text-xs text-neutral-700">{count} appt</div>}
-                        </div>
-                      );
-                    }); })()}
-                </div>
-              )}
-
-              <Modal open={settingsOpen} onClose={() => setSettingsOpen(false)} title="Appointments Settings">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700">Default View</label>
-                    <select value={apptSettings.defaultView} onChange={(e)=> setApptSettings(s=>({...s, defaultView: (e.target as HTMLSelectElement).value}))} className="mt-1 block w-48 rounded-md border-neutral-200">
-                      <option value="day">Day</option>
-                      <option value="week">Week</option>
-                      <option value="month">Month</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={apptSettings.showMRN} onChange={(e)=> setApptSettings(s=>({...s, showMRN: (e.target as HTMLInputElement).checked}))} />
-                    <label className="text-sm text-neutral-600">Show MRN in lists</label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" checked={apptSettings.compact} onChange={(e)=> setApptSettings(s=>({...s, compact: (e.target as HTMLInputElement).checked}))} />
-                    <label className="text-sm text-neutral-600">Compact mode</label>
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="ghost" size="sm" onClick={()=> setSettingsOpen(false)}>Cancel</Button>
-                    <Button variant="primary" size="sm" onClick={()=> { localStorage.setItem('cardioAppointmentsSettings', JSON.stringify(apptSettings)); setSettingsOpen(false); }}>Save</Button>
-                  </div>
-                </div>
-              </Modal>
-            </div>
-          )}\n\n          /* Tab: Rooms */}
+          {/* Tab: Rooms */}
           {activeTab === 'rooms' && (
             <div className="space-y-4">
               <h3 className="font-semibold text-neutral-900">Room Management</h3>

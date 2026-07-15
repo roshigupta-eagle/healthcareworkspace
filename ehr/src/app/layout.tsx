@@ -5,8 +5,8 @@ import { auth } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
 import LandingMode from '@/components/LandingMode';
 import ThemeLangProvider from '@/components/ThemeLangProvider';
-import ThemeLangControlsClient from '@/components/ThemeLangControlsClient';
-import SearchBar from '@/components/SearchBarClient';
+import GlobalHeader from '@/components/GlobalHeader';
+import FloatingActions from '@/components/FloatingActions';
 import PageTransition from '@/components/PageTransition';
 
 const geistSans = Geist({
@@ -55,15 +55,8 @@ export default async function RootLayout({
           </aside>
 
           <main id="main-content" className="flex-1 p-8 max-w-8xl w-full">
-            <header className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h1 className="text-2xl font-semibold" data-i18n="title">Healthcare EHR</h1>
-              </div>
-              <div className="flex items-center gap-2">
-                <SearchBar />
-                <ThemeLangControlsClient />
-              </div>
-            </header>
+            <GlobalHeader session={session} role={role} />
+            <FloatingActions />
 
             <PageTransition>
               <div className="bg-white shadow-sm rounded-lg p-6">{children}</div>

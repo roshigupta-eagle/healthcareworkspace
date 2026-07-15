@@ -1,4 +1,4 @@
-// Healthcare EHR - Prisma Schema
+﻿// Healthcare EHR - Prisma Schema
 // FHIR-style resources: Patient, Practitioner, Encounter, Condition,
 // Observation, DiagnosticReport, ServiceRequest, Procedure,
 // Medication, CarePlan, Consent, AuditEvent, Provenance
@@ -12,12 +12,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── Authentication & Authorization ────────────────────────────────
+// â”€â”€â”€ Authentication & Authorization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 enum Role {
   ADMIN
   DOCTOR
+  NURSE
+  PHARMACIST
+  LAB_TECH
+  RECEPTIONIST
+  BILLING
+  PCA
   PATIENT
+  PENDING
 }
 
 model User {
@@ -72,7 +79,7 @@ model Session {
   @@map("sessions")
 }
 
-// ─── FHIR-Style Clinical Resources ────────────────────────────────
+// â”€â”€â”€ FHIR-Style Clinical Resources â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 model Patient {
   id               String    @id @default(cuid())
@@ -397,3 +404,5 @@ model Provenance {
   @@index([patientId])
   @@map("provenance")
 }
+
+

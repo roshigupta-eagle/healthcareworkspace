@@ -1,6 +1,6 @@
 ﻿import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import SchedulingCalendarClient from '@/app/scheduling/SchedulingCalendarClient';
+import CalBookingClient from '@/app/dashboard/appointments/CalBookingClient';
 import { fetchAppointments, fetchSlots, providers, locations } from '@/scheduling/services/scheduling.mock';
 import { getCurrentUser } from '@/cardiology/services/api.mock';
 
@@ -22,7 +22,7 @@ export default async function AppointmentsPage() {
   const endOfWeek = new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000);
   const weekCount = appointments.filter(a => a.start && new Date(a.start) >= startOfWeek && new Date(a.start) < endOfWeek).length;
   const freeSlots = slots.filter(s => s.status === 'free').length;
-  const pendingCount = appointments.filter(a => ['pending','proposed'].includes(a.status)).length;
+  const pendingCount = appointments.filter(a => ['pending','proposed'].includes((a.status || '').toString().toLowerCase())).length;
 
   const upcoming = appointments
     .filter(a => a.start && new Date(a.start) >= now)
@@ -83,105 +83,15 @@ export default async function AppointmentsPage() {
         </div>
       </div>
 
-      {/* Main grid: quick actions / calendar / upcoming */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-        {/* Left column: quick actions & filters */}
-        <aside className="lg:col-span-3 space-y-4">
-          <div className="bg-white rounded-lg border p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium text-neutral-900">Quick Actions</div>
-            </div>
-            <div className="mt-3 space-y-2">
-              <a href="#book" className="block w-full text-center px-3 py-2 rounded-md bg-sky-600 text-white text-sm">Book New</a>
-              <a href="/scheduling/find" className="block w-full text-center px-3 py-2 rounded-md bg-white border text-sm text-neutral-900">Find Slots</a>
-              <a href="/dashboard/encounters/new" className="block w-full text-center px-3 py-2 rounded-md bg-white border text-sm text-neutral-900">New Encounter</a>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-4 shadow-sm">
-            <div className="text-sm font-medium text-neutral-900">Filters</div>
-            <div className="mt-3 space-y-2">
-              <select className="w-full border rounded px-3 py-2 text-sm" defaultValue="all">
-                <option value="all">All providers</option>
-                {providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              <select className="w-full border rounded px-3 py-2 text-sm" defaultValue="all">
-                <option value="all">All locations</option>
-                {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-4 shadow-sm">
-            <div className="text-sm font-medium text-neutral-900">Legend</div>
-            <div className="mt-3 space-y-2 text-xs text-neutral-600">
-              <div><span className="inline-block w-2 h-2 bg-sky-600 mr-2 align-middle rounded-sm" /> Booked</div>
-              <div><span className="inline-block w-2 h-2 bg-amber-500 mr-2 align-middle rounded-sm" /> Pending</div>
-              <div><span className="inline-block w-2 h-2 bg-gray-300 mr-2 align-middle rounded-sm" /> Cancelled</div>
-            </div>
-          </div>
-        </aside>
-
-        {/* Center: calendar */}
-        <main className="lg:col-span-6">
-          <div className="bg-white rounded-lg border p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-medium text-neutral-900">Schedule</h2>
-                <p className="text-sm text-neutral-600">Compact week/day views with quick booking and drag-to-reschedule.</p>
-              </div>
-              <div className="text-sm text-neutral-600">{appointments.length} total</div>
-            </div>
-
-            <div className="mt-4">
-              {/* Client component - passes initial server data to interactive calendar */}
-              {/* @ts-expect-error Server -> Client prop serialization */}
-              <SchedulingCalendarClient
-                initialAppointments={appointments}
-                initialSlots={slots}
-                providers={providers}
-                locations={locations}
-                currentUser={currentUser}
-              />
-            </div>
-          </div>
-        </main>
-
-        {/* Right column: upcoming list */}
-        <aside className="lg:col-span-3">
-          <div className="bg-white rounded-lg border p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium text-neutral-900">Upcoming</div>
-              <div className="text-xs text-neutral-500">Next {upcoming.length}</div>
-            </div>
-
-            <div className="mt-3 space-y-3">
-              {upcoming.length === 0 && <div className="text-sm text-neutral-500">No upcoming appointments</div>}
-
-              {upcoming.map(a => {
-                const patient = a.participants?.find((p: any) => p.type === 'patient')?.display || 'Patient';
-                const provider = a.participants?.find((p: any) => p.type === 'practitioner')?.display || 'Provider';
-                const when = a.start ? new Date(a.start).toLocaleString() : '—';
-                return (
-                  <div key={a.id} className="p-3 bg-neutral-50 rounded-md border flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-neutral-900 truncate">{patient}</div>
-                      <div className="text-xs text-neutral-600 truncate">{provider} • {a.appointmentType || a.serviceType}</div>
-                      <div className="text-xs text-neutral-500 mt-1">{when}</div>
-                    </div>
-
-                    <div className="ml-3 flex flex-col items-end gap-2">
-                      <a href={`/dashboard/encounters/${a.id}`} className="text-xs text-sky-600 hover:underline">Open</a>
-                      <a href="#book" className="text-xs text-neutral-600 hover:underline">Reschedule</a>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-4 text-sm text-neutral-500">Tip: Use the calendar to drag appointments to available slots for quick rescheduling.</div>
-        </aside>
+      {/* Main grid: quick actions / dashboard client / upcoming */}
+      <div className="mt-6">
+        {/* @ts-expect-error Server -> Client prop serialization */}
+        <CalBookingClient
+          initialAppointments={appointments}
+          providers={providers}
+          locations={locations}
+          currentUser={currentUser}
+        />
       </div>
     </div>
   );

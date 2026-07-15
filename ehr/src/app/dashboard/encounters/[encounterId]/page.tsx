@@ -1,9 +1,9 @@
-import { auth } from '@/lib/auth';
+﻿import { auth } from '@/lib/auth';
 import { redirect, notFound } from 'next/navigation';
 import { fetchVisitDetail } from '@/cardiology/services/api.mock';
 import Link from 'next/link';
 
-export default async function VisitDetailPage({ params }: { params: { visitId: string } }) {
+export default async function VisitDetailPage({ params }: { params: { encounterId: string } }) {
   const session = await auth();
   if (!session) redirect('/login');
 
@@ -11,8 +11,8 @@ export default async function VisitDetailPage({ params }: { params: { visitId: s
   if (role !== 'DOCTOR' && role !== 'ADMIN') redirect('/unauthorized');
 
   // `params` may be a Promise in Next.js; unwrap before destructuring
-  const { visitId } = await params;
-  const visit = await fetchVisitDetail(visitId);
+  const { encounterId } = await params;
+  const visit = await fetchVisitDetail(encounterId);
   if (!visit) return notFound();
 
   return (

@@ -18,32 +18,49 @@ async function getAuditEvents(limit = 200) {
   }
 }
 
-export default async function AuditPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
-  let session: any = null;
-  try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    session = await auth();
-  } catch (e) {
-    // ignore
-  }
+export default async function AuditPage({
+  searchParams,
+}: {
+  searchParams?: Record<string, string | string[]>;
+}) {
+  const session = await auth().catch(() => null);
+  if (!session) redirect("/login");
+  if ((session as any).user?.role !== "ADMIN") redirect("/unauthorized");
 
-  // Allow dev override via ?asUser=ID
-  if (!session && searchParams && searchParams.asUser && process.env.NODE_ENV !== 'production') {
-    const override = Array.isArray(searchParams.asUser) ? searchParams.asUser[0] : searchParams.asUser;
-    const all = getAllMockUsers();
-    if (override && all[override]) session = { user: { id: override, name: all[override].name, role: all[override].role } };
-  }
+  const rawFilter = searchParams?.entityType;
+  const entityType = Array.isArray(rawFilter) ? rawFilter[0] : rawFilter;
 
-  if (!session) redirect('/login');
-  if (session.user.role !== 'ADMIN') redirect('/unauthorized');
+  const events = await getAuditEvents(200);
+  const filtered = entityType
+    ? events.filter((e) => e.entityType === entityType)
+    : events;
+
+  const rows = filtered.map((e) => ({
+    id: e.id,
+    ts: e.recorded.toISOString(),
+    user: (e.agent as any)?.email ?? e.agentId,
+    role: (e.agent as any)?.role ?? "—",
+    action: e.action,
+    outcome: e.outcome,
+    entityType: e.entityType ?? "—",
+    entityId: e.entityId ?? "—",
+    detail: JSON.stringify(e.detail ?? {}),
+  }));
+
+  const entityTypes = [...new Set(events.map((e) => e.entityType).filter(Boolean))];
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <PageHeader title="Audit Log" subtitle="Recent system events and administrator actions." />   
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <PageHeader
+        title="PHIPA Audit Log"
+        subtitle={`${rows.length} events shown. All PHI access is logged immutably per PHIPA §12.`}
+      />
       <Card>
-
-        <AuditTableClient rows={mockEvents} />
+        <AuditTableClient
+          rows={rows}
+          entityTypes={entityTypes as string[]}
+          currentFilter={entityType}
+        />
       </Card>
     </div>
   );

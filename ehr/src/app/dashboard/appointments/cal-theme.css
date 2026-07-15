@@ -1,0 +1,83 @@
+.cal-theme {
+  /* Cal.com-inspired scoped design tokens (MRD) */
+  --cal-primary: #111111; /* primary action / headings */
+  --cal-bg: #F9FAFB; /* page background */
+  --cal-card: #FFFFFF; /* card background */
+  --cal-avatar: #0088CC; /* avatar blue */
+  --cal-avatar-text: #FFFFFF;
+  --cal-duration-badge-bg: #F3F4F6;
+  --cal-duration-badge-text: #374151;
+  --cal-selected-date-bg: #1F2937;
+  --cal-available-date-bg: #E5E7EB;
+  --cal-success: #10B981;
+  --cal-border: #E5E7EB;
+  --cal-timeslot-border: #D1D5DB;
+  --cal-host-badge-bg: #EFF6FF;
+  --cal-host-badge-text: #2563EB;
+
+  /* Reuse global radii/shadows where available */
+}
+
+.cal-theme .cal-card {
+  background: var(--cal-card);
+  border: 1px solid var(--cal-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.cal-theme .cal-avatar {
+  background: var(--cal-avatar);
+  color: var(--cal-avatar-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.cal-theme .cal-primary-btn {
+  background: var(--cal-primary);
+  color: var(--cal-card);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.cal-theme .cal-secondary-btn {
+  background: var(--cal-card);
+  color: var(--cal-primary);
+  border: 1px solid var(--cal-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.cal-theme .cal-selected-date {
+  background: var(--cal-selected-date-bg);
+  color: #ffffff;
+}
+
+.cal-theme .cal-available-date {
+  background: var(--cal-available-date-bg);
+  color: var(--cal-primary);
+}
+
+.cal-theme .cal-success {
+  background: var(--cal-success);
+  color: #fff;
+}
+
+.cal-theme .cal-host-badge {
+  background: var(--cal-host-badge-bg);
+  color: var(--cal-host-badge-text);
+  padding: 4px 8px;
+  border-radius: 8px;
+  display: inline-block;
+  font-weight: 600;
+}
+
+/* Small utility classes used by the booking component */
+.cal-theme .cal-primary-text { color: var(--cal-primary); }
+.cal-theme .cal-muted-text { color: #6B7280; }
+.cal-theme .cal-available-date { background: var(--cal-available-date-bg); color: var(--cal-primary); }
+.cal-theme .cal-bg { background: var(--cal-bg); }
+.cal-theme .cal-link { color: var(--cal-avatar); }
+
+.cal-theme .cal-avatar { /* ensure size helpers remain functional */ }

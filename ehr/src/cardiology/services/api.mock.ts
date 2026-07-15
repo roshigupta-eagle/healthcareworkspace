@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Mock Cardiology API Service
  *
  * Development-friendly mock implementation of the cardiology practice API.
@@ -111,7 +111,82 @@ const mockVisits: CardiovascularVisit[] = [
       recordedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
       recordedBy: 'Nurse Patel',
     },
+    vitalsHistory: [
+      {
+        temperatureC: 37.1,
+        bpSystolic: 152,
+        bpDiastolic: 88,
+        heartRateBpm: 98,
+        respirationRate: 18,
+        oxygenSaturationPercent: 98,
+        recordedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        recordedBy: 'Nurse Patel',
+      },
+      {
+        temperatureC: 36.9,
+        bpSystolic: 148,
+        bpDiastolic: 84,
+        heartRateBpm: 92,
+        respirationRate: 18,
+        oxygenSaturationPercent: 98,
+        recordedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        recordedBy: 'Nurse Patel',
+      },
+    ],
+    carePlan: {
+      symptoms: ['Chest pain on exertion', 'Shortness of breath'],
+      diagnosis: 'Suspected unstable angina',
+      nextSteps: 'ECG, troponins, urgent cardiology review',
+      recommendedProcedure: 'Coronary angiography',
+      medications: ['Aspirin 81 mg daily', 'Nitroglycerin 0.4 mg PRN'],
+      followUpAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    },
     notes: 'Patient reports 3 days of substernal chest pain, worse with exertion',
+    patientContact: {
+      phone: '555-123-4567',
+      email: 'john.smith@example.com',
+      address: '123 Main St, Anytown, ON',
+    },
+    emergencyContacts: [
+      {
+        id: 'ec-001',
+        name: 'Jane Smith',
+        relationship: 'Spouse',
+        phone: '555-765-4321',
+        altPhone: '555-333-2222',
+        email: 'jane.smith@example.com',
+      },
+    ],
+    allergies: [
+      { id: 'alg-001', substance: 'Penicillin', category: 'medication', severity: 'severe', reaction: 'Anaphylaxis', notes: 'Carries EpiPen', recordedAt: '2010-04-10' },
+      { id: 'alg-002', substance: 'Peanuts', category: 'food', severity: 'moderate', reaction: 'Hives', recordedAt: '2002-06-20' },
+    ],
+    chronicConditions: [
+      { id: 'cond-001', name: 'Hypertension', diagnosisDate: '2010-03-01', status: 'active', notes: 'Controlled with medication' },
+      { id: 'cond-002', name: 'Hyperlipidemia', diagnosisDate: '2015-06-12', status: 'active' },
+    ],
+    medicationsHistory: [
+      { id: 'med-001', name: 'Aspirin', dosage: '81 mg', frequency: 'daily', prescribingPhysician: 'Dr. Chen', startDate: '2019-01-01', purpose: 'Antiplatelet', refillStatus: 'auto-refill' },
+      { id: 'med-002', name: 'Nitroglycerin', dosage: '0.4 mg', frequency: 'PRN', prescribingPhysician: 'Dr. Chen', startDate: '2024-06-01', purpose: 'Chest pain relief' },
+    ],
+    immunizations: [
+      { id: 'imm-001', vaccine: 'Influenza', date: '2023-10-01', provider: 'Community Clinic', nextDue: '2024-10-01' },
+      { id: 'imm-002', vaccine: 'COVID-19 (bivalent)', date: '2024-03-05', provider: 'Hospital' },
+    ],
+    labResults: [
+      { id: 'lab-001', testName: 'Troponin I', date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), summary: 'Elevated', interpretation: 'Suggestive of myocardial injury' },
+      { id: 'lab-002', testName: 'ECG (12-lead)', date: new Date(Date.now() - 60 * 60 * 1000).toISOString(), summary: 'ST depressions lateral leads', interpretation: 'Ischemic changes, correlate clinically' },
+    ],
+    medicalDocuments: [
+      { id: 'doc-001', name: 'ED Discharge Summary', type: 'discharge-summary', url: '/docs/ed-discharge-visit-001.pdf', uploadedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
+      { id: 'doc-002', name: 'Referral Letter', type: 'referral', url: '/docs/referral-visit-001.pdf', uploadedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() },
+    ],
+    visitHistory: [
+      { id: 'visit-000A', visitDate: '2024-02-10', provider: 'Dr. Chen', reason: 'Hypertension follow-up', diagnosis: 'Hypertension', treatments: ['Medication adjustment'], medications: ['Atenolol 50 mg daily'], notes: 'BP improved' },
+      { id: 'visit-000B', visitDate: '2023-08-21', provider: 'Dr. Lee', reason: 'Chest pain (non-cardiac)', diagnosis: 'GERD', treatments: ['Lifestyle'], notes: 'Reassurance given' },
+    ],
+    overallHealth: 'Fair — active cardiovascular disease under management',
+    currentAlertStatus: 'Urgent',
   },
   {
     id: 'visit-002',
@@ -136,6 +211,13 @@ const mockVisits: CardiovascularVisit[] = [
       oxygenSaturationPercent: 99,
       recordedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
       recordedBy: 'Nurse Patel',
+    },
+    carePlan: {
+      symptoms: ['Follow-up after MI'],
+      diagnosis: 'Post-MI follow-up',
+      nextSteps: 'Medication review, stress test if indicated',
+      medications: ['Atorvastatin 40 mg nightly', 'Clopidogrel 75 mg daily'],
+      followUpAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     },
   },
   {
@@ -203,6 +285,13 @@ const mockVisits: CardiovascularVisit[] = [
       oxygenSaturationPercent: 97,
       recordedAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
       recordedBy: 'Nurse Patel',
+    },
+    carePlan: {
+      symptoms: ['Palpitations', 'Dizziness'],
+      diagnosis: 'Atrial fibrillation',
+      nextSteps: 'Rate control and anticoagulation assessment',
+      medications: ['Metoprolol 50 mg twice daily', 'Apixaban 5 mg daily'],
+      followUpAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
     },
   },
 ];
@@ -511,6 +600,8 @@ export async function recordVitals(visitId: string, vitals: VitalSigns): Promise
   const visit = mockVisits.find((v) => v.id === visitId);
   if (visit) {
     visit.vitals = vitals;
+    if (!visit.vitalsHistory) visit.vitalsHistory = [];
+    visit.vitalsHistory.push(vitals);
   }
 }
 

@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { mockVisits } from '@/cardiology/services/api.mock';
+import EncounterCard from '@/components/EncounterCard';
 
 export default async function EncountersPage() {
   const session = await auth();
@@ -25,22 +26,9 @@ export default async function EncountersPage() {
         </div>
       </div>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {visits.map((enc: any) => (
-          <div key={enc.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">{enc.arrivedAt ? new Date(enc.arrivedAt).toLocaleString() : ''} • {enc.chiefComplaint || ''}</p>
-              <p className="mt-1 font-medium text-gray-900">{enc.patientName || enc.patient || 'Unknown'}</p>
-            </div>
-            <div className="text-right">
-              <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${enc.currentState === 'DISCHARGED' || enc.currentState === 'CLOSED' ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-800'}`}>
-                {enc.currentState || enc.status || 'Open'}
-              </span>
-              <div className="mt-3">
-                <Link href={`/dashboard/encounters/${enc.id}`} className="text-sky-600 hover:underline text-sm">View</Link>
-              </div>
-            </div>
-          </div>
+          <EncounterCard key={enc.id} encounter={enc} />
         ))}
       </div>
     </div>

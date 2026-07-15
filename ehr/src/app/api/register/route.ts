@@ -1,78 +1,104 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { randomUUID } from 'crypto';
-import { addDevUser, findDevUserByEmail } from '@/lib/devAuthStore';
+import { randomUUID } from "crypto";
+import { addDevUser, findDevUserByEmail } from "@/lib/devAuthStore";
 
+// ─── Simple in-process rate limiter (EPIC-SEC-02) ─────────────────────────
+const attempts = new Map<string, { count: number; resetAt: number }>();
+const WINDOW_MS = 60_000; // 1 minute
+const MAX_ATTEMPTS = 5;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const rec = attempts.get(ip);
+  if (!rec || now > rec.resetAt) {
+    attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+    return true;
+  }
+  if (rec.count >= MAX_ATTEMPTS) return false;
+  rec.count++;
+  return true;
+}
+
+// ─── Validation schema — role is NOT accepted from client (EPIC-SEC-02) ────
 const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().min(1),
-  role: z.enum(["ADMIN", "DOCTOR", "PATIENT"]),
+  password: z
+    .string()
+    .min(12, "Password must be at least 12 characters")
+    .regex(/[A-Z]/, "Must contain an uppercase letter")
+    .regex(/[0-9]/, "Must contain a number")
+    .regex(/[^A-Za-z0-9]/, "Must contain a special character"),
+  name: z.string().min(1).max(100),
+  // role field is intentionally ignored — server always sets PENDING
 });
 
 export async function POST(req: Request) {
+  // Rate limiting
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json(
+      { error: "Too many registration attempts. Please wait and try again." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await req.json();
-    const { email, password, name, role } = registerSchema.parse(body);
-    // Try DB first; on connection issues, fall back to an in-memory dev store
+    const { email, password, name } = registerSchema.parse(body);
+
+    const passwordHash = await hash(password, 12);
+
     try {
       const existingUser = await prisma.user.findUnique({ where: { email } });
       if (existingUser) {
-        return NextResponse.json({ error: "User already exists" }, { status: 409 });
+        return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
       }
-
-      const passwordHash = await hash(password, 12);
 
       const user = await prisma.user.create({
-        data: { email, passwordHash, name, role },
+        // EPIC-SEC-02: role is always PENDING — admin must approve
+        data: { email, passwordHash, name, role: "PENDING" as any },
       });
 
-      return NextResponse.json({ message: "User created", userId: user.id }, { status: 201 });
+      return NextResponse.json(
+        { message: "Account created. An administrator will review and activate your account.", userId: user.id },
+        { status: 201 }
+      );
     } catch (dbErr) {
-      // If we're in production, bubble up the DB error
-      if (process.env.NODE_ENV === 'production') throw dbErr;
+      if (process.env.NODE_ENV === "production") throw dbErr;
 
-      // Dev fallback: use in-memory store
-      const existingDev = findDevUserByEmail(email);
+      const normalized = email.trim().toLowerCase();
+      const existingDev = findDevUserByEmail(normalized);
       if (existingDev) {
-        return NextResponse.json({ error: 'User already exists (dev)' }, { status: 409 });
+        return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
       }
 
-      const passwordHash = await hash(password, 12);
       const id = randomUUID();
-      const normalizedEmail = email.trim().toLowerCase();
-      addDevUser({ id, email: normalizedEmail, passwordHash, name, role });
-
-      // Debug: log created dev user
+      addDevUser({ id, email: normalized, passwordHash, name, role: "PENDING" });
       // eslint-disable-next-line no-console
-      console.log('[register] created dev user (dev):', { id, email: normalizedEmail, name, role });
-
-      return NextResponse.json({ message: 'User created (dev)', userId: id }, { status: 201 });
+      console.log("[register] created dev user (PENDING):", { id, email: normalized, name });
+      return NextResponse.json(
+        { message: "Account created (dev). Pending admin approval.", userId: id },
+        { status: 201 }
+      );
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid input", details: error.issues },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid input", details: error.issues }, { status: 400 });
     }
-
-    // Log the actual error server-side for debugging
-    // and include the message/stack in responses when not in production
-    // so the client can show actionable info during development.
-    // Do NOT expose stacks in production.
     // eslint-disable-next-line no-console
     console.error("/api/register error:", error);
-
     if (process.env.NODE_ENV !== "production") {
       return NextResponse.json(
-        { error: "Internal server error", message: (error as Error)?.message, stack: (error as Error)?.stack },
+        { error: "Internal server error", message: (error as Error)?.message },
         { status: 500 }
       );
     }
-
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

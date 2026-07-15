@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cardiology Practice Domain Types
  *
  * FHIR-aligned interfaces for the cardiology workflow simulator.
@@ -152,9 +152,124 @@ export interface CardiovascularVisit {
     diagnosis?: string;
     nextSteps?: string;
     recommendedProcedure?: string;
+    medications?: string[];
+    followUpAt?: string;
   };
   proceduresOrdered?: CardiovascularProcedure[];
   vitals?: VitalSigns;
+
+  // Extended optional fields for patient profile pages
+  patientContact?: {
+    phone?: string;
+    email?: string;
+    address?: string;
+  };
+  emergencyContacts?: EmergencyContact[];
+  allergies?: AllergyRecord[];
+  chronicConditions?: ConditionRecord[];
+  medicationsHistory?: MedicationRecord[];
+  immunizations?: ImmunizationRecord[];
+  labResults?: LabResult[];
+  vitalsHistory?: VitalSigns[];
+  injuries?: InjuryRecord[];
+  medicalDocuments?: DocumentRecord[];
+  visitHistory?: VisitHistoryRecord[];
+  overallHealth?: string;
+  currentAlertStatus?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Profile helper records
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AllergyRecord {
+  id?: string;
+  substance: string;
+  category?: 'medication' | 'food' | 'environment' | 'other';
+  severity?: 'mild' | 'moderate' | 'severe' | 'life-threatening' | string;
+  reaction?: string;
+  notes?: string;
+  recordedAt?: string;
+}
+
+export interface ConditionRecord {
+  id?: string;
+  name: string;
+  diagnosisDate?: string;
+  status?: string; // e.g., 'active', 'resolved', 'controlled'
+  notes?: string;
+}
+
+export interface MedicationRecord {
+  id?: string;
+  name: string;
+  dosage?: string;
+  frequency?: string;
+  prescribingPhysician?: string;
+  startDate?: string;
+  endDate?: string;
+  purpose?: string;
+  refillStatus?: string;
+  sideEffects?: string[];
+}
+
+export interface ImmunizationRecord {
+  id?: string;
+  vaccine: string;
+  date?: string;
+  lot?: string;
+  provider?: string;
+  nextDue?: string;
+}
+
+export interface LabResult {
+  id?: string;
+  testName: string;
+  date?: string;
+  summary?: string;
+  values?: Record<string, any>;
+  interpretation?: string;
+  critical?: boolean;
+}
+
+export interface InjuryRecord {
+  id?: string;
+  type: string;
+  bodyArea?: string;
+  severity?: string;
+  dateOfInjury?: string;
+  treatment?: string;
+  recoveryStatus?: string;
+  rehabNotes?: string;
+}
+
+export interface DocumentRecord {
+  id?: string;
+  name: string;
+  type?: string;
+  url?: string;
+  uploadedAt?: string;
+  description?: string;
+}
+
+export interface EmergencyContact {
+  id?: string;
+  name: string;
+  relationship?: string;
+  phone?: string;
+  altPhone?: string;
+  email?: string;
+}
+
+export interface VisitHistoryRecord {
+  id: string;
+  visitDate?: string;
+  provider?: string;
+  reason?: string;
+  diagnosis?: string;
+  treatments?: string[];
+  medications?: string[];
+  notes?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

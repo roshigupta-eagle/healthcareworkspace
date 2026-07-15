@@ -1,40 +1,75 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { getAllMockUsers } from '@/cardiology/services/api.mock';
+import { getMockPatients } from './mockPatients';
+import PatientCard from '@/components/PatientCard';
 
-export default async function RecordsPage() {
-  const session = await auth();
+export default async function RecordsPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
+  let session: any = null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    session = await auth();
+  } catch (e) {
+    // ignore — allow dev previews
+  }
+
+  // Support dev override via ?asUser=USER_ID (only outside production)
+  if (!session && searchParams && searchParams.asUser && process.env.NODE_ENV !== 'production') {
+    const override = Array.isArray(searchParams.asUser) ? searchParams.asUser[0] : searchParams.asUser;
+    const all = getAllMockUsers();
+    if (override && all[override]) {
+      session = { user: { id: override, name: all[override].name, role: all[override].role } };
+    }
+  }
+
   if (!session) redirect('/login');
 
-  const records = [
-    { id: 'r1', date: '2026-06-01', type: 'Lab Result', summary: 'CBC — Normal' },
-    { id: 'r2', date: '2026-05-20', type: 'Allergy', summary: 'Penicillin — Rash' },
-    { id: 'r3', date: '2026-04-15', type: 'Medication', summary: 'Atorvastatin 20mg — Ongoing' },
-  ];
+  const patients = getMockPatients();
+
+  const totalPatients = patients.length;
+  const upcomingAppointments = patients.reduce((acc, p) => acc + (p.upcoming?.length || 0), 0);
+  const pendingLabs = patients.reduce((acc, p) => acc + (p.tests?.filter((t: any) => t.status === 'Pending').length || 0), 0);
+  const criticalList = ['Hypertension', 'Type 2 Diabetes', 'Heart Failure', 'CAD', 'Asthma', 'Hyperlipidemia'];
+  const criticalAlerts = patients.reduce((acc, p) => acc + ((p.conditions || []).some((c: string) => criticalList.includes(c)) ? 1 : 0), 0);
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto px-6 py-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-sky-600">Health Records</h1>
-          <p className="mt-1 text-sm text-gray-600">Your medical history, allergies, medications and results.</p>
+          <h1 className="text-3xl font-bold text-teal-700">Health Records</h1>
+          <p className="mt-2 text-base text-gray-600">Manage and view comprehensive patient health profiles.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <input placeholder="Search patients" className="px-4 py-2 border rounded-lg w-80 border-gray-200" />
+          <Link href="/dashboard/records/new" className="inline-flex items-center gap-2 rounded-md bg-teal-700 text-white px-4 py-2 text-sm font-semibold shadow-sm hover:bg-teal-600">New Record</Link>
         </div>
       </div>
 
-      <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-        <ul role="list" className="divide-y divide-gray-100">
-          {records.map((r) => (
-            <li key={r.id} className="px-4 py-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-900">{r.type}</p>
-                <p className="mt-1 text-sm text-gray-500">{r.summary}</p>
-              </div>
-              <div className="text-sm text-gray-500">
-                <p>{r.date}</p>
-                <a className="mt-2 inline-block text-sky-600 hover:underline" href="#">View</a>
-              </div>
-            </li>
-          ))}
-        </ul>
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="text-sm text-gray-500">Patients</div>
+          <div className="mt-1 text-2xl font-bold text-teal-700">{totalPatients}</div>
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="text-sm text-gray-500">Upcoming Appointments</div>
+          <div className="mt-1 text-2xl font-bold text-indigo-600">{upcomingAppointments}</div>
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="text-sm text-gray-500">Pending Labs</div>
+          <div className="mt-1 text-2xl font-bold text-amber-600">{pendingLabs}</div>
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="text-sm text-gray-500">Critical Alerts</div>
+          <div className="mt-1 text-2xl font-bold text-red-600">{criticalAlerts}</div>
+        </div>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {patients.map((p) => (
+          <PatientCard key={p.id} patient={p} />
+        ))}
       </div>
     </div>
   );

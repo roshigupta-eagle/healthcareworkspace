@@ -1,0 +1,71 @@
+﻿{
+  "common": {
+    "loading": "Chargement en cours...",
+    "error": "Une erreur est survenue",
+    "save": "Sauvegarder",
+    "cancel": "Annuler",
+    "back": "Retour",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "submit": "Soumettre",
+    "search": "Rechercher",
+    "notFound": "Introuvable",
+    "required": "Ce champ est requis"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "healthRecords": "Dossiers de santé",
+    "scheduling": "Prise de rendez-vous",
+    "labResults": "Résultats de laboratoire",
+    "prescriptions": "Ordonnances",
+    "admin": "Administration",
+    "signOut": "Se déconnecter"
+  },
+  "auth": {
+    "login": "Se connecter",
+    "register": "Créer un compte",
+    "email": "Adresse courriel",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié?",
+    "noAccount": "Vous n'\''avez pas de compte?",
+    "pending": "Compte en attente d'\''approbation",
+    "pendingMessage": "Votre compte est en attente d'\''approbation par un administrateur."
+  },
+  "patient": {
+    "healthCard": "Numéro de carte santé",
+    "dateOfBirth": "Date de naissance",
+    "conditions": "Conditions",
+    "medications": "Médicaments",
+    "allergies": "Allergies",
+    "vitals": "Signes vitaux",
+    "appointments": "Rendez-vous"
+  },
+  "clinical": {
+    "ctas1": "Réanimation",
+    "ctas2": "Urgence",
+    "ctas3": "Urgent",
+    "ctas4": "Moins urgent",
+    "ctas5": "Non urgent",
+    "soap": "Note SOAP",
+    "subjective": "Subjectif",
+    "objective": "Objectif",
+    "assessment": "Évaluation",
+    "plan": "Plan"
+  },
+  "lab": {
+    "ordered": "Commandé",
+    "inProgress": "En cours",
+    "completed": "Terminé",
+    "critical": "CRITIQUE",
+    "orderLab": "Commander un test de laboratoire",
+    "results": "Résultats"
+  },
+  "pharmacy": {
+    "prescription": "Ordonnance",
+    "dispense": "Dispensation",
+    "activeRx": "Ordonnances actives",
+    "durAlert": "Alerte d'\''examen d'\''utilisation des médicaments",
+    "hardStop": "Arrêt obligatoire — Ne pas dispenser",
+    "softStop": "Avertissement — Justification requise"
+  }
+}

@@ -1,0 +1,71 @@
+﻿{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "edit": "Edit",
+    "delete": "Delete",
+    "submit": "Submit",
+    "search": "Search",
+    "notFound": "Not found",
+    "required": "This field is required"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "healthRecords": "Health Records",
+    "scheduling": "Scheduling",
+    "labResults": "Lab Results",
+    "prescriptions": "Prescriptions",
+    "admin": "Administration",
+    "signOut": "Sign Out"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Create Account",
+    "email": "Email address",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don'\''t have an account?",
+    "pending": "Account Pending Review",
+    "pendingMessage": "Your account is awaiting administrator approval."
+  },
+  "patient": {
+    "healthCard": "Health Card Number",
+    "dateOfBirth": "Date of Birth",
+    "conditions": "Conditions",
+    "medications": "Medications",
+    "allergies": "Allergies",
+    "vitals": "Vital Signs",
+    "appointments": "Appointments"
+  },
+  "clinical": {
+    "ctas1": "Resuscitation",
+    "ctas2": "Emergent",
+    "ctas3": "Urgent",
+    "ctas4": "Less Urgent",
+    "ctas5": "Non-Urgent",
+    "soap": "SOAP Note",
+    "subjective": "Subjective",
+    "objective": "Objective",
+    "assessment": "Assessment",
+    "plan": "Plan"
+  },
+  "lab": {
+    "ordered": "Ordered",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "critical": "CRITICAL",
+    "orderLab": "Order Lab Test",
+    "results": "Results"
+  },
+  "pharmacy": {
+    "prescription": "Prescription",
+    "dispense": "Dispense",
+    "activeRx": "Active Prescriptions",
+    "durAlert": "Drug Utilization Review Alert",
+    "hardStop": "Hard Stop — Do Not Dispense",
+    "softStop": "Soft Stop — Override Required"
+  }
+}

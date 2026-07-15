@@ -453,3 +453,70 @@ body.dark a {
 }
 
 
+/* ===== Appointment layout helpers (appended) =====
+   Purpose: prevent horizontal overflow, unify spacing, and add subtle
+   transitions / radius for a polished UI.
+   Applied to appointment dashboard components.
+*/
+
+/* Ensure media never overflows their container */
+img, svg, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Make the main app container politely prevent horizontal overflow */
+main#main-content, html, body, #__next {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Prevent accidental horizontal scroll due to long words/content */
+.truncate-break {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* Soft, global interactive transitions for small UI elements */
+button, a, input, select, textarea {
+  transition: background-color 200ms var(--ease-in-out), color 200ms var(--ease-in-out), border-color 200ms var(--ease-in-out), box-shadow 200ms var(--ease-in-out), transform 200ms var(--ease-in-out);
+}
+
+/* Reusable card helper for consistent radius/shadow */
+.card-surface {
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  background-color: var(--color-surface-raised);
+}
+
+/* Keep selects and form controls constrained */
+input, select, textarea, button {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Mobile-friendly horizontal chip scroller (used for status chips)
+   keeps chips from wrapping and avoids tall stacks on small screens */
+.chips-scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.25rem;
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+}
+.chips-scroll > * { flex-shrink: 0; }
+
+/* Tiny visual polish when hovering cards */
+.card-hover-raise:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Reduce potential scrollbars on small screens for the dashboard */
+@media (max-width: 640px) {
+  .page-transition * { transition: none !important; }
+}
