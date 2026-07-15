@@ -1,87 +1,74 @@
-"use client";
+﻿import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth';
+import { getPatientById, getMockPatients } from '../../records/mockPatients';
+import EncounterEditor from '@/components/EncounterEditor';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-
-export default function NewEncounterPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    const form = new FormData(e.currentTarget);
-    const patientName = (form.get('patientName') as string) || '';
-    const patientDOB = (form.get('patientDOB') as string) || '';
-    const mrn = (form.get('mrn') as string) || '';
-    const chiefComplaint = (form.get('chiefComplaint') as string) || '';
-    const priority = (form.get('priority') as string) || '';
-
-    try {
-      const res = await fetch('/api/cardiology/visits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientName, patientDOB, mrn, chiefComplaint, priority }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data?.error || 'Failed to create encounter');
-        setLoading(false);
-        return;
-      }
-
-      // Navigate back to encounters list which will fetch fresh data
-      router.push('/dashboard/encounters');
-    } catch (err) {
-      setError('Failed to create encounter');
-      setLoading(false);
-    }
+export default async function NewEncounterPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
+  let session: any = null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    session = await auth();
+  } catch (e) {
+    // allow dev preview
   }
+  if (!session) redirect('/login');
+
+  const qRaw = searchParams?.patientId;
+  const patientId = Array.isArray(qRaw) ? qRaw[0] : qRaw;
+  const patient = patientId ? getPatientById(String(patientId)) : null;
+  const patients = getMockPatients();
 
   return (
-    <main className="max-w-3xl">
-      <h2 className="text-2xl font-bold text-sky-600 mb-4">New Encounter</h2>
-      {error && <div className="p-3 mb-4 bg-red-50 text-red-700 rounded-md">{error}</div>}
+    <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="mb-4">
+        <Link href="/dashboard/records" className="text-sm text-teal-600 hover:underline">← Back to Records</Link>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-lg shadow-sm">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Patient name</label>
-          <input name="patientName" className="mt-1 block w-full rounded-md border px-3 py-2" required />
-        </div>
+      {patient ? (
+        <EncounterEditor patient={patient} />
+      ) : (
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h1 className="text-2xl font-bold text-gray-900">New Encounter</h1>
+          <p className="mt-2 text-sm text-gray-600">Select a patient to start an encounter, or pick a recent patient.</p>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Date of birth</label>
-          <input name="patientDOB" type="date" className="mt-1 block w-full rounded-md border px-3 py-2" />
-        </div>
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {patients.map((p: any) => (
+              <div key={p.id} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:shadow-md flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">{p.name}</div>
+                      <div className="mt-1 text-sm text-gray-500">{p.age} yrs • {p.gender} • MRN: {p.mrn}</div>
+                      <div className="mt-3 text-sm text-gray-700 flex flex-wrap gap-2">
+                        {(p.conditions || []).slice(0,3).map((c: string) => (
+                          <span key={c} className="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">{c}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500 text-right">
+                      <div>Last seen</div>
+                      <div className="font-medium text-gray-900 mt-1">{p.lastVisit || '—'}</div>
+                    </div>
+                  </div>
+                </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">MRN</label>
-          <input name="mrn" className="mt-1 block w-full rounded-md border px-3 py-2" />
-        </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <Link href={`/dashboard/records/${p.id}`} className="text-sm text-gray-500 hover:underline">View record</Link>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Chief complaint</label>
-          <textarea name="chiefComplaint" className="mt-1 block w-full rounded-md border px-3 py-2" />
+                  <Link href={`/dashboard/encounters/new?patientId=${p.id}`} className="inline-flex items-center gap-2 rounded-md bg-teal-700 text-white px-4 py-2 text-sm font-semibold shadow-sm hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6M9 16h6M9 8h6M5 6h14v12H5z" />
+                    </svg>
+                    <span>Start Encounter</span>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Priority</label>
-          <select name="priority" defaultValue="NORMAL" className="mt-1 block w-full rounded-md border px-3 py-2">
-            <option value="NORMAL">Normal</option>
-            <option value="HIGH">High</option>
-            <option value="URGENT">Urgent</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button type="submit" disabled={loading} className="rounded-md bg-sky-600 text-white px-4 py-2">{loading ? 'Creating...' : 'Create Encounter'}</button>
-          <button type="button" onClick={() => router.back()} className="rounded-md border px-4 py-2">Cancel</button>
-        </div>
-      </form>
-    </main>
+      )}
+    </div>
   );
 }
