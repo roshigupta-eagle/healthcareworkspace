@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth';
+﻿import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getAllMockUsers } from '@/cardiology/services/api.mock';
@@ -6,6 +6,8 @@ import { getMockPatients } from './mockPatients';
 import PatientCard from '@/components/PatientCard';
 
 export default async function RecordsPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
+  const sp = await (searchParams as any);
+
   let session: any = null;
   try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -16,8 +18,8 @@ export default async function RecordsPage({ searchParams }: { searchParams?: Rec
   }
 
   // Support dev override via ?asUser=USER_ID (only outside production)
-  if (!session && searchParams && searchParams.asUser && process.env.NODE_ENV !== 'production') {
-    const override = Array.isArray(searchParams.asUser) ? searchParams.asUser[0] : searchParams.asUser;
+  if (!session && sp && sp.asUser && process.env.NODE_ENV !== 'production') {
+    const override = Array.isArray(sp.asUser) ? sp.asUser[0] : sp.asUser;
     const all = getAllMockUsers();
     if (override && all[override]) {
       session = { user: { id: override, name: all[override].name, role: all[override].role } };
@@ -26,7 +28,10 @@ export default async function RecordsPage({ searchParams }: { searchParams?: Rec
 
   if (!session) redirect('/login');
 
-  const patients = getMockPatients();
+  const qRaw = sp?.q;
+  const q = Array.isArray(qRaw) ? qRaw[0] : (qRaw || '');
+  const allPatients = getMockPatients();
+  const patients = q && String(q).trim() !== '' ? allPatients.filter((p) => ((p.name || '').toLowerCase().includes(String(q).toLowerCase()) || (p.mrn || '').includes(String(q)))) : allPatients;
 
   const totalPatients = patients.length;
   const upcomingAppointments = patients.reduce((acc, p) => acc + (p.upcoming?.length || 0), 0);
@@ -42,7 +47,10 @@ export default async function RecordsPage({ searchParams }: { searchParams?: Rec
           <p className="mt-2 text-base text-gray-600">Manage and view comprehensive patient health profiles.</p>
         </div>
         <div className="flex items-center gap-3">
-          <input placeholder="Search patients" className="px-4 py-2 border rounded-lg w-80 border-gray-200" />
+          <form method="get" className="flex items-center gap-3">
+            <input name="q" defaultValue={q as string} placeholder="Search patients or MRN" className="px-4 py-2 border rounded-lg w-80 border-gray-200" />
+            <button type="submit" className="inline-flex items-center gap-2 rounded-md bg-white border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">Search</button>
+          </form>
           <Link href="/dashboard/records/new" className="inline-flex items-center gap-2 rounded-md bg-teal-700 text-white px-4 py-2 text-sm font-semibold shadow-sm hover:bg-teal-600">New Record</Link>
         </div>
       </div>
