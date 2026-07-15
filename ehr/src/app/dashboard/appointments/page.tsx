@@ -1,9 +1,7 @@
 ﻿import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { fetchAppointments, fetchSlots, providers, locations } from '@/scheduling/services/scheduling.mock';
-import { getCurrentUser } from '@/cardiology/services/api.mock';
-
-export default async function AppointmentsPage() {
+\nimport HashBookingRedirectClient from './HashBookingRedirectClient';\nexport default async function AppointmentsPage() {
   const session = await auth();
   if (!session) redirect('/login');
   const role = session.user?.role ?? 'PATIENT';
@@ -28,7 +26,7 @@ export default async function AppointmentsPage() {
     .sort((a,b) => new Date(a.start).getTime() - new Date(b.start).getTime())
     .slice(0, 8);
 
-  return (
+  \n    <HashBookingRedirectClient />\n
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
@@ -112,3 +110,4 @@ export default async function AppointmentsPage() {
     </div>
   );
 }
+
