@@ -15,6 +15,9 @@ export default auth((req) => {
     if (req.nextUrl.searchParams.get("playwright") === "1") return NextResponse.next();
     // Dev preview shortcut: allow ?asUser=USER_ID to bypass auth for local testing
     if (req.nextUrl.searchParams.get("asUser")) return NextResponse.next();
+    // Dev: allow specific dashboard preview routes without query param
+    const devAllowed = ["/dashboard/encounters", "/dashboard/appointments", "/dashboard/records", "/dashboard"];
+    if (devAllowed.some((r) => req.nextUrl.pathname.startsWith(r))) return NextResponse.next();
   }
 
   // Must be authenticated
