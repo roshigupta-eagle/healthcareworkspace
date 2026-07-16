@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 /**
  * Layer 4 — Clinical Pattern: PatientBanner
@@ -155,12 +155,15 @@ export const PatientBanner: React.FC<PatientBannerProps> = ({
 
       {/* ── 2. PATIENT NAME + DEMOGRAPHICS ── */}
       <div className="flex flex-col min-w-0">
-        <span className="text-base font-bold text-neutral-900 leading-tight">
+        <span className="text-lg font-extrabold text-teal-700 leading-tight tracking-tight">
           {lastName.toUpperCase()}, {firstName}
         </span>
-        <span className="text-xs text-neutral-500 mt-0.5">
-          DOB: {formatDOB(dateOfBirth)} &bull; Age {age} &bull; {sex}
-        </span>
+
+        <div className="mt-1 flex items-center gap-2 text-sm">
+          <span className="text-sm text-teal-700 font-semibold">DOB: {formatDOB(dateOfBirth)}</span>
+          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-medium">Age {age}</span>
+          <span className="px-2 py-0.5 rounded-full bg-sky-50 text-sky-800 text-xs font-medium">{sex}</span>
+        </div>
       </div>
 
       {/* ── 3. ISOLATION PRECAUTIONS ── */}

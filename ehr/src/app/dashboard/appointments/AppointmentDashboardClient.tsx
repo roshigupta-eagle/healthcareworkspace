@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import React, { useEffect, useMemo, useState } from 'react';
+import react, { useEffect, useMemo, useState } from 'react';
 import { getPatientById } from '@/app/dashboard/records/mockPatients';
 
 type Props = {

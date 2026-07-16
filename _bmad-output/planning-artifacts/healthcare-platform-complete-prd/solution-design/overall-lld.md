@@ -25,6 +25,7 @@
 13. [Data Flow Diagrams](#13-data-flow-diagrams)
 14. [Security Controls Checklist](#14-security-controls-checklist)
 15. [Known Gaps & Priority Work Items](#15-known-gaps--priority-work-items)
+16. [Epic-Level HLD & LLD](#16-epic-level-hld--lld)
 
 ---
 
@@ -1218,6 +1219,520 @@ LifeLabs                    FHIR :8081                   EHR
 | GAP-053 | Temporal workflow engine (long-running clinical processes) | All | XL |
 | GAP-054 | AI-assisted clinical documentation | EHR | XL |
 
+## 16. Epic-Level HLD & LLD
+
+This section maps the 12 epics / 175 stories in `../implementation/epics.md` onto concrete High-Level Design (HLD: components, data flow, dependencies, decisions) and Low-Level Design (LLD: API contracts, data model, FHIR resources, sequence flow, validation, RBAC) so that implementation is consistent across agents and sprints. Story IDs (e.g. TR-001) trace back to `../definition/prd.md`.
+
+### 16.1 Epic 1 — Triage Nurse: Assessment & Intake Workflows (Stories 1.1–1.16)
+
+**HLD**
+```
+Triage Nurse -> EHR Triage UI (Next.js /app/triage) -> FHIR Server :8081 (Observation/Condition/AllergyIntolerance/Encounter)
+                                                              -> PostgreSQL fhir_dev
+                                                              -> Redis pub/sub "triage.queue.updated" -> WebSocket Gateway -> Nursing/Charge dashboards
+```
+- Responsibilities: EHR owns triage UI/form validation; FHIR server owns clinical resource persistence and versioning; Redis/WebSocket gateway (CC-001) owns real-time queue fan-out.
+- Dependencies: CC-001 (real-time push), CC-003 (patient FHIR record must exist before triage), AD-001/CC-015 (audit every write).
+- Key decisions: CTAS stored as both Observation (LOINC 74033-4) and mirrored onto Encounter.priority for cheap queue sorting without joining Observations; NEWS2/GCS/Morse scores computed server-side (FHIR server) from submitted vitals to guarantee one scoring implementation; re-triage creates a new Observation with `basedOn`/`derivedFrom` linking to the superseded one rather than mutating history (audit-safe).
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| POST | /api/triage/{encounterId}/ctas | `{level, rationale}` | `{encounter, observation}` | Writes Observation(74033-4) + PATCH Encounter.priority; emits `triage.queue.updated` |
+| POST | /api/triage/{encounterId}/vitals | `{weight,height,temp,bp,hr,spo2,rr,pain,...}` | `{observations[], bmi, news2}` | BMI/NEWS2 computed server-side; out-of-range triggers warning payload |
+| POST | /api/triage/{encounterId}/allergies | `{substance,reaction,severity}` | `{allergyIntolerance}` | Duplicate-check against existing AllergyIntolerance before insert |
+| POST | /api/triage/{encounterId}/fall-risk \| /isolation \| /gcs \| /sbar | story-specific body | resource echo | Same auth/audit envelope as above |
+| GET | /api/triage/queue?state=WAITING | — | `{items:[{patientId,ctas,waitTargetSec,...}]}` | Read-through Redis cache (`triage:queue:{tenant}`, 2s TTL), invalidated on queue-updated event |
+
+- **Data model:** No new EHR-side Prisma tables required; all clinical data lives in FHIR server's Postgres (`fhir_dev`). Add a `triage_queue_cache` materialized view (or Redis-only cache) keyed by tenant for the wallboard (TR-013) to avoid recomputing sort order per request.
+- **FHIR resources:** Observation (74033-4 CTAS, 85353-1 vitals panel, 94558-4 NEWS2, 72133-2 fall risk, 72514-3 pain, GCS component codes), Condition (initial presentation), AllergyIntolerance, Encounter (priority, reasonCode), QuestionnaireResponse (SBAR).
+- **Sequence (CTAS assignment):**
+```
+Nurse -> EHR UI: select CTAS-2
+EHR UI -> FHIR Server: POST Observation + PATCH Encounter.priority (If-Match: versionId)
+FHIR Server -> Postgres: INSERT/UPDATE (txn)
+FHIR Server -> Redis: PUBLISH triage.queue.updated
+Redis -> WebSocket Gateway: fan-out to tenant subscribers
+WebSocket Gateway -> Dashboards: queue re-sorts (<1s, target per AC-TR-001-01)
+FHIR Server --> EHR UI: 200 OK
+EHR UI -> Audit API: POST /api/audit (actor, CTAS assigned)
+```
+- **Validation & errors:** Mandatory-field guard client + server (400 with field key); optimistic concurrency via `Encounter.meta.versionId` / `If-Match` to prevent lost updates during re-triage (409 Conflict on mismatch, client re-fetches and retries).
+- **RBAC/Security:** Role `NURSE` or `CHARGE_NURSE` only (API-level check, not just UI redirect — closes GAP-005); every write logged via AD-001/CC-015 audit pipeline with actor, entity, before/after CTAS level.
+
 ---
 
-*End of Overall Low-Level Design Document — v1.0*
+### 16.2 Epic 2 — Physician / Cardiologist: Clinical Documentation & Orders (Stories 2.1–2.20)
+
+**HLD**
+```
+Physician -> EHR Doctor UI (/app/doctor/health-records/[visitId]) -> FHIR Server :8081
+                                                                         -> DocumentReference/Condition/MedicationRequest/ServiceRequest/DiagnosticReport/Consent
+                                                                         -> PharmacyMS :8082 (via PrescribeIT adapter, DR-004)
+                                                                         -> LIMS :8083 (via ServiceRequest, DR-005/006)
+```
+- Responsibilities: EHR owns SOAP editor, ICD-10-CA/problem-list UI, order-entry forms; FHIR server owns canonical clinical resources and cross-app referencing; PharmacyMS/LIMS own their domain execution once an order/prescription lands.
+- Dependencies: CC-004 (inter-app FHIR integration, currently the biggest blocker — DR-004/005/011 cannot complete without it), CC-005 (SMART on FHIR for DR-019), CC-013/012 (test coverage for clinical-safety code paths).
+- Key decisions: One `Encounter`-scoped SOAP `DocumentReference` per note (immutable once signed, amendments create a new version referencing the original via `relatesTo`); ICD-10-CA and problem list share the same `Condition` resource list, differentiated by `Condition.category` (`encounter-diagnosis` vs `problem-list-item`); referrals/discharge summaries reuse the same `Composition` + `DocumentReference` pattern for consistency with DR-010.
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| POST | /api/encounters/{id}/soap | `{subjective,objective,assessment,plan,icd10Codes[]}` | `{documentReference, conditions[]}` | Existing route ([soap/route.ts](../../../../ehr/src/app/api/encounters/%5BencounterId%5D/soap/route.ts)); extend with ICD-10-CA autocomplete-selected codes |
+| POST | /api/encounters/{id}/prescriptions | `{medication,dose,route,frequency,quantity,refills}` | `{medicationRequest}` | DR-004: on save, publish to PrescribeIT adapter queue; adapter maps to PharmacyMS `/api/v1/prescriptions` |
+| POST | /api/encounters/{id}/lab-orders | `{tests[],priority,clinicalInfo}` | `{serviceRequest}` | DR-005: creates ServiceRequest, mirrored into LIMS via CC-004 sync (or direct LIMS POST /api/v1/orders in interim) |
+| GET | /api/encounters/{id}/lab-results | — | `{diagnosticReports[],observations[]}` | DR-006: proxies FHIR search, flags abnormal via `interpretation` code |
+| POST | /api/encounters/{id}/referrals | `{specialty,targetOrgId,reason,attachments[]}` | `{serviceRequest}` | DR-009: FHIR ServiceRequest with `intent=order`, `category=referral` |
+| POST | /api/encounters/{id}/discharge-summary | `{diagnosis,treatment,followUp,medications[]}` | `{composition, documentReference, pdfUrl}` | DR-010: replaces current placeholder PDFs in `public/docs/` |
+| POST | /api/encounters/{id}/consent | `{type,scope,granted}` | `{consent}` | DR-012: FHIR Consent resource, versioned, never hard-deleted |
+
+- **Data model:** No new relational tables in EHR's Prisma schema; all clinical documentation persists as FHIR resources. Add a lightweight `note_templates` Prisma table for DR-017 (org-scoped reusable templates, not PHI).
+- **FHIR resources:** DocumentReference, Composition, Condition, MedicationRequest, ServiceRequest, DiagnosticReport, Consent, CarePlan (discharge follow-up).
+- **Sequence (e-Rx via PrescribeIT, DR-004):**
+```
+Physician -> EHR UI: submit prescription
+EHR UI -> FHIR Server: POST MedicationRequest (status=active)
+FHIR Server -> PrescribeIT Adapter (GAP-040): translate to PrescribeIT message format
+PrescribeIT Adapter -> PharmacyMS :8082: POST /api/v1/prescriptions
+PharmacyMS -> DUR Handler: POST /api/v1/dur/check (allergies, active DINs)
+PharmacyMS --> PrescribeIT Adapter: ack + prescription id
+PrescribeIT Adapter --> FHIR Server: PATCH MedicationRequest.identifier (prescribeItId)
+FHIR Server --> EHR UI: 201 Created
+```
+- **Validation & errors:** ICD-10-CA/SNOMED autocomplete enforces coded-or-explicit-free-text-flag (never silently store unmapped text); prescription submission blocked if `DUR.safe == false` and no override reason captured (soft-stop) or always blocked (hard-stop).
+- **RBAC/Security:** Role `PHYSICIAN`/`CARDIOLOGIST`; discharge summary and consent writes require a second audit event category (`CLINICAL_DOCUMENT_SIGNED`) distinct from generic edits, per CC-015.
+
+---
+
+### 16.3 Epic 3 — Lab Technician: LIMS Order & Result Workflows (Stories 3.1–3.17)
+
+**HLD**
+```
+Physician (EHR) --ServiceRequest--> FHIR Server --sync/poll--> LIMS :8083 --REST--> Lab Tech UI (NEW — currently API-only)
+LIMS -> PostgreSQL lims_dev (lab_tests, lab_orders, lab_results, + new: specimens, qc_results, reflex_rules)
+LIMS -> Redis pub/sub "lab.critical_value" -> WebSocket Gateway -> Ordering physician dashboard
+LIMS -> OLIS Outbound Adapter (GAP-041) -> Ontario OLIS
+```
+- Responsibilities: LIMS owns specimen lifecycle, result entry/QC/autoverification; FHIR server owns canonical DiagnosticReport/Observation once results are finalised; **no lab-tech-facing UI currently exists** — this epic requires a new frontend, not just backend work.
+- Dependencies: CC-004 (order/result sync with EHR), CC-001 (critical value push, LT-005), CC-016 (bulk export for pathology/QC reporting, optional).
+- Key decisions: Introduce `specimens` as a first-class entity (accession number, tube type, collected-at, status) separate from `lab_orders`, since one order can require multiple specimens and one specimen can serve multiple tests (LT-002); autoverification (LT-009) implemented as a rules table evaluated synchronously on result POST, not a background job, so TAT is not impacted; OLIS submission (LT-007) is async via an outbox table to guarantee at-least-once delivery.
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| GET | /api/v1/orders?status=pending | — | `LabOrder[]` | Existing; add `priority`-first sort (STAT) per LT-001 |
+| POST | /api/v1/specimens | `{orderId,accessionNo,tubeType,collectedAt}` | `Specimen` | New (LT-002) |
+| PATCH | /api/v1/specimens/{id}/reject | `{reason}` | `Specimen` | New (LT-006); notifies ordering clinician via CC-001 |
+| POST | /api/v1/results | `{orderId,component,value,units,interpretation}` | `LabResult` | Existing, extend with autoverification check (LT-009) before status=final |
+| PATCH | /api/v1/results/{id}/amend | `{value,reason}` | `LabResult` (new version) | New (LT-008); original preserved, `status=corrected` |
+| POST | /api/v1/qc | `{analyzerId,level,value,expectedRange}` | `QcResult` | New (LT-012); blocks result entry for that analyzer if out-of-control |
+| GET | /api/v1/tests?q= | — | `LabTest[]` (pCLOCD/LOINC) | LT-014, extend catalogue seed |
+
+- **Data model (new tables, `lims` migrations):**
+```sql
+CREATE TABLE specimens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID REFERENCES lab_orders(id),
+  accession_no TEXT UNIQUE NOT NULL,
+  tube_type TEXT NOT NULL,
+  collected_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'collected', -- collected|received|rejected|consumed
+  rejection_reason TEXT
+);
+CREATE TABLE qc_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  analyzer_id TEXT NOT NULL,
+  level TEXT NOT NULL,
+  value NUMERIC NOT NULL,
+  in_control BOOLEAN NOT NULL,
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE olis_outbox (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  result_id UUID REFERENCES lab_results(id),
+  status TEXT NOT NULL DEFAULT 'pending', -- pending|sent|failed
+  attempts INT NOT NULL DEFAULT 0,
+  last_error TEXT
+);
+```
+- **FHIR resources:** ServiceRequest (order), Specimen, Observation, DiagnosticReport.
+- **Sequence (panic value escalation, LT-005):**
+```
+Analyst -> LIMS: POST /api/v1/results (critical value)
+LIMS -> store.IsCritical(): true
+LIMS -> Redis: PUBLISH lab.critical_value {orderId, patientId, value, flag}
+Redis -> WebSocket Gateway -> Ordering physician dashboard: alert (<2s target)
+LIMS -> Notification Service (GAP-014, new): SMS/page fallback if not acknowledged in 5 min
+LIMS -> AuditEvent: CRITICAL_VALUE_ESCALATED
+```
+- **Validation & errors:** Result entry blocked if specimen `status != received`; QC out-of-control blocks all pending result entry for that analyzer (429-style "analyzer locked" response) until re-run.
+- **RBAC/Security:** Role `LAB_TECH`/`LAB_ANALYST`/`PATHOLOGIST` (LT-015); amendments require a second `LAB_ANALYST` or supervisor role (four-eyes principle) — enforce via API check, not just UI.
+
+---
+
+### 16.4 Epic 4 — Pharmacist: Dispensing, DUR & Compliance (Stories 4.1–4.18)
+
+**HLD**
+```
+PrescribeIT Adapter --> PharmacyMS :8083 (Pharmacist UI — NEW, currently API-only)
+PharmacyMS -> PostgreSQL pharmacyms_dev (medications, prescriptions, dispenses, + new: controlled_substance_log, inventory, compounds, counselling_notes)
+PharmacyMS -> DUR Handler (in-process rule table, PH-003) -> allergy/interaction alerts
+PharmacyMS -> ODB/Insurance Adjudication Adapter (GAP-045) -> Ontario MOHLTC / private payer
+```
+- Responsibilities: PharmacyMS owns dispensing workflow state machine (verify→fill→label→final-check→dispense), DUR, inventory, controlled-substance ledger, billing; **no pharmacist-facing UI exists yet**.
+- Dependencies: CC-004 (receive MedicationRequest from EHR), CC-005/DR-004 (PrescribeIT), PT epic (technician actions feed into the same state machine).
+- Key decisions: DUR becomes stateful — persist `dur_checks` linked to each prescription (currently stateless request/response only) so overrides are auditable (PH-003); controlled substances get a append-only ledger table (never UPDATE, only INSERT compensating rows) for CDSA compliance (PH-006); dispensing workflow modeled as an explicit state machine (mirroring the EHR cardiology FSM pattern already in this codebase) rather than a free-form status string.
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| POST | /api/v1/dur/check | existing (see [dur.go](../../../../pharmacyms/internal/handler/dur.go)) | `DURResponse` | Extend to persist result to `dur_checks` (PH-003) |
+| POST | /api/v1/prescriptions/{id}/verify \| /fill \| /label \| /final-check \| /dispense | step-specific body | `Prescription` (new status) | New state-machine transitions (PH-004); each transition requires the acting user's role |
+| POST | /api/v1/controlled-substances/log | `{prescriptionId,drugDin,qty,witnessId}` | `ControlledSubstanceLog` | New (PH-006); double-count = two distinct user IDs required |
+| POST | /api/v1/adjudication | `{prescriptionId,payer,planId}` | `{coPay,claimStatus}` | New (PH-005), calls ODB adapter |
+| GET/POST | /api/v1/inventory | — / `{din,qtyOnHand,reorderPoint}` | `InventoryItem[]` | New (PH-008) |
+| POST | /api/v1/counselling | `{patientId,topics[],understandingLevel}` | `CounsellingNote` | New (PH-014) |
+
+- **Data model (new tables):**
+```sql
+CREATE TABLE dur_checks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  prescription_id UUID REFERENCES prescriptions(id),
+  result JSONB NOT NULL,
+  override_reason TEXT,
+  overridden_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE controlled_substance_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  prescription_id UUID REFERENCES prescriptions(id),
+  drug_din TEXT NOT NULL,
+  quantity NUMERIC NOT NULL,
+  dispensed_by UUID NOT NULL,
+  witnessed_by UUID NOT NULL,
+  logged_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE inventory_items (
+  din TEXT PRIMARY KEY,
+  qty_on_hand NUMERIC NOT NULL DEFAULT 0,
+  reorder_point NUMERIC NOT NULL DEFAULT 0
+);
+```
+- **FHIR resources:** MedicationRequest (in), MedicationDispense (out, written back to FHIR server for DHDR/patient portal visibility), Claim (adjudication, optional FHIR mirror).
+- **Sequence (dispensing with DUR hard-stop override):**
+```
+Technician -> PharmacyMS: POST /prescriptions/{id}/fill
+PharmacyMS -> DUR Handler: re-check at fill time
+DUR Handler --> PharmacyMS: hard-stop alert
+PharmacyMS --> Technician UI: 409 blocked, "requires pharmacist override"
+Pharmacist -> PharmacyMS: POST /prescriptions/{id}/final-check {overrideReason}
+PharmacyMS -> dur_checks: INSERT override record
+PharmacyMS -> MedicationDispense (FHIR): POST
+PharmacyMS --> Pharmacist UI: 200 dispensed
+```
+- **Validation & errors:** Hard-stop DUR alerts cannot be bypassed by technicians (403), only pharmacists (PH-003/PT-007 scope-of-practice enforcement); controlled-substance log requires two distinct authenticated users or request is rejected.
+- **RBAC/Security:** Roles `PHARMACIST`, `PHARMACY_TECHNICIAN` with explicit scope-of-practice matrix (PT-007) enforced server-side per action.
+
+---
+
+### 16.5 Epic 5 — Pharmacy Technician: Fulfillment Workflows (Stories 5.1–5.9)
+
+**HLD**
+```
+Pharmacy Technician -> PharmacyMS Technician UI (NEW) -> PharmacyMS :8082 dispensing state machine (shared with Epic 4)
+                                                        -> Label Printer Service (new integration, PT-002)
+                                                        -> Curbside/Delivery Tracker (PT-006)
+```
+- Responsibilities: Technician-scoped views over the same dispensing state machine as Epic 4, plus fax/image intake (OCR) and unit-dose packaging for hospital contexts.
+- Dependencies: Epic 4's state machine and RBAC scope-of-practice matrix; an OCR service (third-party or self-hosted, e.g. Tesseract) for PT-005.
+- Key decisions: Technician work queue is a filtered view (`status IN ('pending','filling')`) of the same `prescriptions` table — no separate queue table; label printing is a synchronous call to a local print-spooler microservice (network printer, ESC/POS or ZPL) triggered from the fill step, not a background job, so techs get immediate feedback.
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| GET | /api/v1/prescriptions?status=pending&sort=waitTime | — | `Prescription[]` | PT-001 work queue |
+| POST | /api/v1/prescriptions/{id}/print-label | — | `{jobId,status}` | PT-002, calls print-spooler over local network |
+| POST | /api/v1/prescriptions/{id}/ready-for-pickup | — | `Prescription` | PT-004 |
+| POST | /api/v1/fax-intake | `multipart: image/pdf` | `{ocrText, suggestedPrescription}` | PT-005, OCR-assisted, always requires pharmacist confirmation before becoming an active prescription |
+| POST | /api/v1/deliveries | `{prescriptionId,method,address}` | `Delivery` | PT-006 |
+| POST | /api/v1/unit-dose-packages | `{patientId,wardId,medications[]}` | `UnitDosePackage` | PT-008 (hospital) |
+
+- **Data model (new tables):** `deliveries` (prescription_id, method, address, status, proof_of_delivery_url), `unit_dose_packages` (patient_id, ward_id, medications JSONB, packed_by, packed_at).
+- **FHIR resources:** Reuses MedicationDispense from Epic 4; no new resource types.
+- **Validation & errors:** OCR-derived prescriptions are always `status=draft` and cannot progress to `verify` without explicit pharmacist confirmation (PT-005 safety guard); any action requiring pharmacist scope attempted by a technician returns 403 with `requiredRole` in the error body so the UI can route the item to a pharmacist queue automatically (PT-007).
+- **RBAC/Security:** Role `PHARMACY_TECHNICIAN`; delivery proof-of-delivery upload restricted to the assigned technician or delivery partner integration account.
+
+---
+
+### 16.6 Epic 6 — Patient: Portal & Self-Service (Stories 6.1–6.18)
+
+**HLD**
+```
+Patient (browser/mobile) -> Patient Portal Shell (NEW Next.js route group /app/patient, separate layout from clinician EHR)
+                                   -> FHIR Server :8081 (read-scoped: own Patient compartment only)
+                                   -> Scheduling API (existing /api/scheduling/*)
+                                   -> Secure Messaging Service (new, PA-005)
+                                   -> SMART on FHIR / MyHealth Ontario SSO (GAP-051/GAP-017)
+```
+- Responsibilities: A distinct, privacy-scoped shell (not the clinician dashboard with hidden panels) that only ever queries the FHIR `Patient/{id}/$everything`-style compartment search scoped to the authenticated patient's own record.
+- Dependencies: CC-007 (bilingual EN/FR), CC-005 (SMART on FHIR / provincial SSO), scheduling module (already built, reused for PA-002).
+- Key decisions: Enforce compartment-scoping at the API gateway layer (not just query filters) — every patient-portal FHIR call is automatically scoped by `Patient` compartment matching the authenticated subject's `fhirId`, so a bug in one screen cannot leak another patient's data; portal is a separate Next.js route group with its own layout/navigation to avoid any risk of clinician-only UI leaking through shared components.
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| GET | /api/patient/me/summary | — | `{conditions,allergies,immunizations,recentResults}` | PA-008, compartment-scoped |
+| GET | /api/patient/me/lab-results | — | `DiagnosticReport[]` (plain-language annotated) | PA-006/LT-017 |
+| GET/POST | /api/patient/me/appointments | — / `{slotId}` | `Appointment[]` / `Appointment` | PA-002/003, reuses existing scheduling API |
+| POST | /api/patient/me/questionnaire-responses | `{questionnaireId,answers}` | `QuestionnaireResponse` | PA-004 |
+| GET/POST | /api/patient/me/messages | — / `{toCareTeamId,body}` | `Communication[]` | PA-005, new secure messaging service |
+| GET/PATCH | /api/patient/me/consent | — / `{scope,granted}` | `Consent[]` | PA-009 |
+| GET | /api/patient/me/documents | — | `DocumentReference[]` | PA-012 |
+
+- **Data model:** No new PHI tables; add a non-PHI `patient_portal_preferences` table (language, notification prefs) in EHR Prisma DB.
+- **FHIR resources:** Patient, Condition, AllergyIntolerance, Immunization, DiagnosticReport, Appointment, QuestionnaireResponse, Communication, Consent, DocumentReference.
+- **Sequence (compartment-scoped read):**
+```
+Patient -> Portal UI: open "My Results"
+Portal UI -> Patient Portal API: GET /api/patient/me/lab-results (JWT: sub=patientFhirId)
+Patient Portal API -> FHIR Server: GET /fhir/R4/DiagnosticReport?patient={fhirId}&_compartment=Patient/{fhirId}
+FHIR Server -> Postgres: scoped query
+FHIR Server --> Patient Portal API: 200 (only this patient's resources)
+Patient Portal API --> Portal UI: annotated results
+```
+- **Validation & errors:** Any request where `patient` query param ≠ authenticated subject's `fhirId` returns 403 (defense in depth even though UI never constructs such a request); consent withdrawal for `data-sharing` immediately revokes downstream sharing (checked at query time, not just UI toggle).
+- **RBAC/Security:** Role `PATIENT`, MFA recommended for portal login; every access logged as `PHI_SELF_ACCESS` (lighter audit tier than clinician `PHI_ACCESS`) per AD-001; EN/FR (CC-007) applied at the layout/i18n level, not per-page.
+
+---
+
+### 16.7 Epic 7 — Patient Care Assistant: Bedside Support (Stories 7.1–7.8)
+
+**HLD**
+```
+PCA (tablet, bedside) -> EHR PCA UI (NEW, /app/pca) -> FHIR Server :8081 (Observation-lite writes, queued for nurse review)
+```
+- Responsibilities: Narrow-scope UI limited to ADL, I&O, transport requests, fall-prevention checklist, and PCA-entered vitals; all clinically-reviewable entries are flagged `status=preliminary` until a nurse co-signs.
+- Dependencies: Epic 1 (shares the vitals/fall-risk Observation model), new `PCA` role in the role model (PC-001, a pure RBAC/config change, no new service).
+- Key decisions: PCA-entered vitals (PC-006) are written as Observation with `status=preliminary`; a nurse "co-sign" action (already possible via existing Observation status transition) promotes to `final` — this reuses Epic 1's vitals pipeline rather than duplicating it.
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| POST | /api/pca/{encounterId}/adl | `{bathing,dressing,mobility,continence,feeding}` | `Observation[]` | PC-002 |
+| POST | /api/pca/{encounterId}/io | `{intakeMl,outputMl,type,recordedAt}` | `Observation` | PC-003 |
+| POST | /api/pca/transport-requests | `{patientId,mode,fromLocation,toLocation}` | `ServiceRequest` | PC-004 |
+| POST | /api/pca/{encounterId}/fall-checklist | `{items:[{task,done}]}` | `QuestionnaireResponse` | PC-005 |
+| POST | /api/pca/{encounterId}/vitals-preliminary | `{temp,weight}` | `Observation (status=preliminary)` | PC-006 |
+| POST | /api/pca/{encounterId}/turning-log | `{position,performedAt}` | `Observation` | PC-008 |
+
+- **Data model:** No new tables; role model change adds `PCA` to the existing role enum used by AD-004/middleware.
+- **FHIR resources:** Observation (ADL, I&O, vitals-preliminary, turning log), ServiceRequest (transport), QuestionnaireResponse (fall checklist).
+- **Validation & errors:** PCA-entered vitals cannot transition to `status=final` from the PCA UI — only a nurse/physician action can co-sign; attempts to access any physician/nurse-only route return 403.
+- **RBAC/Security:** New role `PCA` added to the RBAC matrix with a strictly limited permission set; every PCA write tagged with `enteredByRole=PCA` in the Observation `note` extension for downstream review clarity.
+
+---
+
+### 16.8 Epic 8 — Receptionist / Front Desk: Scheduling & Check-In (Stories 8.1–8.18)
+
+**HLD**
+```
+Receptionist -> EHR Scheduling UI (existing /app/scheduling) -> Scheduling API (existing /api/scheduling/*)
+                                                              -> FHIR Server (Appointment, Patient, Encounter)
+                                                              -> OHIP Eligibility Adapter (existing /api/ohip/eligibility, GAP-043)
+                                                              -> PCR Adapter (GAP-042, new) for patient matching at registration
+```
+- Responsibilities: Extends the already-built scheduling scaffold with registration, eligibility, kiosk check-in, waitlist, recall, and multi-site scheduling; largely additive to existing code rather than new services.
+- Dependencies: Existing scheduling mock/services ([scheduling.mock.ts](../../../../ehr/src/scheduling/services/scheduling.mock.ts)) need to move from mock to FHIR-backed persistence; CC-006 (PCR) for RC-002 patient matching; CC-001 for RC-013 delay notifications.
+- Key decisions: Kiosk mode (RC-004) is a separate, unauthenticated-but-tokenized route (`/kiosk/{sessionToken}`) rather than reusing the staff-authenticated scheduling UI, to avoid any risk of staff session leakage on a public terminal; waitlist (RC-005) modeled as a priority queue keyed by appointment-type + earliest-acceptable-date, processed via a scheduled job when cancellations occur (RC-007).
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| POST | /api/scheduling/register | `{demographics,hcn}` | `{patient, mrn}` | RC-002, calls PCR adapter for matching |
+| GET | /api/ohip/eligibility?hcn= | — | `{eligible,versionCode}` | Existing, wire into check-in flow (RC-003) |
+| POST | /api/scheduling/kiosk/{token}/check-in | — | `{appointment,roomAssignment}` | RC-004/RC-008 |
+| POST | /api/scheduling/waitlist | `{patientId,apptType,earliestDate}` | `WaitlistEntry` | RC-005 |
+| POST | /api/scheduling/{id}/no-show \| /cancel | `{reason}` | `Appointment` | RC-006/RC-007, triggers waitlist processing |
+| POST | /api/scheduling/interpreter-request | `{apptId,language}` | `InterpreterRequest` | RC-009 |
+| GET | /api/scheduling/eod-reconciliation?date= | — | `{opened,closed,noShow,pending}` | RC-012 |
+| POST | /api/scheduling/recalls | `{criteria}` | `RecallBatch` | RC-014 |
+
+- **Data model:** Migrate existing in-memory scheduling mock to FHIR `Appointment`/`Slot`/`Schedule` resources; add EHR-side `waitlist_entries` and `interpreter_requests` Prisma tables (operational, non-PHI-heavy, or FHIR `Task` resources if full PHI traceability is required).
+- **FHIR resources:** Appointment, Slot, Schedule, Patient, Encounter, Task (interpreter/transport-style requests).
+- **Sequence (check-in with eligibility + room assignment):**
+```
+Patient -> Kiosk: check in
+Kiosk -> Scheduling API: POST /kiosk/{token}/check-in
+Scheduling API -> OHIP Eligibility Adapter: GET eligibility
+Scheduling API -> FHIR Server: PATCH Appointment.status=arrived
+Scheduling API -> Room Assignment: allocate room
+Scheduling API -> Redis: PUBLISH queue.updated (nursing dashboard, Epic 1 wallboard)
+Scheduling API --> Kiosk: confirmation + room number
+```
+- **Validation & errors:** Kiosk tokens are single-use, short-TTL (~15 min), tied to a specific appointment; ineligible OHIP status does not block check-in but flags the encounter `billing_flag=self-pay-review` for Epic 10.
+- **RBAC/Security:** Role `RECEPTIONIST`/`CLINIC_ADMIN` for staff routes; kiosk routes use scoped, single-purpose tokens instead of user sessions.
+
+---
+
+### 16.9 Epic 9 — System Administrator: Security, Config & Compliance (Stories 9.1–9.15)
+
+**HLD**
+```
+Admin -> EHR Admin UI (existing /app/admin) -> Admin API (/api/admin/*, /api/audit existing)
+                                              -> Prisma (User, AuditEvent — existing) + new (SystemConfig, Session, Announcement)
+                                              -> KMS / Secrets Manager (GAP: PHI encryption at rest, AD-012)
+```
+- Responsibilities: Closes the P0 safety-critical gaps (AD-001/002/003 already substantially implemented, per code review) and adds the remaining operational controls (user CRUD, RBAC enforcement audit, session management, encryption, rate limiting, system health, terminology management, backup/restore, announcements, error boundaries).
+- Dependencies: Underpins every other epic — AD-003 (API-level RBAC) and AD-012 (encryption at rest) are cross-cutting prerequisites, not isolated features.
+- Key decisions: RBAC enforcement is centralized as Next.js middleware **plus** a shared server-side `assertRole()` guard called at the top of every API route handler (defense in depth, closes GAP-005 fully rather than relying on middleware alone); PHI encryption at rest uses PostgreSQL `pgcrypto` column-level encryption for the most sensitive fields (HCN, SIN if collected) plus full-disk/tablespace encryption at the infrastructure layer for everything else.
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| GET | /api/audit?entityType=&entityId=&from=&limit= | — | `AuditEvent[]` | Existing ([audit/route.ts](../../../../ehr/src/app/api/audit/route.ts)) |
+| GET/POST/PATCH/DELETE | /api/admin/users | — / user body | `User[]` / `User` | AD-004, full CRUD (extends existing partial admin/users UI) |
+| GET | /api/admin/integrations/status | — | `{fhir,lims,pharmacyms,olis: {status,lastCheck}}` | AD-005 |
+| GET/PATCH | /api/admin/config | — / `{tenantId,settings}` | `TenantConfig` | AD-006 |
+| GET | /api/admin/sessions | — | `Session[]` | AD-007, supports force-revoke |
+| GET | /api/admin/health | — | `{service,status,latencyMs}[]` | AD-008 |
+| GET/POST | /api/admin/value-sets | — / value-set body | `ValueSet[]` | AD-009 |
+| POST | /api/admin/export | `{resourceTypes,dateRange}` | `{exportId}` | AD-010, reuses CC-016 `$export` |
+| POST | /api/admin/announcements | `{message,severity,expiresAt}` | `Announcement` | AD-014 |
+
+- **Data model (new tables):** `system_config` (tenant_id, key, value JSONB), `announcements` (message, severity, expires_at), `sessions` (already partially via NextAuth — extend with `revoked_at` for AD-007).
+- **FHIR resources:** AuditEvent (already implemented), Provenance (optional, for stronger PHI access chain-of-custody).
+- **Sequence (API-level RBAC enforcement, AD-003):**
+```
+Client -> API Route: request with JWT
+API Route -> assertRole(requiredRoles): checked server-side (not just middleware)
+  if role not in requiredRoles -> 403 + AuditEvent(outcome=denied)
+  else -> proceed to handler -> AuditEvent(outcome=success)
+```
+- **Validation & errors:** Rate limiting (AD-013) returns 429 + `Retry-After`; all admin destructive actions (user delete, session revoke) require re-authentication (step-up auth) within the last 5 minutes.
+- **RBAC/Security:** Role `ADMIN` only; this epic's own audit trail is itself audited (meta-audit, already implemented per [audit/route.ts](../../../../ehr/src/app/api/audit/route.ts) line 30).
+
+---
+
+### 16.10 Epic 10 — Billing Specialist: Coding & Revenue Cycle (Stories 10.1–10.10)
+
+**HLD**
+```
+Billing Specialist -> EHR Billing UI (NEW, /app/billing) -> Billing API (NEW)
+                                                           -> FHIR Server (Encounter, Condition/ICD-10-CA, Claim)
+                                                           -> OHIP MC EDT Adapter (GAP-045) -> MOHLTC
+                                                           -> Private Insurance Adapter (BI-006)
+```
+- Responsibilities: Entirely new module; converts a completed, signed encounter (Epic 2 output) into a coded, submittable claim.
+- Dependencies: Epic 2 (DR-002 ICD-10-CA coding must exist on the encounter before billing can code it), Epic 8 (RC-012 end-of-day reconciliation feeds the billing queue).
+- Key decisions: Model claims as FHIR `Claim` resources (not a bespoke billing table) so the same resource can represent OHIP fee-for-service and private insurance claims, differentiated by `Claim.type`; time-barred claim alerts (BI-008) computed from `Claim.billablePeriod` + a configurable submission-window rule rather than hard-coded 6-month logic, so provincial rule changes don't require code changes.
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| GET | /api/billing/queue?status=unbilled | — | `Encounter[]` | BI-001 |
+| POST | /api/billing/{encounterId}/icd10 | `{codes[]}` | `Condition[]` | BI-002, reuses DR-002 coding component |
+| POST | /api/billing/{encounterId}/fee-codes | `{codes[],modifiers[]}` | `Claim` | BI-003, validates against OHIP Schedule of Benefits rule set |
+| POST | /api/billing/{claimId}/submit | — | `{claim,mcEdtBatchId}` | BI-004 |
+| GET | /api/billing/rejections | — | `Claim[]` (status=rejected) | BI-005 |
+| POST | /api/billing/{encounterId}/private-claim | `{payerId,planId}` | `Claim` | BI-006 |
+| GET | /api/billing/analytics | — | `{revenueByMonth,denialRate,...}` | BI-007 |
+| GET | /api/billing/{encounterId}/superbill | — | `{pdfUrl}` | BI-009 |
+| GET | /api/billing/patients/{id}/statement | — | `{balance,lineItems[]}` | BI-010 |
+
+- **Data model:** Primarily FHIR `Claim`/`ClaimResponse`; add EHR-side `fee_schedule` reference table (fee code, description, unit value) for fast validation without round-tripping to FHIR on every keystroke.
+- **FHIR resources:** Claim, ClaimResponse, Encounter, Condition, Coverage.
+- **Sequence (OHIP claim submission):**
+```
+Billing Specialist -> Billing UI: submit claim
+Billing UI -> Billing API: POST /billing/{claimId}/submit
+Billing API -> FHIR Server: validate Claim resource (fee codes, ICD-10-CA present)
+Billing API -> MC EDT Adapter: batch + transmit (async, per MOHLTC file-based protocol)
+MC EDT Adapter --> Billing API: batch receipt id
+Billing API -> Claim.status = 'entered-in-error' | 'active' (submitted)
+```
+- **Validation & errors:** Time-barred claims (BI-008) surfaced as a dashboard warning 30/14/3 days before the submission deadline; submission blocked entirely once past the hard MOHLTC cutoff (with override path for legitimate late-submission reason codes).
+- **RBAC/Security:** Role `BILLING_SPECIALIST`; claim data treated as PHI-adjacent (financial + diagnosis codes) — same audit tier as clinical access.
+
+---
+
+### 16.11 Epic 11 — Cardiac Technician: Procedure & Diagnostic Workflows (Stories 11.1–11.10)
+
+**HLD**
+```
+Cardiac Technician -> EHR Cardiology module (existing /src/cardiology) -> Cardiology API (existing FSM-based)
+                                                                        -> FHIR Server (DiagnosticReport, Observation, ImagingStudy)
+                                                                        -> DICOM Viewer (GAP-052, new, likely OHIF or Cornerstone.js embed)
+```
+- Responsibilities: Extends the existing cardiology visit FSM (already documented in this LLD, §11) with structured result forms (ECG/Echo/stress test), Holter tracking, DICOM viewing, and critical-finding escalation — builds on a mature existing subsystem rather than greenfield.
+- Dependencies: Existing cardiology FSM/queues; CC-001 (critical finding push, TK-006); DR-008 (risk calculators consume TK result data).
+- Key decisions: Structured result forms (TK-001/002/003) are modeled as `Observation` components grouped under a procedure-specific `DiagnosticReport` (one per ECG/Echo/stress test), reusing the existing `fhirDiagnosticReportId` link already present in the cardiology domain types ([fhir-domain.ts](../../../../ehr/src/cardiology/types/fhir-domain.ts)); DICOM viewing is embedded via iframe/web-component rather than a custom-built viewer, to avoid re-implementing DICOM rendering.
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| POST | /cardiology/procedures/{id}/ecg-result | `{intervals,rhythm,interpretation}` | `DiagnosticReport` | TK-001 |
+| POST | /cardiology/procedures/{id}/echo-result | `{ef,chambers,valves,findings}` | `DiagnosticReport` | TK-002 |
+| POST | /cardiology/procedures/{id}/stress-protocol | `{protocol,stages[],terminationReason}` | `DiagnosticReport` | TK-003 |
+| POST | /cardiology/holter/{id}/assign \| /return | `{deviceId}` | `DeviceUseStatement` | TK-004 |
+| GET | /cardiology/imaging/{studyId}/viewer-url | — | `{viewerUrl}` | TK-005, signed short-TTL URL into DICOM viewer |
+| POST | /cardiology/procedures/{id}/critical-finding | `{finding,severity}` | alert dispatched | TK-006, reuses CC-001 pipeline |
+| GET | /cardiology/patients/{id}/previous-studies | — | `DiagnosticReport[]` | TK-007 |
+
+- **Data model:** Reuses existing cardiology FSM tables; add `device_assignments` table for Holter tracking (device_id, patient_id, assigned_at, returned_at).
+- **FHIR resources:** DiagnosticReport, Observation, ImagingStudy, DeviceUseStatement.
+- **Validation & errors:** Critical findings (TK-006) cannot be saved as a normal result — the form forces the escalation path (same pattern as LT-005) before allowing the report to be finalised.
+- **RBAC/Security:** Role `CARDIAC_TECHNICIAN`; DICOM viewer URLs are signed, single-use, short-TTL to avoid exposing raw imaging storage.
+
+---
+
+### 16.12 Epic 12 — Cross-Cutting: Platform, Integration & Quality (Stories 12.1–12.16)
+
+**HLD**
+```
+All Apps (EHR/LIMS/PharmacyMS) -> FHIR Server :8081 (canonical integration point, CC-004/CC-010)
+                                -> Redis (pub/sub for CC-001, cache for queues)
+                                -> Temporal (CC-002, long-running workflows: e.g. multi-day dispensing, referral tracking)
+                                -> SMART on FHIR Auth Server (CC-005)
+                                -> PCR Adapter (CC-006)
+```
+- Responsibilities: Shared platform capabilities every persona epic depends on. This epic should be sequenced **first** for its safety/integration items (CC-001, CC-004, CC-005) since Epics 1–11 all assume real-time push and cross-app FHIR sync exist.
+- Dependencies: None upstream (foundation layer); all other epics depend on this one.
+- Key decisions: Real-time notifications (CC-001) built on Redis pub/sub + a thin WebSocket gateway (not a heavyweight message broker) given current scale; Temporal (CC-002) introduced only for genuinely long-running, multi-step sagas (e.g. referral acceptance → scheduling → reminder → follow-up) rather than every async task, to control operational complexity; inter-app FHIR integration (CC-004) uses the FHIR server as the single source of truth with LIMS/PharmacyMS treated as downstream execution engines that sync back via REST callbacks (not direct DB-to-DB coupling).
+
+**LLD**
+
+| Method | Path | Request | Response | Notes |
+|---|---|---|---|---|
+| WS | /ws/notifications | JWT on connect | event stream | CC-001, falls back to `GET /sse/notifications` |
+| POST | /fhir/R4/$export | `{types,since}` | `{Content-Location}` | CC-016 |
+| POST | /smart/authorize \| /token | OAuth2/SMART params | tokens | CC-005 |
+| POST | /integration/pcr/match | `{demographics}` | `{matchedPatientId,confidence}` | CC-006 |
+| GET | /admin/temporal/workflows | — | `WorkflowExecution[]` | CC-002 observability |
+
+- **Data model:** `webhook_outbox` / `integration_events` table (already implicit in LIMS `olis_outbox` pattern, generalised platform-wide) for reliable at-least-once cross-service delivery; Temporal's own Postgres-backed state store (separate namespace) for CC-002.
+- **FHIR resources:** All — this epic is the profile-validation (CC-010) and bulk-export (CC-016) layer for every resource type used elsewhere.
+- **Sequence (cross-app FHIR sync, CC-004):**
+```
+EHR -> FHIR Server: POST ServiceRequest (lab order)
+FHIR Server -> integration_events: INSERT (topic=lab.order.created)
+Integration Worker -> LIMS: POST /api/v1/orders (idempotent on ServiceRequest.id)
+LIMS --> Integration Worker: 201 Created
+Integration Worker -> FHIR Server: PATCH ServiceRequest.status=active
+```
+- **Validation & errors:** All integration events are idempotent (keyed by FHIR resource id) so retries after a downstream outage do not create duplicates; WebSocket reconnect/backoff per AC-CC-001-01 (5s retry, 10 attempts, then manual refresh prompt).
+- **RBAC/Security:** SMART on FHIR (CC-005) scopes limit third-party apps to declared resource types/actions; PCR matching (CC-006) results always require human confirmation above a configurable confidence threshold before merging records.
+
+---
+
+*End of Overall Low-Level Design Document — v1.1 (adds §16 Epic-Level HLD & LLD)*

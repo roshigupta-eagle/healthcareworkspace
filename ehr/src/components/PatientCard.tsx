@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import React from 'react';
@@ -10,7 +10,7 @@ export default function PatientCard({ patient }: { patient: any }) {
   const isHighRisk = (patient.conditions || []).some((c: string) => ['Hypertension','Type 2 Diabetes','Heart Failure','CAD'].includes(c)) || (patient.age || 0) >= 65;
 
   return (
-    <Link href={`/dashboard/records/${patient.id}`} className="block">
+    <Link href={`/dashboard/records/${patient.id}`} className="block" aria-label={`Open record for ${patient.name}`}>
       <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition transform hover:-translate-y-1 cursor-pointer">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -35,7 +35,7 @@ export default function PatientCard({ patient }: { patient: any }) {
             <div className="text-sm">
               <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${patient.status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-700'}`}>{patient.status}</span>
             </div>
-            <div className="text-xs text-gray-500">Unread notes: <span className="font-medium text-gray-800">{unread}</span></div>
+            <div className="text-xs text-gray-500">Notes: <span className="font-medium text-gray-800">{unread}</span></div>
             <div className="text-xs text-gray-500">Next: <span className="font-medium text-gray-800">{nextAppt || '—'}</span></div>
           </div>
         </div>

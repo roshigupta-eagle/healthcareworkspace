@@ -3,8 +3,11 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { getPatientById, getMockPatients } from '../../records/mockPatients';
 import EncounterEditor from '@/components/EncounterEditor';
+import CalBookingClient from '@/app/dashboard/appointments/CalBookingClient';
+import { fetchAppointments } from '@/scheduling/services/scheduling.mock';
+import { getCurrentUser } from '@/cardiology/services/api.mock';
 
-export default async function NewEncounterPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
+export default async function NewEncounterPage({ searchParams }: { searchParams?: any }) {
   let session: any = null;
   try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -13,12 +16,22 @@ export default async function NewEncounterPage({ searchParams }: { searchParams?
   } catch (e) {
     // allow dev preview
   }
-  if (!session) redirect('/login');
+  if (!session) {
+    if (process.env.NODE_ENV === 'development') {
+      session = { user: { name: 'Dev User' } };
+    } else {
+      redirect('/login');
+    }
+  }
 
-  const qRaw = searchParams?.patientId;
+  const params = await searchParams;
+  const qRaw = params?.patientId;
   const patientId = Array.isArray(qRaw) ? qRaw[0] : qRaw;
   const patient = patientId ? getPatientById(String(patientId)) : null;
   const patients = getMockPatients();
+
+  const appointments = await fetchAppointments();
+  const currentUser = getCurrentUser();
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-6">
@@ -27,7 +40,23 @@ export default async function NewEncounterPage({ searchParams }: { searchParams?
       </div>
 
       {patient ? (
-        <EncounterEditor patient={patient} />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <main className="lg:col-span-8">
+            <EncounterEditor patient={patient} />
+          </main>
+
+          <aside className="lg:col-span-4">
+            <div className="bg-white rounded-lg p-4 shadow-sm ring-1 ring-gray-50">
+              <h3 className="text-lg font-semibold">Scheduling & Appointments</h3>
+              <p className="mt-1 text-sm text-neutral-600">Book or review appointments for this patient (demo)</p>
+
+              <div className="mt-4">
+                {/* @ts-expect-error Server -> Client prop serialization */}
+                <CalBookingClient initialAppointments={appointments} currentUser={currentUser} />
+              </div>
+            </div>
+          </aside>
+        </div>
       ) : (
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <h1 className="text-2xl font-bold text-gray-900">New Encounter</h1>
