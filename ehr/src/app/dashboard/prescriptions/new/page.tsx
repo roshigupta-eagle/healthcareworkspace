@@ -1,9 +1,9 @@
-﻿import { redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
-import { getPatientById, getMockPatients } from '../../../records/mockPatients';
-import LabOrderComposer from '@/components/LabOrderComposer';
+import { getPatientById } from '../../records/mockPatients';
+import PrescriptionComposerSerene from '@/components/PrescriptionComposerSerene';
 
-export default async function NewLabOrderPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
+export default async function NewPrescriptionPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
   let session: any = null;
   try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -20,13 +20,14 @@ export default async function NewLabOrderPage({ searchParams }: { searchParams?:
     }
   }
 
-  const qRaw = searchParams?.patientId;
+  const params = await searchParams;
+  const qRaw = params?.patientId;
   const patientId = Array.isArray(qRaw) ? qRaw[0] : qRaw;
   const patient = patientId ? getPatientById(String(patientId)) : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <LabOrderComposer patient={patient} />
+      <PrescriptionComposerSerene patient={patient} />
     </div>
   );
 }

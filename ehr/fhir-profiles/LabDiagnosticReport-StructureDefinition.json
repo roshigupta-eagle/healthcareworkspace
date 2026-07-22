@@ -1,0 +1,25 @@
+﻿{
+  "resourceType": "StructureDefinition",
+  "id": "LabDiagnosticReport",
+  "url": "http://healthcareworkspace.org/fhir/StructureDefinition/LabDiagnosticReport",
+  "version": "0.1.0",
+  "name": "LabDiagnosticReport",
+  "title": "Lab DiagnosticReport Profile",
+  "status": "draft",
+  "date": "2026-07-21",
+  "publisher": "HealthCareWorkspace",
+  "description": "Profile constraining DiagnosticReport for lab panels and results.",
+  "fhirVersion": "5.0.0",
+  "kind": "resource",
+  "abstract": false,
+  "type": "DiagnosticReport",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/DiagnosticReport",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      { "id": "DiagnosticReport", "path": "DiagnosticReport", "short": "Laboratory diagnostic report", "definition": "DiagnosticReport profile for lab results." },
+      { "id": "DiagnosticReport.code", "path": "DiagnosticReport.code", "min": 1, "short": "Panel code (LOINC)", "definition": "The panel or report code, prefer LOINC." },
+      { "id": "DiagnosticReport.result", "path": "DiagnosticReport.result", "short": "Result observations", "definition": "References to Observations that make up the report." }
+    ]
+  }
+}

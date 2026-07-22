@@ -1,0 +1,25 @@
+﻿{
+  "resourceType": "StructureDefinition",
+  "id": "LabSpecimen",
+  "url": "http://healthcareworkspace.org/fhir/StructureDefinition/LabSpecimen",
+  "version": "0.1.0",
+  "name": "LabSpecimen",
+  "title": "Lab Specimen Profile",
+  "status": "draft",
+  "date": "2026-07-21",
+  "publisher": "HealthCareWorkspace",
+  "description": "Profile constraining Specimen for laboratory specimens.",
+  "fhirVersion": "5.0.0",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Specimen",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Specimen",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      { "id": "Specimen", "path": "Specimen", "short": "Laboratory specimen", "definition": "Specimen profile for lab specimens." },
+      { "id": "Specimen.identifier", "path": "Specimen.identifier", "short": "Specimen identifiers", "definition": "Use accessionIdentifier or identifier for barcodes and accession numbers." },
+      { "id": "Specimen.type", "path": "Specimen.type", "min": 1, "short": "Specimen type", "definition": "Specimen type coded (prefer SNOMED)." }
+    ]
+  }
+}

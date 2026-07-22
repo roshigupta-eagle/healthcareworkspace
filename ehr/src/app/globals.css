@@ -520,3 +520,83 @@ input, select, textarea, button {
 @media (max-width: 640px) {
   .page-transition * { transition: none !important; }
 }
+
+/* ===== Serene Encounter UI additions ===== */
+
+/* Scope animations and styles to the Encounter editor container */
+.encounter-editor .bg-white.rounded-lg.p-6.shadow-sm {
+  animation: cardFadeUp var(--duration-normal) var(--ease-out) both;
+}
+
+@keyframes cardFadeUp {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* Stepper styles */
+.serene-stepper { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.serene-step {
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.375rem 0.75rem; border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(250,250,250,0.8));
+  color: var(--color-neutral-900); box-shadow: none; border: 1px solid rgba(15,23,42,0.04);
+}
+.serene-step[aria-current="step"] {
+  background: linear-gradient(90deg, rgba(16,185,129,0.12), rgba(6,182,212,0.06));
+  color: var(--color-surface-inverted); box-shadow: 0 6px 18px rgba(16,185,129,0.06); transform: translateY(-1px);
+}
+.serene-step .step-circle { display:inline-flex; align-items:center; justify-content:center; height:1.25rem; width:1.25rem; border-radius:9999px; font-size:0.7rem; }
+.serene-step[aria-current="step"] .step-circle { background: linear-gradient(90deg, var(--color-stable-400), var(--color-info-400)); color: white; box-shadow: 0 6px 14px rgba(16,185,129,0.12); }
+
+/* Tall inputs for the Serene look */
+.serene-input { height: 3rem; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+
+/* Suggestion chips */
+.suggestion-chips { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem; }
+.suggestion-chip {
+  background: linear-gradient(180deg, rgba(14,165,233,0.06), rgba(237,249,255,0.85));
+  color: var(--color-info-700); border-radius: 9999px; padding: 0.375rem 0.75rem; font-size: 0.875rem; cursor: pointer; border:1px solid rgba(6,182,212,0.08);
+}
+
+/* AI orb */
+.ai-orb { position: absolute; right: 1rem; top: -1.5rem; height:48px; width:48px; border-radius:9999px; display:flex; align-items:center; justify-content:center; background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.5)); box-shadow: 0 8px 20px rgba(13,110,253,0.06); backdrop-filter: blur(8px); }
+.ai-orb:hover { transform: translateY(-2px); }
+.ai-tooltip { position: absolute; right: 3.25rem; top: -0.25rem; min-width:220px; background: rgba(255,255,255,0.9); border-radius: 12px; padding:0.5rem; box-shadow: var(--shadow-lg); font-size:0.875rem; }
+
+/* Simple confetti particles */
+.confetti-container { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
+.confetti-particle { position: absolute; width:10px; height:10px; border-radius:2px; opacity:1; animation: confettiFall 1000ms linear forwards; }
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity:1; }
+  100% { transform: translateY(280px) rotate(360deg); opacity:0; }
+}
+
+/* Completion overlay */
+.complete-overlay { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(12,18,30,0.36); z-index: 10000; }
+.complete-modal { background: white; padding: 2rem; border-radius: 12px; display:flex; flex-direction:column; gap:1rem; align-items:center; box-shadow: var(--shadow-2xl); }
+.checkmark { width:96px; height:96px; border-radius:9999px; display:flex; align-items:center; justify-content:center; background: linear-gradient(90deg,var(--color-stable-400), var(--color-info-400)); color:white; font-size:2rem; box-shadow: 0 12px 30px rgba(16,185,129,0.12); transform: scale(0.9); animation: popIn 360ms cubic-bezier(0.22,1,0.36,1) forwards; }
+@keyframes popIn { 0% { transform: scale(0.6); opacity:0 } 100% { transform: scale(1); opacity:1 } }
+
+/* Progress bar */
+.progress-track { background: linear-gradient(90deg, rgba(15,23,42,0.05), rgba(15,23,42,0.02)); height:10px; border-radius:9999px; overflow:hidden; }
+.progress-fill { height:100%; background: linear-gradient(90deg,var(--color-info-400), var(--color-stable-400)); transition: width 520ms var(--ease-in-out); }
+
+/* Message drawer scrollbar styling: thin, unobtrusive but visible */
+.message-drawer {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15,23,42,0.12) transparent;
+}
+.message-drawer::-webkit-scrollbar {
+  width: 10px;
+}
+.message-drawer::-webkit-scrollbar-track {
+  background: transparent;
+}
+.message-drawer::-webkit-scrollbar-thumb {
+  background-color: rgba(15,23,42,0.12);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+}
+.message-drawer::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(15,23,42,0.18);
+}
+

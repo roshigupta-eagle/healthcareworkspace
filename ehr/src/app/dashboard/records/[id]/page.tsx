@@ -69,18 +69,21 @@ export default async function PatientDetailPage({ params, searchParams }: { para
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 shadow-sm ring-1 ring-gray-50">
-          <h4 className="text-sm font-semibold text-gray-800">Vitals Trend</h4>
-          <div className="mt-3 text-sm text-gray-700">
-            <div className="text-xs text-gray-500">Weight</div>
-            <div className="text-2xl font-bold text-gray-900">{patient.weight || '—'}</div>
-            <div className="mt-3">
-              <svg className="w-full h-16" viewBox="0 0 100 30" preserveAspectRatio="none">
-                <polyline fill="none" stroke="#06b6d4" strokeWidth="2" points="0,20 20,15 40,12 60,10 80,8 100,6" />
-              </svg>
+        <Link href={`/dashboard/records/${patient.id}/weight-trend`} className="group" aria-label={`Open weight trend for ${patient.name}`}>
+          <div className="bg-white rounded-lg p-4 shadow-sm ring-1 ring-gray-50 hover:shadow-md transition-shadow duration-150 cursor-pointer">
+            <h4 className="text-sm font-semibold text-gray-800">Vitals Trend</h4>
+            <div className="mt-3 text-sm text-gray-700">
+              <div className="text-xs text-gray-500">Weight</div>
+              <div className="text-2xl font-bold text-gray-900">{patient.weight || '—'}</div>
+              <div className="mt-3" aria-hidden>
+                <svg className="w-full h-16" viewBox="0 0 100 30" preserveAspectRatio="none">
+                  <polyline fill="none" stroke="#06b6d4" strokeWidth="2" points="0,20 20,15 40,12 60,10 80,8 100,6" />
+                </svg>
+              </div>
+              <div className="mt-2 text-xs text-teal-600 font-medium">Open full weight trend</div>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Unified timeline feed (notes, visits, labs, appointments) */}
@@ -182,16 +185,21 @@ export default async function PatientDetailPage({ params, searchParams }: { para
 
           <div className="bg-white rounded-lg p-4 shadow-sm ring-1 ring-gray-50">
             <h3 className="text-sm font-semibold text-gray-800">Recent Lab Results</h3>
-            <div className="mt-3 space-y-2 text-sm text-gray-700">
+              <div className="mt-3 space-y-2 text-sm text-gray-700">
               {(patient.labResults && patient.labResults.length > 0) ? (
                 patient.labResults.map((l: any) => (
-                  <div key={l.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                  <Link
+                    key={l.id}
+                    href={`/dashboard/records/${patient.id}/labs?selected=${l.id}`}
+                    aria-label={`Open lab results intelligence for ${l.name}`}
+                    className="flex items-center justify-between bg-gray-50 p-3 rounded-md hover:-translate-y-0.5 hover:shadow-md hover:ring-2 hover:ring-teal-100 transition-transform duration-150 transform focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 cursor-pointer"
+                  >
                     <div>
                       <div className="font-medium text-gray-900">{l.name}</div>
                       <div className="text-xs text-gray-500">{l.date} • {l.unit || ''}</div>
                     </div>
                     <div className="text-sm text-gray-700">{l.result} <span className="text-xs text-gray-500">({l.normalRange})</span></div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="text-sm text-gray-500">No recent lab results</div>

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:unit": "vitest",
+    "test:unit": "vitest src",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test"
   },
@@ -18,7 +18,10 @@
     "dotenv": "^17.4.2",
     "next": "16.2.6",
     "next-auth": "^5.0.0-beta.31",
+    "pdf-lib": "^1.17.1",
+    "pdfkit": "^0.13.0",
     "prisma": "^6.19.3",
+    "puppeteer": "^21.11.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.3"

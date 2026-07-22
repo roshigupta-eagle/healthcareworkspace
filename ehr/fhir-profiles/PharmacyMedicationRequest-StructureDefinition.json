@@ -1,0 +1,26 @@
+﻿{
+  "resourceType": "StructureDefinition",
+  "id": "PharmacyMedicationRequest",
+  "url": "http://healthcareworkspace.org/fhir/StructureDefinition/PharmacyMedicationRequest",
+  "version": "0.1.0",
+  "name": "PharmacyMedicationRequest",
+  "title": "Pharmacy MedicationRequest Profile",
+  "status": "draft",
+  "date": "2026-07-21",
+  "publisher": "HealthCareWorkspace",
+  "description": "Profile constraining MedicationRequest for outpatient pharmacy prescriptions.",
+  "fhirVersion": "5.0.0",
+  "kind": "resource",
+  "abstract": false,
+  "type": "MedicationRequest",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/MedicationRequest",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      { "id": "MedicationRequest", "path": "MedicationRequest", "short": "Pharmacy prescription request", "definition": "MedicationRequest profile for pharmacy prescriptions." },
+      { "id": "MedicationRequest.medication[x]", "path": "MedicationRequest.medication[x]", "min": 1, "short": "Medication code or reference", "definition": "Prefer coded RxNorm medication or reference to Medication resource." },
+      { "id": "MedicationRequest.dosageInstruction", "path": "MedicationRequest.dosageInstruction", "short": "Human-readable SIG and structured dose", "definition": "Map UI SIG to dosageInstruction.text and structured fields where available." },
+      { "id": "MedicationRequest.dispenseRequest", "path": "MedicationRequest.dispenseRequest", "short": "Dispense / quantity / refills", "definition": "Capture quantity and numberOfRepeatsAllowed for pharmacy fulfillment." }
+    ]
+  }
+}

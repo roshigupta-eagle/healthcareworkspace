@@ -1,10 +1,12 @@
-﻿'use client';
+﻿"use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { PatientBanner } from '@/design-system/clinical/PatientBanner';
 import Link from 'next/link';
+// MessageDrawer removed in favor of a full Messages page
 
 export default function PatientProfileHeader({ patient }: { patient: any }) {
+  // messaging now routes to a dedicated Messages page
   const names = (patient.name || '').split(' ');
   const firstName = names[0] || '';
   const lastName = names.slice(1).join(' ') || '';
@@ -12,7 +14,7 @@ export default function PatientProfileHeader({ patient }: { patient: any }) {
   const age = patient.age || 0;
   const gender = patient.gender || 'Unknown';
   const sex = (gender === 'Male' || gender === 'Female' || gender === 'Other') ? gender : 'Unknown';
-  const identifiers = [{ label: 'MRN', value: patient.mrn }];
+  const identifiers = patient.phone ? [{ label: 'Phone', value: patient.phone }] : [{ label: 'MRN', value: patient.mrn }];
   const allergies = patient.allergies || [];
 
   const isHighRisk = (patient.conditions || []).some((c: string) => ['Hypertension','Type 2 Diabetes','Heart Failure','CAD'].includes(c)) || (patient.age || 0) >= 65;
@@ -65,11 +67,26 @@ export default function PatientProfileHeader({ patient }: { patient: any }) {
             </svg>
           </Link>
 
-          <button type="button" className="inline-flex items-center gap-2 rounded-md bg-white border border-gray-200 text-sm px-3 py-2 hover:bg-gray-50">Order Lab</button>
-          <button type="button" className="inline-flex items-center gap-2 rounded-md bg-white border border-gray-200 text-sm px-3 py-2 hover:bg-gray-50">Prescribe</button>
-          <button type="button" className="inline-flex items-center gap-2 rounded-md text-sm px-3 py-2 text-gray-700 hover:bg-gray-50">Message</button>
+          <Link href={"/dashboard/orders/labs/new?patientId=" + patient.id} className="inline-flex items-center gap-2 rounded-md bg-white border border-gray-200 text-sm px-3 py-2 hover:bg-gray-50" aria-label={"Order labs for " + patient.name}>Order Lab</Link>
+          <Link href={`/dashboard/prescriptions/new?patientId=${patient.id}`} className="inline-flex items-center gap-2 rounded-md bg-white border border-gray-200 text-sm px-3 py-2 hover:bg-gray-50" aria-label={`Prescribe for ${patient.name}`}>Prescribe</Link>
+          <Link
+            href={`/dashboard/records/${patient.id}/messages`}
+            className="inline-flex items-center gap-2 rounded-md bg-white border border-gray-200 text-sm px-3 py-2 text-gray-700 hover:bg-gray-50 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-400"
+            aria-label={`Open messages for ${patient.name}`}
+            title={patient.messagingDisabled ? 'Messaging disabled for this patient' : 'Open messages'}
+            onClick={(e) => { if (patient.messagingDisabled) e.preventDefault(); }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-teal-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+              <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6l-4 4V5z" />
+            </svg>
+            <span>Message</span>
+            {patient?.unreadMessagesCount > 0 && (
+              <span className="ml-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold bg-teal-600 text-white rounded-full">{patient.unreadMessagesCount}</span>
+            )}
+          </Link>
         </div>
       </div>
     </div>
   );
 }
+

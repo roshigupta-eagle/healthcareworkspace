@@ -1,0 +1,23 @@
+﻿{
+  "resourceType": "ImplementationGuide",
+  "id": "ehr-lab-pharmacy-ig",
+  "url": "http://healthcareworkspace.org/fhir/ImplementationGuide/ehr-lab-pharmacy-ig",
+  "version": "0.1.0",
+  "name": "EHRLabPharmacyIG",
+  "title": "EHR Lab & Pharmacy Starter IG",
+  "status": "draft",
+  "date": "2026-07-21",
+  "publisher": "HealthCareWorkspace",
+  "fhirVersion": ["5.0.0"],
+  "definition": {
+    "title": "EHR Lab & Pharmacy Starter IG",
+    "description": "Starter Implementation Guide containing basic StructureDefinitions for lab and pharmacy workflows.",
+    "resource": [
+      { "reference": { "reference": "StructureDefinition/LabServiceRequest" } },
+      { "reference": { "reference": "StructureDefinition/LabSpecimen" } },
+      { "reference": { "reference": "StructureDefinition/LabDiagnosticReport" } },
+      { "reference": { "reference": "StructureDefinition/PharmacyMedicationRequest" } },
+      { "reference": { "reference": "StructureDefinition/PharmacyMedicationDispense" } }
+    ]
+  }
+}

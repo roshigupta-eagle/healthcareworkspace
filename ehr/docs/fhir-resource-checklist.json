@@ -1,0 +1,93 @@
+﻿[
+  {
+    "resource": "Patient",
+    "usage": "Core patient demographic and identifiers; required for linking clinical data.",
+    "requiredFields": ["identifier","name","gender","birthDate"],
+    "recommendedBindings": {"identifier": "Local MRN / hospital number","gender":"AdministrativeGender"},
+    "notes": "Used by EHR, LIMS, and Pharmacy; ensure stable MRN mapping."
+  },
+  {
+    "resource": "Observation",
+    "usage": "Individual measurements (labs, vitals).",
+    "requiredFields": ["status","category","code","subject","effective[x]"],
+    "recommendedBindings": {"code":"LOINC","unit":"UCUM"},
+    "notes": "Use LOINC for lab tests; use components for panels."
+  },
+  {
+    "resource": "DiagnosticReport",
+    "usage": "Report that aggregates Observation results (lab panels).",
+    "requiredFields": ["status","code","subject","result"],
+    "recommendedBindings": {"code":"LOINC"},
+    "notes": "Link to Specimen and Observations; include interpretation/conclusion."
+  },
+  {
+    "resource": "ServiceRequest",
+    "usage": "Orders for services including laboratory tests (lab requisition).",
+    "requiredFields": ["subject","code","authoredOn"],
+    "recommendedBindings": {"code":"LOINC"},
+    "notes": "Record accession/requisition identifier on identifier or supportingIdentifier."
+  },
+  {
+    "resource": "Specimen",
+    "usage": "Specimen information (container, collection time, type).",
+    "requiredFields": ["identifier","type","subject"],
+    "recommendedBindings": {"type":"SpecimenType(SNOMED)"},
+    "notes": "Capture accessionIdentifier/barcode in identifier or accessionIdentifier."
+  },
+  {
+    "resource": "MedicationRequest",
+    "usage": "Prescriptions/orders for medications (outpatient/inpatient).",
+    "requiredFields": ["medication[x]","subject","intent"],
+    "recommendedBindings": {"medication":"RxNorm or SNOMED Medication","dosageInstruction":"See DosageDetails"},
+    "notes": "One MedicationRequest per medication; map UI SIG to dosageInstruction.text."
+  },
+  {
+    "resource": "MedicationDispense",
+    "usage": "Record of supply/dispense of medication to a patient.",
+    "requiredFields": ["medication[x]","subject","whenHandedOver","quantity"],
+    "recommendedBindings": {"medication":"RxNorm"},
+    "notes": "Link to MedicationRequest via basedOn or prescription."
+  },
+  {
+    "resource": "MedicationAdministration",
+    "usage": "Record of medication actually administered to the patient.",
+    "requiredFields": ["medication[x]","subject","status","effective[x]"],
+    "recommendedBindings": {"medication":"RxNorm"},
+    "notes": "Used for inpatient or observed administrations (MAR)."
+  },
+  {
+    "resource": "Consent",
+    "usage": "Patient consent records (data-sharing, results release).",
+    "requiredFields": ["status","scope","patient"],
+    "recommendedBindings": {},
+    "notes": "Capture share preferences for lab results and messaging."
+  },
+  {
+    "resource": "Appointment",
+    "usage": "Scheduling and booking appointments.",
+    "requiredFields": ["status","start","participant"],
+    "recommendedBindings": {},
+    "notes": "Used by scheduling UI and booking flows."
+  },
+  {
+    "resource": "Encounter",
+    "usage": "Context for visits and encounters.",
+    "requiredFields": ["status","class","subject"],
+    "recommendedBindings": {},
+    "notes": "Link diagnostic reports, orders and administrations to encounters where applicable."
+  },
+  {
+    "resource": "Procedure",
+    "usage": "Procedure records (e.g., specimen collection procedures).",
+    "requiredFields": ["status","code","subject"],
+    "recommendedBindings": {},
+    "notes": "Capture performer and performedDateTime for audit."
+  },
+  {
+    "resource": "Organization",
+    "usage": "Organizations such as labs and pharmacies.",
+    "requiredFields": ["identifier","name"],
+    "recommendedBindings": {},
+    "notes": "Use when referencing dispensers, performing lab, or organizations."
+  }
+]

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -13,7 +13,7 @@ export default function FloatingActions() {
           <div className="mb-2 bg-white rounded-lg shadow-lg p-2 ring-1 ring-gray-100">
             <Link href="/dashboard/appointments/new" className="block px-3 py-2 text-sm hover:bg-gray-50 rounded">New Appointment</Link>
             <Link href="/dashboard/prescriptions/new" className="block px-3 py-2 text-sm hover:bg-gray-50 rounded">New Prescription</Link>
-            <Link href="/dashboard/labs/order" className="block px-3 py-2 text-sm hover:bg-gray-50 rounded">Order Lab</Link>
+            <Link href="/dashboard/orders/labs/new" className="block px-3 py-2 text-sm hover:bg-gray-50 rounded">Order Lab</Link>
             <Link href="/dashboard/records/new" className="block px-3 py-2 text-sm hover:bg-gray-50 rounded">New Patient</Link>
           </div>
         )}
@@ -25,3 +25,4 @@ export default function FloatingActions() {
     </div>
   );
 }
+

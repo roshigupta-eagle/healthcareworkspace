@@ -3,9 +3,6 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { getPatientById, getMockPatients } from '../../records/mockPatients';
 import EncounterEditor from '@/components/EncounterEditor';
-import CalBookingClient from '@/app/dashboard/appointments/CalBookingClient';
-import { fetchAppointments } from '@/scheduling/services/scheduling.mock';
-import { getCurrentUser } from '@/cardiology/services/api.mock';
 
 export default async function NewEncounterPage({ searchParams }: { searchParams?: any }) {
   let session: any = null;
@@ -30,32 +27,15 @@ export default async function NewEncounterPage({ searchParams }: { searchParams?
   const patient = patientId ? getPatientById(String(patientId)) : null;
   const patients = getMockPatients();
 
-  const appointments = await fetchAppointments();
-  const currentUser = getCurrentUser();
-
   return (
     <div className="max-w-7xl mx-auto px-6 py-6">
       <div className="mb-4">
-        <Link href="/dashboard/records" className="text-sm text-teal-600 hover:underline">← Back to Records</Link>
+        <Link href="/dashboard/records" className="inline-flex items-center gap-2 rounded-md bg-white border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-teal-500"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 -ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg><span>Back to Records</span></Link>
       </div>
 
       {patient ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <main className="lg:col-span-8">
-            <EncounterEditor patient={patient} />
-          </main>
-
-          <aside className="lg:col-span-4">
-            <div className="bg-white rounded-lg p-4 shadow-sm ring-1 ring-gray-50">
-              <h3 className="text-lg font-semibold">Scheduling & Appointments</h3>
-              <p className="mt-1 text-sm text-neutral-600">Book or review appointments for this patient (demo)</p>
-
-              <div className="mt-4">
-                {/* @ts-expect-error Server -> Client prop serialization */}
-                <CalBookingClient initialAppointments={appointments} currentUser={currentUser} />
-              </div>
-            </div>
-          </aside>
+        <div>
+          <EncounterEditor patient={patient} />
         </div>
       ) : (
         <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -101,3 +81,4 @@ export default async function NewEncounterPage({ searchParams }: { searchParams?
     </div>
   );
 }
+

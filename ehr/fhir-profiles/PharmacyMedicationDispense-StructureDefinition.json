@@ -1,0 +1,25 @@
+﻿{
+  "resourceType": "StructureDefinition",
+  "id": "PharmacyMedicationDispense",
+  "url": "http://healthcareworkspace.org/fhir/StructureDefinition/PharmacyMedicationDispense",
+  "version": "0.1.0",
+  "name": "PharmacyMedicationDispense",
+  "title": "Pharmacy MedicationDispense Profile",
+  "status": "draft",
+  "date": "2026-07-21",
+  "publisher": "HealthCareWorkspace",
+  "description": "Profile constraining MedicationDispense for pharmacy fulfillment records.",
+  "fhirVersion": "5.0.0",
+  "kind": "resource",
+  "abstract": false,
+  "type": "MedicationDispense",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/MedicationDispense",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      { "id": "MedicationDispense", "path": "MedicationDispense", "short": "Pharmacy dispense record", "definition": "MedicationDispense profile for pharmacy fulfillment." },
+      { "id": "MedicationDispense.medication[x]", "path": "MedicationDispense.medication[x]", "min": 1, "short": "Medication", "definition": "Medication code or reference (RxNorm preferred)." },
+      { "id": "MedicationDispense.whenHandedOver", "path": "MedicationDispense.whenHandedOver", "short": "Timestamp of handover", "definition": "When the medication was handed to the patient or agent." }
+    ]
+  }
+}
