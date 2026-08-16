@@ -301,6 +301,15 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
     } catch (e) { return 'Routine'; }
   }, [patient]);
 
+  const relevantRecent = useMemo(() => {
+    try {
+      const recent = patient?.recentTests || [];
+      if (!selected || selected.length === 0) return (recent || []).slice(0,3);
+      const sels = selected.map(s => (s.code || s.name || '').toLowerCase());
+      return (recent || []).filter((r:any) => sels.some(s => (r || '').toLowerCase().includes(s))).slice(0,3);
+    } catch (e) { return (patient?.recentTests || []).slice(0,3); }
+  }, [patient?.recentTests, selected]);
+
   const canSubmit = useMemo(() => {
     return selected.length > 0 && reason.trim().length > 0;
   }, [selected, reason]);
@@ -604,10 +613,10 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
               <div className="mt-4">
                 <h4 className="text-xs font-semibold text-gray-500">Recent lab results</h4>
                 <div className="mt-2 text-sm text-gray-700">
-                  {(patient?.recentTests || []).slice(0,3).length === 0 ? (
+                  {(relevantRecent || []).length === 0 ? (
                     <div className="text-sm text-gray-500">No recent lab results</div>
                   ) : (
-                    (patient?.recentTests || []).slice(0,3).map((r:any) => (
+                    (relevantRecent || []).map((r:any) => (
                       <div key={r} className="flex items-center justify-between py-1">
                         <div className="text-sm">{r}</div>
                         <div className="text-xs text-gray-500">{new Date().toLocaleDateString()}</div>
