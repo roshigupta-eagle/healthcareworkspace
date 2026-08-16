@@ -26,8 +26,18 @@ const LAB_CATALOG: LabTest[] = [
 
 const COMMON_PANELS = ['cbc', 'lipid', 'hba1c', 'cmp'];
 
+// Map panels to components (informational only)
+const PANEL_COMPONENTS: Record<string, string[]> = {
+  cmp: ['glucose', 'bun', 'creatinine', 'na', 'k', 'cl', 'ast', 'alt', 'alkphos', 'bilirubin'],
+  cbc: ['hemoglobin', 'hematocrit', 'wbc', 'platelets'],
+};
+
 export default function LabOrderComposer({ patient }: { patient?: any }) {
   const [query, setQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const reasonRef = useRef<HTMLTextAreaElement | null>(null);
+  const [quickView, setQuickView] = useState<'Common'|'Favorites'|'Recent'|'Patient'|'Panels'|'All'>('Common');
+  const [detailsTest, setDetailsTest] = useState<any | null>(null);
   const [filter, setFilter] = useState<'All'|'Blood'|'Urine'|'Diabetes'|'Cardiology'|'Infection'|'Hormones'|'Vitamins'|'Kidney'|'Liver'>('All');
   const [selected, setSelected] = useState<any[]>([]);
   const [priority, setPriority] = useState<'Routine'|'Urgent'|'STAT'|'Future'>('Routine');
@@ -92,16 +102,50 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
   }, [selected, priority, orderDate, collectBy, repeat, morning, collectionType, location, fasting, reason, instructions, draftKey]);
 
+  // Keyboard: focus search when `/` pressed and not typing in inputs
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === '/' && (document.activeElement instanceof HTMLElement) && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = LAB_CATALOG.slice();
     if (q) list = list.filter(t => t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q));
+    // apply quickView filters
+    if (quickView === 'Common') list = list.filter(l => COMMON_PANELS.includes(l.id));
+    if (quickView === 'Panels') list = list.filter(l => l.panel);
+    if (quickView === 'Patient') {
+      const recentNames = (patient?.recentTests || []).map((r:string) => r.toLowerCase());
+      list = list.filter(l => recentNames.some(rn => l.name.toLowerCase().includes(rn) || l.code.toLowerCase().includes(rn)));
+    }
     // simple filter placeholder
     return list;
   }, [query, filter]);
 
+  function highlightMatch(text: string) {
+    const q = query.trim();
+    if (!q) return text;
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return text;
+    const before = text.slice(0, idx);
+    const match = text.slice(idx, idx + q.length);
+    const after = text.slice(idx + q.length);
+    return (<>{before}<mark className="bg-yellow-100 text-yellow-800 px-0.5">{match}</mark>{after}</>);
+  }
+
   function addTest(t: LabTest) {
-    if (selected.some(s => s.id === t.id)) return; // silently ignore duplicates in UI
+    if (selected.some(s => s.id === t.id)) {
+      // already selected
+      setDetailsTest(t);
+      return;
+    }
 
     try {
       const recent = JSON.parse(localStorage.getItem(sentKey) || '[]');
@@ -112,7 +156,7 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
     } catch (e) {}
 
     const fastingRecommended = (t.code === 'LIPID');
-    setSelected(s => [...s, { ...t, specimen: 'Blood', fastingRecommended, note: '' }]);
+    setSelected(s => [...s, { ...t, specimen: t.panel ? 'Blood' : 'Blood', fastingRecommended, note: '' }]);
   }
 
   function addPanel(panelId: string) {
@@ -142,12 +186,16 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
     setShowReview(true);
   }
 
-  function submitOrderFinal() {
+  async function submitOrderFinal() {
     if (selected.length === 0) { alert('Add at least one test before submitting'); return; }
     const order = { patientId: patient?.id || null, tests: selected, priority, reason, fasting, collectionType, location, orderDate, collectBy, repeat, morning, instructions, ts: Date.now() };
     try {
-      const prev = JSON.parse(localStorage.getItem(sentKey) || '[]');
-      localStorage.setItem(sentKey, JSON.stringify([order, ...prev].slice(0,50)));
+      setAutosaveStatus('saving');
+      // call server endpoint
+      const res = await fetch('/api/orders/labs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) });
+      if (!res.ok) throw new Error('failed');
+      const body = await res.json();
+      // success
       localStorage.removeItem(draftKey);
       setSelected([]);
       setReason('');
@@ -155,9 +203,14 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
       setInstructions('');
       setShowReview(false);
       setSent(true);
+      setAutosaveStatus('saved');
+      setLastSavedAt(new Date().toLocaleTimeString());
+      // show order id
+      alert(`Order submitted: ${body.orderId}`);
       setTimeout(() => setSent(false), 2500);
     } catch (e) {
-      alert('Failed to submit order (local)');
+      setAutosaveStatus('failed');
+      alert('Failed to submit order');
     }
   }
 
@@ -178,6 +231,16 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
     } catch (e) {}
     return Array.from(new Set(w));
   }, [selected, reason, sentKey]);
+
+  function focusForIssue(issue: string) {
+    if (issue.includes('reason')) {
+      reasonRef.current?.focus();
+      reasonRef.current?.scrollIntoView({ block: 'center' });
+    }
+    if (issue.includes('Select') || issue.includes('tests')) {
+      inputRef.current?.focus();
+    }
+  }
 
   const patientRisk = useMemo(() => {
     try {
@@ -289,9 +352,15 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
                         <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="2" />
                       </svg>
-                      <input id="lab-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search CBC, A1C, Lipid, Troponin, CMP..." className="w-full max-w-3xl text-sm pl-11 pr-4 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-200" />
+                      <input id="lab-search" ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search test, panel, synonym, code or clinical keyword..." className="w-full max-w-3xl text-sm pl-11 pr-4 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-200" />
                     </div>
                     <div className="mt-3 text-xs text-gray-500 flex items-center gap-2 flex-wrap">Popular: <span className="ml-2 inline-flex gap-2">{['CBC','A1C','Lipid','CMP','Troponin'].map(s => (<button key={s} onClick={() => setQuery(s)} className="px-2 py-0.5 rounded bg-gray-100 text-xs text-gray-700">{s}</button>))}</span></div>
+                    {/* Quick views */}
+                    <div className="mt-3 flex items-center gap-2">
+                      {['Common','Favorites','Recent','Patient','Panels','All'].map((v) => (
+                        <button key={v} onClick={() => setQuickView(v as any)} className={`px-3 py-1 text-xs rounded ${quickView===v ? 'bg-teal-700 text-white' : 'bg-white text-gray-700 border border-gray-100'}`}>{v}</button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="flex-1 lg:flex-none">
@@ -304,7 +373,7 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
                 </div>
 
               {/* Common panels */}
-              <div className="mt-6">
+                  <div className="mt-6">
                 <h3 className="text-sm font-medium text-gray-700">Common panels</h3>
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {COMMON_PANELS.map((id) => {
@@ -328,13 +397,13 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
               </div>
 
               {/* Catalog results */}
-              <div className="mt-6 space-y-3">
+                  <div className="mt-6 space-y-3">
                 {filtered.map((t) => (
                   <div key={t.id} className="flex items-center justify-between p-3 rounded-md bg-white border border-gray-100 hover:shadow-sm transition">
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 font-semibold">{t.code}</div>
                       <div>
-                        <div className="font-medium text-gray-900">{t.name}</div>
+                        <div className="font-medium text-gray-900 cursor-pointer" role="button" tabIndex={0} onClick={() => setDetailsTest(t)} onKeyDown={(e)=>{ if(e.key==='Enter') setDetailsTest(t); }}>{highlightMatch(t.name) as any}</div>
                         <div className="text-xs text-gray-500">{t.description}</div>
                         <div className="text-xs text-gray-400 mt-1">{t.code} • {t.tat ? `TAT: ${t.tat}` : 'TAT: —'}</div>
                       </div>
