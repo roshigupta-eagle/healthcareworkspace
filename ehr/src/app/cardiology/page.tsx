@@ -87,7 +87,7 @@ function generateMockDashboard(): DashboardType {
   return dashboard;
 }
 
-export default async function Page({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
+export default async function Page({ searchParams }: { searchParams?: any }) {
   const dashboard = generateMockDashboard();
 
   let userId = 'u-1';
@@ -112,8 +112,9 @@ export default async function Page({ searchParams }: { searchParams?: Record<str
   }
 
   // Allow dev override via ?asUser=USER_ID
-  if (searchParams && searchParams.asUser) {
-    const override = Array.isArray(searchParams.asUser) ? searchParams.asUser[0] : searchParams.asUser;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  if (resolvedSearchParams && resolvedSearchParams.asUser) {
+    const override = Array.isArray(resolvedSearchParams.asUser) ? resolvedSearchParams.asUser[0] : resolvedSearchParams.asUser;
     const all = getAllMockUsers();
     if (override && all[override]) {
       userId = override;

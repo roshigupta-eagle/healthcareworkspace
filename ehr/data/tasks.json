@@ -1,0 +1,34 @@
+﻿{
+  "patient-001": [
+    {
+      "id": "ct1",
+      "patientId": "patient-001",
+      "title": "Lipid Panel",
+      "description": "Laboratory monitoring requested after medication review.",
+      "category": "Laboratory",
+      "priority": "normal",
+      "status": "requested",
+      "dueDate": "2026-06-04T00:00:00.000Z",
+      "assignee": null,
+      "requester": { "id": "dr-chen", "name": "Dr. Chen" },
+      "relatedResources": [ { "type": "ServiceRequest", "id": "sr-lipid-001", "display": "Lipid Panel ServiceRequest" } ],
+      "history": [],
+      "createdAt": "2026-05-01T10:00:00.000Z"
+    },
+    {
+      "id": "ct2",
+      "patientId": "patient-001",
+      "title": "Blood Pressure Follow-up",
+      "description": "Monitor elevated readings and review the patient's home blood-pressure log.",
+      "category": "Follow-up",
+      "priority": "high",
+      "status": "in-progress",
+      "dueDate": "2026-06-15T00:00:00.000Z",
+      "assignee": { "id": "dr-aris", "name": "Dr. Aris Thorne" },
+      "requester": { "id": "dr-lee", "name": "Dr. Lee" },
+      "relatedResources": [ { "type": "CarePlan", "id": "cp-hypertension-001", "display": "Hypertension Care Plan" } ],
+      "history": [],
+      "createdAt": "2026-05-20T09:00:00.000Z"
+    }
+  ]
+}

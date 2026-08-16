@@ -2,7 +2,7 @@
 
 import (
 "encoding/json"
-"log/slog"
+"errors"
 "net/http"
 
 "healthcareworkspace/pharmacyms/internal/store"
@@ -28,7 +28,10 @@ return
 }
 d, err := h.st.CreateDispense(r.Context(), body.PrescriptionID, body.DispensedBy, body.Quantity, body.LotNumber)
 if err != nil {
-slog.Error("create dispense", "error", err)
+if errors.Is(err, store.ErrInsufficientQuantity) {
+writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "insufficient quantity"})
+return
+}
 writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to record dispense"})
 return
 }
@@ -43,7 +46,6 @@ return
 }
 dispenses, err := h.st.ListDispensesByPrescription(r.Context(), rxID)
 if err != nil {
-slog.Error("list dispenses", "error", err)
 writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to list dispenses"})
 return
 }

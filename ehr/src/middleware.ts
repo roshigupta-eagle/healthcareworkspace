@@ -3,20 +3,36 @@ import { NextResponse } from "next/server";
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
+  const searchParams = req.nextUrl.searchParams;
+
+  // Allow dev bypass for doctor view when ?noauth=1 is present
+  if (pathname.startsWith('/doctor') && searchParams.get('noauth')) {
+    return NextResponse.next();
+  }
 
   // Public — no auth required
   if (pathname === "/") return NextResponse.next();
-  const publicRoutes = ["/login", "/register", "/api/auth", "/api/register", "/scheduling", "/docs"];
+  const publicRoutes = ["/login", "/register", "/api/auth", "/api/register", "/scheduling", "/docs", "/debug"];
+
+  // Redirect login/register to doctor view (dev convenience)
+  if (pathname === '/login' || pathname === '/register') {
+    return NextResponse.redirect(new URL('/doctor?noauth=1', req.url));
+  }
+
   if (publicRoutes.some((r) => pathname.startsWith(r))) return NextResponse.next();
 
-  // Playwright E2E bypass (non-production only)
-  if (process.env.NODE_ENV !== "production") {
+  // Playwright / E2E bypass is gated behind explicit env enable + allowlist
+  const enableE2EBypass = process.env.ENABLE_E2E_BYPASS === "true";
+  const bypassAllowlist = (process.env.E2E_BYPASS_ALLOWLIST || "").split(",").map(s => s.trim()).filter(Boolean);
+
+  if (process.env.NODE_ENV !== "production" && enableE2EBypass) {
     if (req.headers.get("x-playwright") === "1") return NextResponse.next();
     if (req.nextUrl.searchParams.get("playwright") === "1") return NextResponse.next();
-    // Dev preview shortcut: allow ?asUser=USER_ID to bypass auth for local testing
-    if (req.nextUrl.searchParams.get("asUser")) return NextResponse.next();
-    // Dev: allow specific dashboard preview routes without query param
-    const devAllowed = ["/dashboard/encounters", "/dashboard/appointments", "/dashboard/records", "/dashboard"];
+    const asUser = req.nextUrl.searchParams.get("asUser");
+    if (asUser && bypassAllowlist.includes(asUser)) return NextResponse.next();
+
+    const allowedPaths = bypassAllowlist.filter(p => p.startsWith("/"));
+    const devAllowed = allowedPaths.length ? allowedPaths : ["/dashboard/encounters", "/dashboard/appointments", "/dashboard/records", "/dashboard"];
     if (devAllowed.some((r) => req.nextUrl.pathname.startsWith(r))) return NextResponse.next();
   }
 

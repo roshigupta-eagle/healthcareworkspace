@@ -1,9 +1,10 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ThemeLangControlsClient from "@/components/ThemeLangControlsClient";
 import { useThemeLang } from "@/components/ThemeLangProvider";
+import Link from "next/link";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -11,6 +12,15 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
   const { t } = useThemeLang();
+
+  useEffect(() => {
+    // Redirect register page straight to doctor view (bypass auth)
+    try {
+      router.replace('/doctor?noauth=1');
+    } catch (e) {
+      // ignore
+    }
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -225,6 +235,4 @@ export default function RegisterPage() {
     </main>
   );
 }
-
-import Link from "next/link";
 

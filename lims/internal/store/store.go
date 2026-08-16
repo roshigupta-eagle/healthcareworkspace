@@ -12,7 +12,7 @@ import (
 
 // Store wraps the database pool with LIMS-specific query methods.
 type Store struct {
-db *pgxpool.Pool
+    db *pgxpool.Pool
 }
 
 // New creates a Store.
@@ -218,7 +218,26 @@ in.OrderID)
 return &r, nil
 }
 
-// IsCritical checks whether a result interpretation flag is life-threatening.
+func (s *Store) UpdateResultStatus(ctx context.Context, id, status string) error {
+tag, err := s.db.Exec(ctx, `UPDATE lab_results SET status=$1 WHERE id=$2::uuid`, status, id)
+if err != nil {
+return fmt.Errorf("update result status: %w", err)
+}
+if tag.RowsAffected() == 0 {
+return fmt.Errorf("result not found: %s", id)
+}
+return nil
+}
+
+func (s *Store) GetResultByID(ctx context.Context, id string) (*LabResult, error) {
+var r LabResult
+err := s.db.QueryRow(ctx, `SELECT id, order_id, COALESCE(lab_test_id::text,''), value_numeric, COALESCE(value_text,''), COALESCE(value_coded,''), COALESCE(units,''), COALESCE(reference_range,''), COALESCE(interpretation,''), status, resulted_at, COALESCE(resulted_by,'') FROM lab_results WHERE id=$1::uuid`, id).Scan(&r.ID, &r.OrderID, &r.LabTestID, &r.ValueNumeric, &r.ValueText, &r.ValueCoded, &r.Units, &r.ReferenceRange, &r.Interpretation, &r.Status, &r.ResultedAt, &r.ResultedBy)
+if err != nil {
+return nil, fmt.Errorf("get result: %w", err)
+}
+return &r, nil
+}
+
 func IsCritical(interpretation string) bool {
 return interpretation == "HH" || interpretation == "LL"
 }

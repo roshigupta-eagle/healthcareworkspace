@@ -4,7 +4,7 @@ import LinkCard from '@/components/LinkCard';
 import { PageHeader } from '@/design-system';
 import { getAllMockUsers } from '@/cardiology/services/api.mock';
 
-export default async function AdminPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
+export default async function AdminPage({ searchParams }: { searchParams?: any }) {
   let session: any = null;
   try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -15,8 +15,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: Recor
   }
 
   // Support dev override via ?asUser=USER_ID (only outside production)
-  if (!session && searchParams && searchParams.asUser && process.env.NODE_ENV !== 'production') {
-    const override = Array.isArray(searchParams.asUser) ? searchParams.asUser[0] : searchParams.asUser;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  if (!session && resolvedSearchParams && resolvedSearchParams.asUser && process.env.NODE_ENV !== 'production') {
+    const override = Array.isArray(resolvedSearchParams.asUser) ? resolvedSearchParams.asUser[0] : resolvedSearchParams.asUser;
     const all = getAllMockUsers();
     if (override && all[override]) {
       session = { user: { id: override, name: all[override].name, role: all[override].role } };

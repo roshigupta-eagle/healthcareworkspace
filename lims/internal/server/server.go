@@ -8,6 +8,7 @@ import (
 "github.com/go-chi/chi/v5"
 "github.com/go-chi/chi/v5/middleware"
 
+"healthcareworkspace/lims/internal/auth"
 "healthcareworkspace/lims/internal/config"
 "healthcareworkspace/lims/internal/db"
 "healthcareworkspace/lims/internal/handler"
@@ -32,7 +33,7 @@ r.Use(func(next http.Handler) http.Handler {
 return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 w.Header().Set("Access-Control-Allow-Origin", cfg.AllowedOrigin)
 w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
-w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Internal-Token")
 if req.Method == http.MethodOptions {
 w.WriteHeader(http.StatusNoContent)
 return
@@ -59,7 +60,7 @@ r.Get("/tests", tests.List)
 // Lab orders
 r.Route("/orders", func(r chi.Router) {
 r.Get("/", orders.List)
-r.Post("/", orders.Create)
+r.With(auth.RequireAuth("DOCTOR","ADMIN")).Post("/", orders.Create)
 r.Route("/{id}", func(r chi.Router) {
 r.Patch("/status", orders.UpdateStatus)
 r.Get("/results", results.GetByOrder)
@@ -69,7 +70,10 @@ r.Get("/results", results.GetByOrder)
 // Lab results
 r.Route("/results", func(r chi.Router) {
 r.Get("/", results.List)   // ?order=UUID
-r.Post("/", results.Create)
+r.With(auth.RequireAuth("LAB_TECH","LAB_VERIFIER","PATHOLOGIST","ADMIN")).Post("/", results.Create)
+r.Route("/{id}", func(r chi.Router) {
+r.With(auth.RequireAuth("LAB_VERIFIER","PATHOLOGIST","ADMIN")).Patch("/status", results.UpdateStatus)
+})
 })
 })
 }

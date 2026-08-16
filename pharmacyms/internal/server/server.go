@@ -8,6 +8,7 @@ import (
 "github.com/go-chi/chi/v5"
 "github.com/go-chi/chi/v5/middleware"
 
+"healthcareworkspace/pharmacyms/internal/auth"
 "healthcareworkspace/pharmacyms/internal/config"
 "healthcareworkspace/pharmacyms/internal/db"
 "healthcareworkspace/pharmacyms/internal/handler"
@@ -31,7 +32,7 @@ r.Use(func(next http.Handler) http.Handler {
 return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 w.Header().Set("Access-Control-Allow-Origin", cfg.AllowedOrigin)
 w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
-w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Internal-Token")
 if req.Method == http.MethodOptions { w.WriteHeader(http.StatusNoContent); return }
 next.ServeHTTP(w, req)
 })
@@ -59,12 +60,12 @@ r.Get("/", meds.List) // ?q=search
 })
 r.Route("/prescriptions", func(r chi.Router) {
 r.Get("/", rxs.List)   // ?patient=&status=
-r.Post("/", rxs.Create)
-r.Patch("/{id}/status", rxs.UpdateStatus)
+r.With(auth.RequireAuth("DOCTOR","ADMIN")).Post("/", rxs.Create)
+r.With(auth.RequireAuth("DOCTOR","ADMIN")).Patch("/{id}/status", rxs.UpdateStatus)
 })
 r.Route("/dispenses", func(r chi.Router) {
 r.Get("/", dispenses.ListByPrescription)  // ?prescription=UUID
-r.Post("/", dispenses.Create)
+r.With(auth.RequireAuth("PHARMACIST","ADMIN")).Post("/", dispenses.Create)
 })
 })
 }

@@ -48,6 +48,9 @@ writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "orderId
 return
 }
 
+// Force preliminary status on create — handlers should not create final results directly
+in.Status = ""
+
 result, err := h.st.CreateResult(r.Context(), in)
 if err != nil {
 slog.Error("create result", "error", err)
@@ -55,14 +58,48 @@ writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed 
 return
 }
 
-// EPIC-SAFE-01: Fire critical value alert asynchronously
+// EPIC-SAFE-01: Fire critical value alert asynchronously when finalization happens. Create only logs for now.
 if store.IsCritical(result.Interpretation) {
-slog.Warn("CRITICAL VALUE", "orderId", result.OrderID, "interp", result.Interpretation,
+// preliminary critical flags are recorded but alerts are emitted after finalization
+slog.Warn("CRITICAL VALUE (preliminary)", "orderId", result.OrderID, "interp", result.Interpretation,
 "value", result.ValueNumeric, "units", result.Units)
-// In production: publish to Redis pub/sub → SSE stream → SMS gateway
 }
 
 writeJSON(w, http.StatusCreated, result)
+}
+
+// UpdateStatus handles PATCH /api/v1/results/{id}/status — used by verifiers to finalize results
+func (h *ResultsHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
+id := chi.URLParam(r, "id")
+if id == "" {
+writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing result id"})
+return
+}
+var body struct{ Status string `json:"status"` }
+if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+return
+}
+if body.Status != "final" {
+writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "only status=final is allowed"})
+return
+}
+if err := h.st.UpdateResultStatus(r.Context(), id, body.Status); err != nil {
+writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to update status"})
+return
+}
+res, err := h.st.GetResultByID(r.Context(), id)
+if err != nil {
+writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to retrieve result"})
+return
+}
+// On finalization, emit critical alert if applicable
+if store.IsCritical(res.Interpretation) {
+slog.Warn("CRITICAL VALUE (final)", "orderId", res.OrderID, "interp", res.Interpretation,
+"value", res.ValueNumeric, "units", res.Units)
+// TODO: publish to Redis pub/sub → SSE → notification pipeline
+}
+writeJSON(w, http.StatusOK, res)
 }
 
 // GetByOrder handles GET /api/v1/orders/{id}/results

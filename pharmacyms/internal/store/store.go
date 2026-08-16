@@ -3,6 +3,7 @@ package store
 
 import (
 "context"
+"errors"
 "fmt"
 "time"
 
@@ -11,6 +12,8 @@ import (
 
 type Store struct{ db *pgxpool.Pool }
 func New(db *pgxpool.Pool) *Store { return &Store{db: db} }
+
+var ErrInsufficientQuantity = errors.New("insufficient quantity")
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -139,8 +142,27 @@ return s.ListPrescriptions(ctx, patientID, "active")
 // ─── Dispenses ───────────────────────────────────────────────────────────────
 
 func (s *Store) CreateDispense(ctx context.Context, prescriptionID, dispensedBy string, qty float64, lot string) (*Dispense, error) {
+// Use a transaction and lock the prescription row to prevent concurrent over-dispense
+tx, err := s.db.Begin(ctx)
+if err != nil { return nil, fmt.Errorf("begin tx: %w", err) }
+defer func() { _ = tx.Rollback(ctx) }()
+
+var presQty float64
+var presStatus string
+err = tx.QueryRow(ctx, `SELECT COALESCE(quantity,0), COALESCE(status,'') FROM prescriptions WHERE id=$1::uuid FOR UPDATE`, prescriptionID).Scan(&presQty, &presStatus)
+if err != nil { return nil, fmt.Errorf("lock prescription: %w", err) }
+
+var dispensedSum float64
+err = tx.QueryRow(ctx, `SELECT COALESCE(SUM(quantity),0) FROM dispenses WHERE prescription_id=$1::uuid`, prescriptionID).Scan(&dispensedSum)
+if err != nil { return nil, fmt.Errorf("sum dispensed: %w", err) }
+
+remaining := presQty - dispensedSum
+if remaining < qty {
+return nil, ErrInsufficientQuantity
+}
+
 var d Dispense
-err := s.db.QueryRow(ctx,
+err = tx.QueryRow(ctx,
 `INSERT INTO dispenses (prescription_id,dispensed_by,quantity,lot_number)
  VALUES ($1::uuid,$2,$3,$4)
  RETURNING id,prescription_id,dispensed_by,dispensed_at,quantity,COALESCE(lot_number,''),NULL`,
@@ -148,11 +170,13 @@ prescriptionID, dispensedBy, qty, lot,
 ).Scan(&d.ID,&d.PrescriptionID,&d.DispensedBy,&d.DispensedAt,&d.Quantity,&d.LotNumber,&d.ExpiryDate)
 if err != nil { return nil, fmt.Errorf("create dispense: %w", err) }
 
-// Decrement refills; if 0, close prescription
-_, _ = s.db.Exec(ctx,
+_, err = tx.Exec(ctx,
 `UPDATE prescriptions SET refills = GREATEST(refills-1,0),
  status = CASE WHEN refills <= 1 THEN 'completed' ELSE status END
  WHERE id=$1::uuid`, prescriptionID)
+if err != nil { return nil, fmt.Errorf("update prescription: %w", err) }
+
+if err := tx.Commit(ctx); err != nil { return nil, fmt.Errorf("commit: %w", err) }
 return &d, nil
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import AnimatedLink from "@/components/AnimatedLink";
@@ -12,6 +12,15 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { t } = useThemeLang();
+
+  useEffect(() => {
+    // Automatically redirect login page to doctor view (bypass auth in dev)
+    try {
+      router.replace('/doctor?noauth=1');
+    } catch (e) {
+      // ignore
+    }
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

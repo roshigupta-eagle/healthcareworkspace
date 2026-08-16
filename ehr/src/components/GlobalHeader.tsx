@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import SearchBar from './SearchBarClient';
 import ThemeLangControlsClient from './ThemeLangControlsClient';
 import CommandPaletteClient from './CommandPaletteClient';
@@ -10,15 +11,18 @@ export default function GlobalHeader({ session, role }: { session?: any; role?: 
   const [unread, setUnread] = useState(3);
   const [syncStatus, setSyncStatus] = useState({ ok: true, last: '2 min ago' });
   const tenant = session?.user?.tenant || 'Maple Health';
+  const searchParams = useSearchParams();
+  const noAuth = !!(searchParams && (searchParams.get('noauth') === '1' || searchParams.get('noauth') === 'true'));
+  const homeHref = noAuth || role === 'DOCTOR' || role === 'ADMIN' ? '/doctor' : '/dashboard';
 
   
 
   return (
     <header className="mb-6 flex items-center justify-between gap-4">
       <div className="flex items-center gap-4">
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="rounded-md bg-indigo-600 text-white px-3 py-2 font-semibold shadow">EHR</div>
-          <div className="text-lg font-semibold">Healthcare EHR</div>
+        <Link href={homeHref} className="flex items-center gap-3">
+          <div className="rounded-md bg-indigo-600 text-white px-3 py-2 font-semibold shadow">R</div>
+          <div className="text-lg font-semibold">Roshi EHR</div>
         </Link>
 
         <div className="hidden sm:block">

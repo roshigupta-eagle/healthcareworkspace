@@ -24,6 +24,7 @@
  */
 
 import React from 'react';
+import Link from 'next/link';
 import { cn } from '../utils/cn';
 import { Badge } from '../primitives/Badge';
 
@@ -48,12 +49,17 @@ export interface PatientBannerProps {
   sex: 'Male' | 'Female' | 'Other' | 'Unknown';
   allergies?: string[];
   isolationPrecautions?: IsolationPrecaution[];
-  /** Optional additional identifiers (e.g. Health Card No., provincial ID) */
-  identifiers?: Array<{ label: string; value: string }>;
+  /** Optional additional identifiers (e.g. Health Card No., provincial ID)
+   * Each identifier may include an optional `href` which will render the
+   * value as a clickable link (e.g. phone/email link to contact preferences).
+   */
+  identifiers?: Array<{ label: string; value: string; href?: string }>;
   verificationStatus?: PatientVerificationStatus;
   /** Callback when clinician verifies patient identity */
   onVerify?: () => void;
   className?: string;
+  /** Optional link to open full allergy details page (e.g. /dashboard/records/:id/allergies) */
+  allergyHref?: string;
 }
 
 const precautionLabels: Record<IsolationPrecaution, string> = {
@@ -86,16 +92,18 @@ export const PatientBanner: React.FC<PatientBannerProps> = ({
   identifiers = [],
   verificationStatus = 'none',
   onVerify,
+  allergyHref,
   className,
-}) => (
-  <div
-    role="region"
-    aria-label="Patient identification banner"
-    className={cn(
-      'flex flex-col bg-white border-b border-neutral-200 shadow-xs',
-      className,
-    )}
-  >
+}) => {
+  return (
+    <div
+      role="region"
+      aria-label="Patient identification banner"
+      className={cn(
+        'flex flex-col bg-white border-b border-neutral-200 shadow-xs',
+        className,
+      )}
+    >
     {/* Unverified patient warning strip */}
     {verificationStatus === 'unverified' && (
       <div
@@ -147,7 +155,18 @@ export const PatientBanner: React.FC<PatientBannerProps> = ({
             </div>
           </>
         ) : (
-          <Badge variant="stable">No Known Allergies</Badge>
+          allergyHref ? (
+            <Link
+              href={allergyHref}
+              title="Open allergy safety details"
+              aria-label={`Open allergy safety details for ${firstName} ${lastName}`}
+              className="inline-flex items-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-300 transform transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm hover:ring-2 hover:ring-emerald-100"
+            >
+              <Badge variant="stable" className="cursor-pointer">No Known Allergies</Badge>
+            </Link>
+          ) : (
+            <Badge variant="stable">No Known Allergies</Badge>
+          )
         )}
       </div>
 
@@ -194,7 +213,13 @@ export const PatientBanner: React.FC<PatientBannerProps> = ({
             <div className="h-8 w-px bg-neutral-200 hidden sm:block" aria-hidden="true" />
             <div className="flex flex-col">
               <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{id.label}</span>
-              <span className="text-sm font-semibold text-neutral-900 font-mono tracking-wider">{id.value}</span>
+              {id.href ? (
+                <Link href={id.href} className="text-sm font-semibold text-neutral-900 font-mono tracking-wider hover:underline">
+                  {id.value}
+                </Link>
+              ) : (
+                <span className="text-sm font-semibold text-neutral-900 font-mono tracking-wider">{id.value}</span>
+              )}
             </div>
           </React.Fragment>
         ))}
@@ -214,4 +239,5 @@ export const PatientBanner: React.FC<PatientBannerProps> = ({
       )}
     </div>
   </div>
-);
+  );
+};

@@ -5,6 +5,7 @@ Files:
 - `stop-all.ps1` - Stop processes started by `start-all.ps1` using the PID file.
 - `port-forward.ps1` - Start/stop kubectl port-forwards described in `port-forward.config.json`.
 - `port-forward.config.json` - sample port-forward rules.
+ - `manage-services.ps1` - More flexible manager: status/start/stop/restart individual components (ehr, fhir, lims, pharmacyms, postgres). Preferred for scripted workflows.
 
 Usage (PowerShell, from repository root):
 
@@ -12,6 +13,12 @@ Start everything:
 
 ```powershell
 .\scripts\start-all.ps1
+```
+
+Start everything (preferred - checks status and supports restart/force):
+
+```powershell
+.\scripts\manage-services.ps1 -Action start -Component all
 ```
 
 Stop everything:

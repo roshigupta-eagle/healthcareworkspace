@@ -109,6 +109,7 @@ model Patient {
   carePlans        CarePlan[]
   consents         Consent[]
   provenance       Provenance[]
+  clinicalNotes    ClinicalNote[]
 
   @@map("patients")
 }
@@ -163,6 +164,7 @@ model Encounter {
   procedures      Procedure[]
   serviceRequests ServiceRequest[]
   diagnosticReports DiagnosticReport[]
+  clinicalNotes     ClinicalNote[]
 
   @@index([patientId])
   @@index([practitionerId])
@@ -404,5 +406,181 @@ model Provenance {
   @@index([patientId])
   @@map("provenance")
 }
+
+// ─── Unified Notes (track-changes enabled, all-staff) ───────────────────────
+// See docs/solutioning/notes-feature/hld.md and lld.md.
+// Not yet migrated in this environment (no live DB); service.mock.ts in
+// ehr/src/notes mirrors this shape so a Prisma-backed repository is a
+// drop-in replacement behind the NotesService interface.
+
+model ClinicalNote {
+  id            String    @id @default(cuid())
+  patientId     String
+  encounterId   String?
+  type          String    // NoteType: progress | soap | nursing | medication-review | lab-annotation | administrative | consult
+  title         String
+  status        String    @default("draft") // draft | signed
+  baseText      String    @db.Text
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  signedById    String?
+  signedAt      DateTime?
+  tags          String[]
+
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  encounter     Encounter?     @relation(fields: [encounterId], references: [id])
+  revisions     NoteRevision[]
+  comments      NoteComment[]
+  addenda       NoteAddendum[]
+
+  @@index([patientId])
+  @@index([encounterId])
+  @@index([status])
+  @@map("clinical_notes")
+}
+
+model NoteRevision {
+  id             String    @id @default(cuid())
+  noteId         String
+  authorId       String
+  createdAt      DateTime  @default(now())
+  status         String    // pending | accepted | rejected | superseded
+  baseRevisionId String?
+  ops            Json      // ChangeOp[]
+  resultingText  String?   @db.Text
+  reviewedById   String?
+  reviewedAt     DateTime?
+
+  note ClinicalNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@index([status])
+  @@map("note_revisions")
+}
+
+model NoteComment {
+  id         String   @id @default(cuid())
+  noteId     String
+  authorId   String
+  body       String   @db.Text
+  anchorOpId String?
+  createdAt  DateTime @default(now())
+
+  note ClinicalNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@map("note_comments")
+}
+
+model NoteAddendum {
+  id        String   @id @default(cuid())
+  noteId    String
+  authorId  String
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+
+  note ClinicalNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@map("note_addenda")
+}
+
+// -------------------------- Tasks & Workflow -----------------------------
+// Task models support assignment, comments, activity timeline and status
+// history. These align with the UI components in the Clinical Tasks page.
+
+model Task {
+  id                 String   @id @default(cuid())
+  title              String
+  patientId          String
+  assignedTo         String?
+  createdBy          String
+  status             String   // todo, in_progress, delegated, completed, overdue
+  priority           String   // low, medium, high, critical
+  category           String?
+  dueAt              DateTime?
+  completedAt        DateTime?
+  relatedEncounterId String?
+  relatedLabResultId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  // optional relations to users (may be null for system-assigned tasks)
+  assignee  User?    @relation(fields: [assignedTo], references: [id])
+  creator   User     @relation("TaskCreator", fields: [createdBy], references: [id])
+
+  comments       TaskComment[]
+  activities     TaskActivity[]
+  assignments    TaskAssignment[]
+  statusHistory  TaskStatusHistory[]
+
+  @@index([patientId])
+  @@index([assignedTo])
+  @@map("tasks")
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  authorId  String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([taskId])
+  @@map("task_comments")
+}
+
+model TaskActivity {
+  id        String   @id @default(cuid())
+  taskId    String
+  type      String   // note, status, assignment, system
+  detail    String   @db.Text
+  actorId   String?
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([taskId])
+  @@map("task_activities")
+}
+
+model TaskAssignment {
+  id        String   @id @default(cuid())
+  taskId    String
+  fromUser  String?
+  toUser    String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  from User? @relation(fields: [fromUser], references: [id])
+  to   User  @relation(fields: [toUser], references: [id])
+
+  @@index([taskId])
+  @@map("task_assignments")
+}
+
+model TaskStatusHistory {
+  id        String   @id @default(cuid())
+  taskId    String
+  from      String?
+  to        String
+  reason    String?
+  actorId   String?
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([taskId])
+  @@map("task_status_history")
+}
+
 
 

@@ -600,3 +600,57 @@ input, select, textarea, button {
   background-color: rgba(15,23,42,0.18);
 }
 
+/* Roshi EHR: Hero dot-grid background and motif (accessible, decorative) */
+.hero-dot-grid {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at center, rgba(18,41,110,0.96) 0%, rgba(5,20,68,1) 75%);
+}
+
+.hero-dot-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(102,145,255,0.32) 1.25px, transparent 1.5px);
+  background-size: 72px 72px;
+  opacity: 0.45;
+  mask-image: linear-gradient(to bottom, black 0%, black 72%, transparent 100%);
+}
+
+/* Larger six-dot Roshi motif (two columns x three rows) */
+.roshi-dot-motif {
+  position: absolute;
+  width: 72px;
+  height: 108px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 8px;
+  pointer-events: none;
+  opacity: 0.12;
+}
+.roshi-dot-motif > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #6691FF; /* dot color */
+  filter: blur(0.2px);
+}
+
+/* Reduced motion and hidden-from-screen-reader for decorative pattern */
+.hero-dot-grid[aria-hidden="true"]::before { transform: translateZ(0); }
+@media (prefers-reduced-motion: reduce) {
+  .hero-dot-grid::before { transition: none !important; }
+}
+
+/* Small helper to place motif softly behind previews */
+.roshi-dot-motif.soft { opacity: 0.08; transform: translateY(-8px) translateX(12px); }
+
+/* Prevent dots behind small text by fading center area via radial-gradient overlay */
+.hero-dot-grid .hero-content-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(closest-side, rgba(5,20,68,0.0), rgba(5,20,68,0.18) 68%);
+}

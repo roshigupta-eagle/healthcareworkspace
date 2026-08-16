@@ -1,0 +1,73 @@
+﻿{
+  "patient-001": [
+    {
+      "id": "evt-appt-a1",
+      "patientId": "patient-001",
+      "resourceType": "Appointment",
+      "resourceId": "a1",
+      "eventType": "appointment",
+      "title": "Follow-up Visit",
+      "summary": "Follow-up with Dr. Aris Thorne",
+      "status": "Scheduled",
+      "occurredAt": "2026-07-18T10:30:00.000Z",
+      "recordedAt": "2026-05-28T12:00:00.000Z",
+      "provider": { "id": "dr-aris", "name": "Dr. Aris Thorne" },
+      "relatedResources": []
+    },
+    {
+      "id": "evt-lab-l1",
+      "patientId": "patient-001",
+      "resourceType": "Observation",
+      "resourceId": "l1",
+      "eventType": "result",
+      "title": "Lipid Panel — LDL",
+      "summary": "LDL 2.6 mmol/L (within target)",
+      "status": "Final",
+      "occurredAt": "2026-06-01T09:30:00.000Z",
+      "recordedAt": "2026-06-01T10:00:00.000Z",
+      "provider": { "id": "lab-1", "name": "Toronto Lab Services" },
+      "severity": "normal",
+      "relatedResources": [ { "type": "DiagnosticReport", "id": "dr-lipid-001", "display": "Lipid Panel Report" } ]
+    },
+    {
+      "id": "evt-note-n1",
+      "patientId": "patient-001",
+      "resourceType": "Composition",
+      "resourceId": "n1",
+      "eventType": "note",
+      "title": "Progress Note",
+      "summary": "Reviewed blood pressure; medication adjustment recommended.",
+      "status": "Signed",
+      "occurredAt": "2026-06-05T14:00:00.000Z",
+      "recordedAt": "2026-06-05T14:10:00.000Z",
+      "provider": { "id": "dr-chen", "name": "Dr. Chen" },
+      "relatedResources": []
+    },
+    {
+      "id": "evt-med-atorva",
+      "patientId": "patient-001",
+      "resourceType": "MedicationRequest",
+      "resourceId": "med-atorva-001",
+      "eventType": "medication",
+      "title": "Atorvastatin started",
+      "summary": "20 mg once daily",
+      "status": "Active",
+      "occurredAt": "2025-01-15T09:00:00.000Z",
+      "recordedAt": "2025-01-15T09:10:00.000Z",
+      "provider": { "id": "dr-chen", "name": "Dr. Chen" }
+    },
+    {
+      "id": "evt-doc-d1",
+      "patientId": "patient-001",
+      "resourceType": "DocumentReference",
+      "resourceId": "d1",
+      "eventType": "document",
+      "title": "ED Discharge Summary",
+      "summary": "Discharge summary from ED visit",
+      "status": "Final",
+      "occurredAt": "2026-06-03T16:30:00.000Z",
+      "recordedAt": "2026-06-03T17:00:00.000Z",
+      "provider": { "id": "ed-1", "name": "General Hospital" }
+    }
+  ]
+}

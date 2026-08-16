@@ -21,6 +21,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        // In development prefer the in-memory dev store when a matching
+        // dev user exists. This lets local sign-in work even when
+        // DATABASE_URL is present (e.g., developer has a local DB env).
+        if (process.env.NODE_ENV !== "production") {
+          const normalized = (credentials.email as string || "").trim().toLowerCase();
+          const devUserEarly = findDevUserByEmail(normalized);
+          if (devUserEarly) {
+            // GAP-001: reject pending users
+            if (devUserEarly.role === "PENDING") {
+              throw new Error(
+                "Your account is pending administrator approval. Please check your email for activation."
+              );
+            }
+            const isValidEarly = await compare(credentials.password as string, devUserEarly.passwordHash);
+            if (!isValidEarly) return null;
+            return { id: devUserEarly.id, email: devUserEarly.email, name: devUserEarly.name, role: devUserEarly.role };
+          }
+        }
+
         // If no DATABASE_URL is configured, skip Prisma and use dev in-memory store.
         if (!process.env.DATABASE_URL) {
           const normalized = (credentials.email as string || "").trim().toLowerCase();

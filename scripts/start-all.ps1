@@ -34,20 +34,10 @@ function Start-ServiceProcess {
   Start-Sleep -Milliseconds 300
 }
 
-# EHR (Next.js)
-$ehrPath = Join-Path $repoRoot 'ehr'
-if (Test-Path $ehrPath) {
-  Start-ServiceProcess -name 'ehr' -workdir $ehrPath -cmd 'npm run dev'
+Write-Host "Delegating to manage-services.ps1 (start all)"
+$manageScript = Join-Path $PSScriptRoot 'manage-services.ps1'
+if (Test-Path $manageScript) {
+  & $manageScript -Action start -Component all
+} else {
+  Write-Host "manage-services.ps1 not found. Please run manage-services.ps1 directly or restore this script."
 }
-
-# Go services (use Makefile run target)
-foreach ($svc in @('fhir','lims','pharmacyms')) {
-  $svcPath = Join-Path $repoRoot $svc
-  if (Test-Path $svcPath -and Test-Path (Join-Path $svcPath 'Makefile')) {
-    Start-ServiceProcess -name $svc -workdir $svcPath -cmd 'make run'
-  }
-}
-
-# Persist PIDs
-$pids | ConvertTo-Json | Out-File (Join-Path $runDir 'pids.json') -Encoding utf8
-Write-Host "Started services. PID file: $(Join-Path $runDir 'pids.json')"

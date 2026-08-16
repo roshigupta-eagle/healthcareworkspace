@@ -1,8 +1,9 @@
 ﻿import PatientDetailClient from '@/app/doctor/patients/PatientDetailClient';
 import { fetchVisitDetail, fetchDashboard } from '@/cardiology/services/api.mock';
 
-export default async function EncounterPage({ params }: { params: { encounterId: string } }) {
-  const { encounterId } = params;
+export default async function EncounterPage({ params }: { params: any }) {
+  const resolvedParams = await params;
+  const encounterId = resolvedParams?.encounterId ?? (params && params.encounterId);
   const visit = await fetchVisitDetail(encounterId);
   if (!visit) return <div className="p-6">Encounter not found.</div>;
   const dashboard = await fetchDashboard();

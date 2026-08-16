@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { fetchDashboard } from '@/cardiology/services/api.mock';
 import HealthRecordsListClient from '@/app/doctor/health-records/HealthRecordsListClient';
 
-export default async function HealthRecordsPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
+export default async function HealthRecordsPage({ searchParams }: { searchParams?: any }) {
   let session: any = null;
   try {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -14,8 +14,9 @@ export default async function HealthRecordsPage({ searchParams }: { searchParams
   }
 
   // Support dev override via ?asUser=USER_ID (only outside production)
-  if (!session && searchParams && searchParams.asUser && process.env.NODE_ENV !== 'production') {
-    const override = Array.isArray(searchParams.asUser) ? searchParams.asUser[0] : searchParams.asUser;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  if (!session && resolvedSearchParams && resolvedSearchParams.asUser && process.env.NODE_ENV !== 'production') {
+    const override = Array.isArray(resolvedSearchParams.asUser) ? resolvedSearchParams.asUser[0] : resolvedSearchParams.asUser;
     // dev helper: set session if override provided
     if (override) session = { user: { id: override, name: override, role: override === 'user-admin-khan' ? 'ADMIN' : 'DOCTOR' } };
   }

@@ -1,13 +1,17 @@
- 'use client';
+"use client";
 
 import React from 'react';
 import AnimatedLink from '@/components/AnimatedLink';
 import { useThemeLang } from '@/components/ThemeLangProvider';
+import { useSearchParams } from 'next/navigation';
 
 type Props = { session?: any; role?: string };
 
 export default function Sidebar({ session, role = 'PATIENT' }: Props) {
   const { t } = useThemeLang();
+  const searchParams = useSearchParams();
+  const noAuth = !!(searchParams && (searchParams.get('noauth') === '1' || searchParams.get('noauth') === 'true'));
+  const homeHref = noAuth || role === 'DOCTOR' || role === 'ADMIN' ? '/doctor' : '/dashboard';
   return (
     <nav aria-label="Main navigation" className="w-full h-full bg-blue-400 text-white p-4 shadow-none">
       <div className="mb-8">
@@ -17,7 +21,7 @@ export default function Sidebar({ session, role = 'PATIENT' }: Props) {
 
       <ul className="space-y-1" role="list">
         <li>
-          <AnimatedLink href="/dashboard" className="block px-3 py-2 rounded-md text-sm font-medium bg-blue-500 text-white" aria-current="page" data-i18n="dashboard">
+          <AnimatedLink href={homeHref} className="block px-3 py-2 rounded-md text-sm font-medium bg-blue-500 text-white" aria-current="page" data-i18n="dashboard">
             {t('dashboard')}
           </AnimatedLink>
         </li>

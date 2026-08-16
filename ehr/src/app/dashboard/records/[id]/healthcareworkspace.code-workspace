@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../.."
+		},
+		{
+			"path": "../../../../../../../../Users/welcome/Downloads/skill_archive_fhir/fhir-sme-architect"
+		},
+		{
+			"path": "../../../../../../../../Users/welcome/Downloads/skill-terminology/terminology-advisor"
+		}
+	],
+	"settings": {
+		"powershell.cwd": "healthcareworkspace"
+	}
+}
