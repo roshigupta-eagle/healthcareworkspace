@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "id": "cg-1",
+      "patientId": "patient-001",
+      "title": "HbA1c Test",
+      "category": "Diabetes Care",
+      "status": "overdue",
+      "dueDate": "2026-05-05",
+      "lastCompletedDate": "2025-02-05",
+      "recommendedAction": "order",
+      "measureReference": { "resourceType": "Measure", "id": "measure-hba1c" }
+    },
+    {
+      "id": "cg-2",
+      "patientId": "patient-001",
+      "title": "Diabetic Retinal Exam",
+      "category": "Diabetes Care",
+      "status": "overdue",
+      "dueDate": "2026-04-20",
+      "lastCompletedDate": "2024-04-20",
+      "recommendedAction": "schedule",
+      "measureReference": { "resourceType": "Measure", "id": "measure-retina" }
+    },
+    {
+      "id": "cg-3",
+      "patientId": "patient-001",
+      "title": "Urine Albumin Test",
+      "category": "Diabetes Care",
+      "status": "due-soon",
+      "dueDate": "2026-06-20",
+      "lastCompletedDate": "2025-06-20",
+      "recommendedAction": "order",
+      "measureReference": { "resourceType": "Measure", "id": "measure-ualbumin" }
+    },
+    {
+      "id": "cg-4",
+      "patientId": "patient-001",
+      "title": "Lipid Panel",
+      "category": "Cardiovascular",
+      "status": "due-soon",
+      "dueDate": "2026-06-25",
+      "lastCompletedDate": "2025-06-25",
+      "recommendedAction": "order",
+      "measureReference": { "resourceType": "Measure", "id": "measure-lipid" }
+    },
+    {
+      "id": "cg-5",
+      "patientId": "patient-001",
+      "title": "Blood Pressure Check",
+      "category": "Preventive Care",
+      "status": "overdue",
+      "dueDate": "2026-05-15",
+      "lastCompletedDate": "2026-02-15",
+      "recommendedAction": "schedule",
+      "measureReference": { "resourceType": "Measure", "id": "measure-bp" }
+    },
+    {
+      "id": "cg-6",
+      "patientId": "patient-001",
+      "title": "Mammogram",
+      "category": "Preventive Care",
+      "status": "recommended",
+      "dueDate": "2026-08-11",
+      "lastCompletedDate": null,
+      "recommendedAction": "schedule",
+      "measureReference": { "resourceType": "Measure", "id": "measure-mammo" }
+    },
+    {
+      "id": "cg-7",
+      "patientId": "patient-001",
+      "title": "Influenza Vaccine",
+      "category": "Preventive Care",
+      "status": "recommended",
+      "dueDate": "2026-09-01",
+      "lastCompletedDate": "2024-09-01",
+      "recommendedAction": "order",
+      "measureReference": { "resourceType": "Measure", "id": "measure-flu" }
+    }
+  ]
+}
