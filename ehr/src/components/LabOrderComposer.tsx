@@ -38,6 +38,8 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
   const reasonRef = useRef<HTMLTextAreaElement | null>(null);
   const [quickView, setQuickView] = useState<'Common'|'Favorites'|'Recent'|'Patient'|'Panels'|'All'>('Common');
   const [detailsTest, setDetailsTest] = useState<any | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const [filter, setFilter] = useState<'All'|'Blood'|'Urine'|'Diabetes'|'Cardiology'|'Infection'|'Hormones'|'Vitamins'|'Kidney'|'Liver'>('All');
   const [selected, setSelected] = useState<any[]>([]);
   const [priority, setPriority] = useState<'Routine'|'Urgent'|'STAT'|'Future'>('Routine');
@@ -164,6 +166,32 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
     if (item) addTest(item);
   }
 
+  async function addTest(t: LabTest) {
+    // check duplicates from server for this patient
+    try {
+      const pid = patient?.id;
+      if (pid) {
+        const res = await fetch(`/api/orders/labs?patientId=${encodeURIComponent(pid)}`);
+        if (res.ok) {
+          const body = await res.json();
+          const recent = body.items || [];
+          const found = recent.find((r:any) => r.tests && r.tests.find((x:any) => x.id === t.id) && (Date.now() - (r.ts||0)) < 24*60*60*1000);
+          if (found) {
+            if (!confirm(`${t.name} was ordered recently. Add anyway?`)) return;
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    if (selected.some(s => s.id === t.id)) {
+      setDetailsTest(t);
+      return;
+    }
+    const fastingRecommended = (t.code === 'LIPID');
+    setSelected(s => [...s, { ...t, specimen: t.panel ? 'Blood' : 'Blood', fastingRecommended, note: '' }]);
+  }
+
   function removeTest(id: string) {
     setSelected(s => s.filter(t => t.id !== id));
   }
@@ -190,9 +218,10 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
     if (selected.length === 0) { alert('Add at least one test before submitting'); return; }
     const order = { patientId: patient?.id || null, tests: selected, priority, reason, fasting, collectionType, location, orderDate, collectBy, repeat, morning, instructions, ts: Date.now() };
     try {
+      setSubmitting(true);
       setAutosaveStatus('saving');
-      // call server endpoint
-      const res = await fetch('/api/orders/labs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) });
+      const token = getOrCreateIdempotency();
+      const res = await fetch('/api/orders/labs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': token }, body: JSON.stringify(order) });
       if (!res.ok) throw new Error('failed');
       const body = await res.json();
       // success
@@ -208,7 +237,9 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
       // show order id
       alert(`Order submitted: ${body.orderId}`);
       setTimeout(() => setSent(false), 2500);
+      setSubmitting(false);
     } catch (e) {
+      setSubmitting(false);
       setAutosaveStatus('failed');
       alert('Failed to submit order');
     }
@@ -240,6 +271,24 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
     if (issue.includes('Select') || issue.includes('tests')) {
       inputRef.current?.focus();
     }
+  }
+
+  // grouped selected by specimen
+  const groupedSelected = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    selected.forEach((s:any) => {
+      const k = s.specimen || 'Other';
+      map[k] = map[k] || [];
+      map[k].push(s);
+    });
+    return map;
+  }, [selected]);
+
+  function getOrCreateIdempotency() {
+    if (idempotencyKey) return idempotencyKey;
+    const key = `idem-${Date.now().toString(36)}-${Math.floor(Math.random()*100000).toString(36)}`;
+    setIdempotencyKey(key);
+    return key;
   }
 
   const patientRisk = useMemo(() => {
@@ -304,7 +353,11 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
                   <div className="font-semibold">Before submitting</div>
                   <div className="mt-1 text-sm">Please review these items before submitting the lab order.</div>
                   <ul className="mt-2 list-disc ml-5">
-                    {safetyWarnings.map((w,i) => <li key={i}>{w}</li>)}
+                    {safetyWarnings.map((w,i) => (
+                      <li key={i}>
+                        <button onClick={() => focusForIssue(w)} className="text-amber-800 underline text-left">{w}</button>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </div>
@@ -434,18 +487,26 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
                 {selected.length === 0 ? (
                   <div className="text-sm text-gray-500">No lab tests selected yet. Search or choose a common panel to begin.</div>
                 ) : (
-                  selected.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-md shadow-sm">
-                      <div>
-                        <div className="font-medium text-gray-900">{s.name}</div>
-                        <div className="text-xs text-gray-500">{s.code} • Specimen: {s.specimen}</div>
-                        <div className="mt-1 flex items-center gap-2">
-                          {s.fastingRecommended && <span className="text-xs text-amber-700">Fasting recommended</span>}
-                          <span className="text-xs text-emerald-700">Status: {recentSent.some(r => r.tests.find((t:any)=>t.id===s.id)) ? 'Recent order' : 'No duplicate'}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => removeTest(s.id)} className="text-sm text-red-600 hover:underline">Remove</button>
+                  Object.entries(groupedSelected).map(([specimen, items]) => (
+                    <div key={specimen} className="bg-gray-50 p-3 rounded-md">
+                      <div className="text-sm font-medium text-gray-700 mb-2">Specimen: {specimen}</div>
+                      <div className="space-y-2">
+                        {items.map((s:any) => (
+                          <div key={s.id} className="flex items-center justify-between bg-white p-3 rounded-md shadow-sm">
+                            <div>
+                              <div className="font-medium text-gray-900">{s.name}</div>
+                              <div className="text-xs text-gray-500">{s.code}</div>
+                              <div className="mt-1 flex items-center gap-2">
+                                {s.fastingRecommended && <span className="text-xs text-amber-700">Fasting recommended</span>}
+                                <span className="text-xs text-emerald-700">Status: {recentSent.some(r => r.tests.find((t:any)=>t.id===s.id)) ? 'Recent order' : 'No duplicate'}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button onClick={() => setDetailsTest(s)} className="text-sm text-teal-700 hover:underline">Details</button>
+                              <button onClick={() => removeTest(s.id)} className="text-sm text-red-600 hover:underline">Remove</button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))
@@ -455,7 +516,7 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-500">Reason for order</label>
-                  <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Clinical rationale" className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm" rows={3} />
+                  <textarea ref={reasonRef} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Clinical rationale" className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm" rows={3} />
                 </div>
 
                 <div>
@@ -608,7 +669,7 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
               <button onClick={() => { window.history.back(); }} className="inline-flex items-center gap-2 rounded-md bg-white border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">Cancel</button>
               <button onClick={() => { try { const payload = { selected, priority, orderDate, collectBy, repeat, morning, collectionType, location, fasting, reason, instructions, updatedAt: new Date().toISOString() }; localStorage.setItem(draftKey, JSON.stringify(payload)); setAutosaveStatus('saved'); setLastSavedAt(new Date().toLocaleTimeString()); alert('Draft saved'); } catch (e) { alert('Failed to save draft'); } }} className="inline-flex items-center gap-2 rounded-md bg-white border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">Save Draft</button>
               <button onClick={previewRequisition} className="inline-flex items-center gap-2 rounded-md bg-white border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">Preview Requisition</button>
-              <button onClick={confirmSubmit} disabled={!canSubmit} className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold ${canSubmit ? 'bg-teal-700 text-white hover:bg-teal-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>Submit Lab Order</button>
+              <button onClick={confirmSubmit} disabled={!canSubmit || submitting} className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold ${canSubmit && !submitting ? 'bg-teal-700 text-white hover:bg-teal-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>Submit Lab Order</button>
             </div>
           </div>
           {!canSubmit && (
@@ -656,7 +717,33 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
 
               <div className="mt-6 flex items-center justify-end gap-3">
                 <button onClick={() => setShowReview(false)} className="px-3 py-2 rounded bg-white border">Go back</button>
-                <button onClick={submitOrderFinal} className="px-3 py-2 rounded bg-teal-700 text-white">Confirm & Submit</button>
+                <button onClick={submitOrderFinal} disabled={submitting} className={`px-3 py-2 rounded ${submitting ? 'bg-gray-300 text-gray-600' : 'bg-teal-700 text-white'}`}>{submitting ? 'Submitting…' : 'Confirm & Submit'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Details modal */}
+        {detailsTest && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setDetailsTest(null)} />
+            <div className="relative bg-white rounded-lg p-6 shadow-lg w-full max-w-md">
+              <h3 className="text-lg font-semibold">{detailsTest.name}</h3>
+              <div className="mt-2 text-sm text-gray-700">{detailsTest.description}</div>
+              <div className="mt-3 text-xs text-gray-500">Code: {detailsTest.code} • TAT: {detailsTest.tat || '—'}</div>
+              {detailsTest.panel && PANEL_COMPONENTS[detailsTest.id] && (
+                <div className="mt-3">
+                  <div className="text-sm font-medium">Components</div>
+                  <ul className="mt-1 list-disc ml-5 text-sm text-gray-700">{PANEL_COMPONENTS[detailsTest.id].map(c => <li key={c}>{c}</li>)}</ul>
+                </div>
+              )}
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <button onClick={() => setDetailsTest(null)} className="px-3 py-2 rounded bg-white border">Close</button>
+                {selected.some(s=>s.id===detailsTest.id) ? (
+                  <button onClick={() => { removeTest(detailsTest.id); setDetailsTest(null); }} className="px-3 py-2 rounded bg-red-600 text-white">Remove</button>
+                ) : (
+                  <button onClick={() => { void addTest(detailsTest); setDetailsTest(null); }} className="px-3 py-2 rounded bg-teal-700 text-white">Add</button>
+                )}
               </div>
             </div>
           </div>

@@ -1,0 +1,31 @@
+[
+  {
+    "patientId": null,
+    "tests": [
+      {
+        "id": "lipid",
+        "name": "Lipid Panel",
+        "code": "LIPID",
+        "tat": "24h",
+        "panel": true,
+        "description": "Cholesterol and heart risk markers",
+        "specimen": "Blood",
+        "fastingRecommended": true,
+        "note": ""
+      }
+    ],
+    "priority": "Urgent",
+    "reason": "ertert",
+    "fasting": false,
+    "collectionType": "Urine",
+    "location": "Main Lab",
+    "orderDate": "2026-07-11",
+    "collectBy": "2026-07-31",
+    "repeat": true,
+    "morning": true,
+    "instructions": "ertert",
+    "ts": 1786903673866,
+    "orderId": "LAB-1786903675325",
+    "idempotency": null
+  }
+]
