@@ -33,7 +33,7 @@ export default function TopHeader({ search = '', onSearch, onNew, onFilterChange
               aria-label="Search tasks"
               value={search}
               onChange={(e) => onSearch?.(e.target.value)}
-              placeholder="Search patient, record, task..."
+              placeholder="Search Patient, Record, Task..."
               className="w-full rounded-md border border-gray-200 bg-white px-10 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400"
             />
           </div>
@@ -55,7 +55,7 @@ export default function TopHeader({ search = '', onSearch, onNew, onFilterChange
 
           <div>
             <select className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-              <option>Sort: Due date</option>
+              <option>Sort: Due Date</option>
               <option>Sort: Priority</option>
             </select>
           </div>

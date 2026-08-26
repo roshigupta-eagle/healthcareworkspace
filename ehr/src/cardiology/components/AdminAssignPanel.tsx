@@ -114,13 +114,13 @@ const AdminAssignPanel: React.FC<AdminAssignPanelProps> = ({ onAssigned }) => {
         </div>
       )}
 
-      <FormField label="Choose existing visit" id="visit-select">
+      <FormField label="Choose Existing Visit" id="visit-select">
         <select
           className="block w-full rounded-md border border-neutral-300 bg-white px-3 py-2"
           value={selectedVisitId}
           onChange={(e) => setSelectedVisitId(e.target.value)}
         >
-          <option value="new">Create new patient...</option>
+          <option value="new">Create New Patient...</option>
           {visits.map((v) => (
             <option key={v.id} value={v.id}>
               {v.patientName} — {v.chiefComplaint}
@@ -131,7 +131,7 @@ const AdminAssignPanel: React.FC<AdminAssignPanelProps> = ({ onAssigned }) => {
 
       {selectedVisitId === 'new' && (
         <>
-          <FormField label="Patient name" id="patient-name">
+          <FormField label="Patient Name" id="patient-name">
             <Input value={patientName} onChange={(e) => setPatientName(e.target.value)} fullWidth />
           </FormField>
           <FormField label="Patient ID (optional)" id="patient-id">

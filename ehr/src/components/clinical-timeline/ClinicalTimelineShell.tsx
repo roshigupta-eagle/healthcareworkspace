@@ -5,12 +5,14 @@ import {
   useEffect,
   useMemo,
   useState,
-  useRef,
+  type FormEvent,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
+import Link from 'next/link';
 
 type DateRange = '30d' | '6m' | '1y' | 'all';
+const CLINIC_TIME_ZONE = process.env.NEXT_PUBLIC_CLINIC_TIME_ZONE || 'America/Toronto';
 
 type TimelineEvent = {
   id: string;
@@ -22,18 +24,21 @@ type TimelineEvent = {
 
   // Optional fields. These will automatically display if your API provides them.
   status?: string | null;
-  clinicianName?: string | null;
-  source?: string | null;
-};
-
-type TimelineApiResponse = {
-  data?: TimelineEvent[];
-  error?: string;
-  message?: string;
+  severity?: string | null;
+  provider?: { name?: string | null } | null;
+  organization?: { name?: string | null } | null;
+  source?: { system?: string | null; display?: string | null } | null;
+  recordHref?: string | null;
+  temporalState?: 'past' | 'current' | 'future' | null;
 };
 
 interface ClinicalTimelineShellProps {
   patientId: string;
+  initialSelectedEventId?: string | null;
+  initialDateRange?: DateRange | null;
+  initialEventType?: string | null;
+  initialSearch?: string | null;
+  patientData?: { lastVisit?: string };
 }
 
 function getEventDate(event: TimelineEvent): Date | null {
@@ -55,12 +60,13 @@ function formatEventDate(event: TimelineEvent): string {
     return 'Date unavailable';
   }
 
+  const hasTime = /T|\d{1,2}:\d{2}/.test(event.occurredAt || event.recordedAt || '');
   return date.toLocaleString(undefined, {
+    timeZone: CLINIC_TIME_ZONE,
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
+    ...(hasTime ? { hour: 'numeric', minute: '2-digit' } : {}),
   });
 }
 
@@ -98,24 +104,34 @@ function getRangeCutoff(range: DateRange): Date | null {
 
 export default function ClinicalTimelineShell({
   patientId,
+  initialSelectedEventId,
+  initialDateRange,
+  initialEventType,
+  initialSearch,
+  patientData,
 }: ClinicalTimelineShellProps) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedEventId, setSelectedEventId] =
-    useState<string | null>(null);
+    useState<string | null>(initialSelectedEventId ?? null);
 
-  const [search, setSearch] = useState('');
-  const [dateRange, setDateRange] = useState<DateRange>('1y');
-  const [eventType, setEventType] = useState('all');
+  const [search, setSearch] = useState(initialSearch ?? '');
+  const [dateRange, setDateRange] = useState<DateRange>(
+    (initialDateRange as DateRange) ?? '1y',
+  );
+  const [eventType, setEventType] = useState(initialEventType ?? 'all');
   const [criticalOnly, setCriticalOnly] = useState(false);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [hasMore, setHasMore] = useState(false);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [showSinceSummary, setShowSinceSummary] = useState(false);
+  const [showMoreActions, setShowMoreActions] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const router = useRouter();
   const toast = useToast();
-  const announcerRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
 
   /**
    * Load patient timeline
@@ -145,7 +161,7 @@ export default function ClinicalTimelineShell({
           signal,
         });
 
-        const body: any = await response.json().catch(() => null);
+        const body = await response.json().catch(() => null) as { data?: TimelineEvent[]; cursor?: string; error?: string; message?: string } | null;
 
         if (!response.ok) {
           const apiMessage = body && (body.error || body.message);
@@ -168,8 +184,32 @@ export default function ClinicalTimelineShell({
           setEvents(nextEvents);
         }
 
+        // If a deep-linked event id is present in state but not in the initial page,
+        // attempt to fetch that single event and include it so the deep link works.
         setSelectedEventId((currentId) => {
           if (currentId && nextEvents.some((event) => event.id === currentId)) return currentId;
+
+          // If a currentId exists but wasn't found, try to fetch it specifically.
+          if (currentId) {
+            (async () => {
+              try {
+                const evRes = await fetch(`${window.location.origin}/api/patients/${encodeURIComponent(patientId)}/timeline/${encodeURIComponent(currentId)}`);
+                if (evRes.ok) {
+                  const evJson = await evRes.json();
+                  if (evJson) {
+                    setEvents((prev) => {
+                      const map = new Map(prev.map((e) => [e.id, e]));
+                      map.set(evJson.id, evJson);
+                      return Array.from(map.values());
+                    });
+                  }
+                }
+              } catch {
+                // ignore single-event fetch failures
+              }
+            })();
+          }
+
           return nextEvents[0]?.id ?? null;
         });
       } catch (err) {
@@ -193,10 +233,10 @@ export default function ClinicalTimelineShell({
    */
   useEffect(() => {
     const controller = new AbortController();
-
-    loadEvents(controller.signal);
+    const timer = window.setTimeout(() => { void loadEvents(controller.signal); }, 0);
 
     return () => {
+      window.clearTimeout(timer);
       controller.abort();
     };
   }, [loadEvents]);
@@ -207,14 +247,32 @@ export default function ClinicalTimelineShell({
     loadEvents(controller.signal, { append: true, cursor });
   }, [cursor, loadEvents]);
 
+  const historicalEvents = useMemo(
+    () => events.filter((event) => event.temporalState !== 'future'),
+    [events],
+  );
+
+  const upcomingEvents = useMemo(
+    () => events.filter((event) => event.temporalState === 'future'),
+    [events],
+  );
+
+  const lastEncounterEvent = useMemo(() => {
+    return [...historicalEvents]
+      .filter((event) => event.eventType === 'encounter' || (event.eventType === 'appointment' && (event.status || '').toLowerCase() === 'completed'))
+      .sort((a, b) => (getEventDate(b)?.getTime() || 0) - (getEventDate(a)?.getTime() || 0))[0] || null;
+  }, [historicalEvents]);
+
+  const sinceLastVisitDate = lastEncounterEvent?.occurredAt || patientData?.lastVisit || null;
+
   /**
    * Available event types
    */
   const eventTypes = useMemo(() => {
     return Array.from(
-      new Set(events.map((event) => getEventType(event))),
+      new Set(historicalEvents.map((event) => getEventType(event))),
     ).sort((a, b) => a.localeCompare(b));
-  }, [events]);
+  }, [historicalEvents]);
 
   function isCriticalEvent(event: TimelineEvent) {
     return (event.severity || '').toLowerCase() === 'critical' || (event.summary || '').toLowerCase().includes('critical');
@@ -222,16 +280,18 @@ export default function ClinicalTimelineShell({
 
   const summary = useMemo(() => {
     const total = events.length;
-    const critical = events.filter((e) => isCriticalEvent(e)).length;
-    const abnormal = events.filter((e) => (e.severity || '').toLowerCase() === 'abnormal' || ((e.eventType || '').toLowerCase() === 'result' && (e.severity || '').toLowerCase() === 'abnormal')).length;
+    const critical = historicalEvents.filter((e) => isCriticalEvent(e)).length;
+    const abnormal = historicalEvents.filter((e) => (e.severity || '').toLowerCase() === 'abnormal' || ((e.eventType || '').toLowerCase() === 'result' && (e.severity || '').toLowerCase() === 'abnormal')).length;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
-    const last30 = events.filter((e) => {
+    const last30 = historicalEvents.filter((e) => {
       const d = getEventDate(e);
       return d && d >= cutoff;
     }).length;
-    return { total, critical, abnormal, last30 };
-  }, [events]);
+    const results = historicalEvents.filter((event) => event.eventType === 'result').length;
+    const sinceLastVisit = sinceLastVisitDate ? historicalEvents.filter((event) => (getEventDate(event)?.getTime() || 0) > Date.parse(sinceLastVisitDate)).length : 0;
+    return { total, critical, abnormal, last30, results, sinceLastVisit };
+  }, [events, historicalEvents, sinceLastVisitDate]);
 
   /**
    * Search + type + date filtering
@@ -243,7 +303,7 @@ export default function ClinicalTimelineShell({
 
     const cutoff = getRangeCutoff(dateRange);
 
-    return [...events]
+    return [...historicalEvents]
       .filter((event) => {
         if (eventType !== 'all' && getEventType(event) !== eventType) return false;
 
@@ -255,7 +315,7 @@ export default function ClinicalTimelineShell({
         }
 
         if (normalizedSearch) {
-          const searchableText = [event.title, event.summary, event.eventType, event.status, event.clinicianName, event.source]
+          const searchableText = [event.title, event.summary, event.eventType, event.status, event.provider?.name, event.source?.display]
             .filter(Boolean)
             .join(' ')
             .toLowerCase();
@@ -273,7 +333,7 @@ export default function ClinicalTimelineShell({
 
         return bTime - aTime;
       });
-  }, [events, search, eventType, dateRange]);
+  }, [historicalEvents, search, eventType, dateRange, criticalOnly]);
 
   // Map of event id -> index in filteredEvents for line rendering
   const eventIndexMap = useMemo(() => {
@@ -309,7 +369,7 @@ export default function ClinicalTimelineShell({
       const headers = ['Date', 'Event Type', 'Title', 'Priority', 'Status', 'Clinician', 'Department', 'Location', 'Summary', 'Source'];
       const rows = filteredEvents.map((e) => {
         const d = getEventDate(e);
-        return [d ? d.toISOString() : '', getEventType(e), e.title || '', (e.severity || '') as any, e.status || '', e.clinicianName || '', e.organization?.name || '', e.source?.display || '', (e.summary || '').replace(/\n/g, ' '), e.source?.system || ''];
+        return [d ? d.toISOString() : '', getEventType(e), e.title || '', e.severity || '', e.status || '', e.provider?.name || '', e.organization?.name || '', e.source?.display || '', (e.summary || '').replace(/\n/g, ' '), e.source?.system || ''];
       });
 
       const csv = [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c || '').replace(/"/g, '""')}"`).join(','))].join('\n');
@@ -323,7 +383,7 @@ export default function ClinicalTimelineShell({
       a.remove();
       URL.revokeObjectURL(url);
       toast.push({ message: 'Timeline exported successfully.', level: 'success' });
-    } catch (err) {
+    } catch {
       toast.push({ message: 'Failed to export timeline.', level: 'error' });
     }
   }
@@ -331,14 +391,68 @@ export default function ClinicalTimelineShell({
   function copySummary(event: TimelineEvent) {
     try {
       const date = formatEventDate(event);
-      const text = `${event.title || ''}\nType: ${getEventType(event)}\nDate: ${date}\nClinician: ${event.clinicianName || ''}\nStatus: ${event.status || ''}\n\n${event.summary || ''}`;
+      const text = `${event.title || ''}\nType: ${getEventType(event)}\nDate: ${date}\nClinician: ${event.provider?.name || ''}\nStatus: ${event.status || ''}\n\n${event.summary || ''}`;
       navigator.clipboard.writeText(text).then(() => {
         toast.push({ message: 'Event summary copied.', level: 'success' });
       }, () => {
         toast.push({ message: 'Unable to copy this event.', level: 'error' });
       });
-    } catch (err) {
+    } catch {
       toast.push({ message: 'Unable to copy this event.', level: 'error' });
+    }
+  }
+
+  /**
+   * Schedule a new appointment for this patient. The created event is persisted
+   * server-side and immediately appears on the timeline alongside past visits.
+   */
+  async function scheduleAppointment(input: { doctor: string; type: string; date: string; location?: string }) {
+    if (!patientId?.trim()) return;
+    setScheduling(true);
+    try {
+      const res = await fetch(`${window.location.origin}/api/patients/${encodeURIComponent(patientId)}/timeline`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error((body && (body.error || body.message)) || 'Unable to schedule appointment.');
+      }
+      setShowScheduleForm(false);
+      await loadEvents();
+      if (body?.id) setSelectedEventId(body.id);
+      toast.push({ message: 'Appointment scheduled and added to the timeline.', level: 'success' });
+    } catch (err) {
+      toast.push({ message: err instanceof Error ? err.message : 'Unable to schedule appointment.', level: 'error' });
+    } finally {
+      setScheduling(false);
+    }
+  }
+
+  /**
+   * Update the status of a timeline event (e.g. mark an appointment completed or
+   * cancelled). Completing an appointment also records a companion encounter.
+   */
+  async function updateEventStatus(event: TimelineEvent, status: string) {
+    if (!patientId?.trim()) return;
+    setUpdatingStatus(true);
+    try {
+      const res = await fetch(`${window.location.origin}/api/patients/${encodeURIComponent(patientId)}/timeline/${encodeURIComponent(event.id)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error((body && (body.error || body.message)) || 'Unable to update this event.');
+      }
+      await loadEvents();
+      toast.push({ message: `Marked as ${status.toLowerCase()}.`, level: 'success' });
+    } catch (err) {
+      toast.push({ message: err instanceof Error ? err.message : 'Unable to update this event.', level: 'error' });
+    } finally {
+      setUpdatingStatus(false);
     }
   }
 
@@ -357,10 +471,26 @@ export default function ClinicalTimelineShell({
     );
   }, [events, selectedEventId]);
 
+  // Sync selected event into the URL so deep links can be shared/bookmarked.
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      if (selectedEventId) {
+        url.searchParams.set('eventId', selectedEventId);
+      } else {
+        url.searchParams.delete('eventId');
+      }
+      window.history.replaceState({}, '', url.toString());
+    } catch {
+      // ignore in non-browser contexts
+    }
+  }, [selectedEventId]);
+
   const clearFilters = () => {
     setSearch('');
     setEventType('all');
-    setDateRange('1y');
+    setDateRange('all');
+    setCriticalOnly(false);
   };
 
   return (
@@ -377,11 +507,7 @@ export default function ClinicalTimelineShell({
 
           <h1>Clinical Timeline</h1>
 
-          <p>
-            Review encounters, results, medications,
-            documents, notes, and other clinical events in
-            chronological order.
-          </p>
+          <p>Encounters, clinical changes, results, medications, documents and care events in chronological order.</p>
         </div>
 
         <div className="ct-header-actions">
@@ -392,14 +518,54 @@ export default function ClinicalTimelineShell({
 
           <button
             type="button"
+            className="ct-primary-button"
+            onClick={() => setShowScheduleForm(true)}
+          >
+            + Schedule Appointment
+          </button>
+
+          <button
+            type="button"
             className="ct-secondary-button"
             disabled={loading}
             onClick={() => loadEvents()}
           >
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
+          <Link href={`/dashboard/records/${patientId}/documents`} className="ct-secondary-button ct-link-button">View Documents</Link>
+          <div className="ct-more-actions">
+            <button type="button" className="ct-secondary-button" aria-haspopup="menu" aria-expanded={showMoreActions} onClick={() => setShowMoreActions((value) => !value)}>More Actions</button>
+            {showMoreActions && <div className="ct-more-menu" role="menu"><button type="button" role="menuitem" onClick={() => { setShowMoreActions(false); exportCsv(); }}>Export CSV</button><button type="button" role="menuitem" onClick={() => { setShowMoreActions(false); window.print(); }}>Print timeline</button></div>}
+          </div>
         </div>
       </header>
+
+      {showScheduleForm && (
+        <ScheduleAppointmentModal
+          submitting={scheduling}
+          onCancel={() => setShowScheduleForm(false)}
+          onSubmit={scheduleAppointment}
+        />
+      )}
+
+      <section className="ct-since-last" aria-labelledby="since-last-heading">
+        <div>
+          <div className="ct-eyebrow">Longitudinal context</div>
+          <h2 id="since-last-heading">Since Last Visit</h2>
+          <p>{sinceLastVisitDate ? `${formatEventDate({ id: 'last-visit', occurredAt: sinceLastVisitDate })} · ${summary.sinceLastVisit} documented events since the last qualifying encounter.` : 'No qualifying completed encounter is documented.'}</p>
+          <div className="ct-since-stats"><span>{historicalEvents.filter((event) => event.eventType === 'appointment').length} appointments</span><span>{summary.results} results</span><span>{historicalEvents.filter((event) => event.eventType === 'medication').length} medication events</span><span>{historicalEvents.filter((event) => event.eventType === 'document').length} documents</span></div>
+        </div>
+        <button type="button" className="ct-secondary-button" onClick={() => setShowSinceSummary(true)}>View Summary</button>
+      </section>
+
+      <section className="ct-snapshot-strip" aria-label="Timeline Snapshot">
+        <div className="ct-snapshot-card ct-snapshot-teal"><span>Last Encounter</span><strong>{lastEncounterEvent ? formatEventDate(lastEncounterEvent) : '—'}</strong><small>{lastEncounterEvent?.title || 'No completed encounter'}</small></div>
+        <div className="ct-snapshot-card ct-snapshot-blue"><span>Events Since Last Visit</span><strong>{summary.sinceLastVisit}</strong><small>Configured clinical history scope</small></div>
+        <div className="ct-snapshot-card ct-snapshot-cyan"><span>Results</span><strong>{summary.results}</strong><small>Historical result events</small></div>
+        <div className="ct-snapshot-card ct-snapshot-violet"><span>Upcoming Care</span><strong>{upcomingEvents.length}</strong><small>{upcomingEvents.length === 1 ? 'scheduled event' : 'scheduled events'}</small></div>
+      </section>
+
+      {upcomingEvents.length > 0 && <section className="ct-upcoming" aria-labelledby="upcoming-heading"><div className="ct-upcoming-heading"><div><div className="ct-eyebrow">Future care</div><h2 id="upcoming-heading">Upcoming</h2><p>Scheduled events remain separate from completed clinical history.</p></div><span className="ct-upcoming-count">{upcomingEvents.length}</span></div><div className="ct-upcoming-list">{upcomingEvents.map((event) => <button key={event.id} type="button" className="ct-upcoming-item" onClick={() => setSelectedEventId(event.id)}><span className="ct-upcoming-icon">◷</span><span className="ct-upcoming-copy"><strong>{event.title || 'Scheduled appointment'}</strong><span>{formatEventDate(event)}{event.provider?.name ? ` · ${event.provider.name}` : ''}</span><small>{event.organization?.name || event.source?.display || 'Scheduling'} · {event.status || 'Scheduled'}</small></span><span className="ct-chevron">›</span></button>)}</div></section>}
 
       {/* ======================================================
           ERROR STATE
@@ -454,13 +620,18 @@ export default function ClinicalTimelineShell({
             <input
               id="timeline-search"
               type="search"
-              placeholder="Notes, medications, labs..."
+              placeholder="Notes, Medications, Labs..."
               value={search}
               onChange={(event) =>
                 setSearch(event.target.value)
               }
             />
           </div>
+
+          <label className="ct-checkbox-field">
+            <input type="checkbox" checked={criticalOnly} onChange={(event) => setCriticalOnly(event.target.checked)} />
+            <span>Only important events</span>
+          </label>
 
           <div className="ct-field">
             <label htmlFor="timeline-range">
@@ -559,6 +730,32 @@ export default function ClinicalTimelineShell({
             </div>
           </div>
 
+          {/* Quick filter chips */}
+          <div className="ct-quick-filters" style={{ padding: '12px 18px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {[
+              ['All', 'all'],
+              ['Encounters', 'encounter'],
+              ['Appointments', 'appointment'],
+              ['Conditions', 'condition'],
+              ['Results', 'result'],
+              ['Medications', 'medication'],
+              ['Procedures', 'procedure'],
+              ['Orders', 'order'],
+              ['Referrals', 'referral'],
+              ['Documents', 'document'],
+              ['Tasks', 'task'],
+            ].map(([label, val]) => (
+              <button
+                key={String(val)}
+                type="button"
+                className={`ct-filter-chip ${eventType === val ? 'ct-filter-chip-active' : ''}`}
+                onClick={() => setEventType(String(val))}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           {loading && events.length === 0 ? (
             <div className="ct-loading">
               <div className="ct-skeleton" />
@@ -581,7 +778,7 @@ export default function ClinicalTimelineShell({
               {groupedEvents.map(([label, items]) => (
                 <div key={label} className="mb-4">
                   <div className="text-sm font-medium text-slate-500 mb-2">{label}</div>
-                  {items.map((event, idx) => {
+                  {items.map((event) => {
                     const isSelected = event.id === selectedEventId;
                     const globalIndex = eventIndexMap.get(event.id) ?? 0;
 
@@ -603,9 +800,9 @@ export default function ClinicalTimelineShell({
                           {event.summary && <p>{event.summary}</p>}
 
                           <div className="ct-event-meta">
-                            {event.clinicianName && <span>{event.clinicianName}</span>}
+                            {event.provider?.name && <span>{event.provider.name}</span>}
                             {event.status && <span>{event.status}</span>}
-                            {event.source && <span>{event.source}</span>}
+                            {event.source?.display && <span>{event.source.display}</span>}
                           </div>
                         </div>
 
@@ -684,24 +881,24 @@ export default function ClinicalTimelineShell({
                 </div>
               )}
 
-              {selectedEvent.clinicianName && (
+              {selectedEvent.provider?.name && (
                 <div className="ct-detail-row">
                   <span>Clinician</span>
 
                   <strong>
                     {
-                      selectedEvent.clinicianName
+                      selectedEvent.provider.name
                     }
                   </strong>
                 </div>
               )}
 
-              {selectedEvent.source && (
+              {selectedEvent.source?.display && (
                 <div className="ct-detail-row">
                   <span>Source</span>
 
                   <strong>
-                    {selectedEvent.source}
+                    {selectedEvent.source.display}
                   </strong>
                 </div>
               )}
@@ -721,10 +918,25 @@ export default function ClinicalTimelineShell({
 
                 <button type="button" className="ct-secondary-button" onClick={() => { copySummary(selectedEvent); }}>Copy summary</button>
               </div>
+
+              {selectedEvent.eventType === 'appointment' && selectedEvent.temporalState !== 'future' && (selectedEvent.status || '').toLowerCase() !== 'completed' && (selectedEvent.status || '').toLowerCase() !== 'cancelled' && (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button type="button" disabled={updatingStatus} className="ct-primary-button" onClick={() => updateEventStatus(selectedEvent, 'Completed')}>Mark completed</button>
+
+                  <button type="button" disabled={updatingStatus} className="ct-secondary-button" onClick={() => updateEventStatus(selectedEvent, 'Cancelled')}>Cancel appointment</button>
+                </div>
+              )}
+              {selectedEvent.eventType === 'appointment' && selectedEvent.temporalState === 'future' && (selectedEvent.status || '').toLowerCase() !== 'cancelled' && (
+                <div className="mt-2">
+                  <button type="button" disabled={updatingStatus} className="ct-secondary-button ct-full-button" onClick={() => updateEventStatus(selectedEvent, 'Cancelled')}>Cancel appointment</button>
+                </div>
+              )}
             </div>
           )}
         </aside>
       </div>
+
+      {showSinceSummary && <SinceLastVisitModal date={sinceLastVisitDate} events={historicalEvents} onClose={() => setShowSinceSummary(false)} />}
 
       {/* ======================================================
           SELF-CONTAINED STYLES
@@ -1193,6 +1405,32 @@ export default function ClinicalTimelineShell({
           color: #9f3030;
         }
 
+        .ct-quick-filters {
+          max-width: 1800px;
+          margin: 0 auto 8px;
+        }
+
+        .ct-filter-chip {
+          padding: 6px 10px;
+          border-radius: 999px;
+          border: 1px solid transparent;
+          background: #f6f7fb;
+          color: #283042;
+          font-size: 13px;
+          cursor: pointer;
+        }
+
+        .ct-filter-chip:focus {
+          outline: 2px solid rgba(91,95,233,0.25);
+        }
+
+        .ct-filter-chip-active {
+          background: #e9eefc;
+          border-color: #cbd4ff;
+          color: #2b2f7a;
+          font-weight: 700;
+        }
+
         .ct-loading {
           padding: 18px;
         }
@@ -1210,6 +1448,294 @@ export default function ClinicalTimelineShell({
           background-size: 200% 100%;
           animation: ct-pulse 1.4s infinite;
         }
+
+        .ct-header-actions .ct-primary-button,
+        .ct-header-actions .ct-secondary-button,
+        .ct-header-actions .ct-link-button {
+          width: auto;
+          margin-top: 0;
+          white-space: nowrap;
+        }
+
+        .ct-link-button {
+          display: inline-flex;
+          align-items: center;
+          text-decoration: none;
+        }
+
+        .ct-more-actions {
+          position: relative;
+        }
+
+        .ct-more-menu {
+          position: absolute;
+          right: 0;
+          top: calc(100% + 8px);
+          z-index: 20;
+          min-width: 180px;
+          padding: 6px;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          background: #ffffff;
+          box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+        }
+
+        .ct-more-menu button {
+          width: 100%;
+          padding: 9px 10px;
+          border: 0;
+          border-radius: 7px;
+          background: transparent;
+          color: #344054;
+          text-align: left;
+          cursor: pointer;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .ct-more-menu button:hover,
+        .ct-more-menu button:focus-visible {
+          background: #f8fafc;
+          outline: none;
+        }
+
+        .ct-since-last {
+          max-width: 1800px;
+          margin: 14px auto;
+          padding: 18px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          border: 1px solid #c8eee9;
+          border-radius: 14px;
+          background: linear-gradient(110deg, #f0fdfa, #ffffff 70%);
+          box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+        }
+
+        .ct-since-last h2 {
+          margin: 2px 0 0;
+          color: #0f172a;
+          font-size: 18px;
+        }
+
+        .ct-since-last p {
+          margin: 5px 0 0;
+          color: #475467;
+          font-size: 13px;
+        }
+
+        .ct-since-stats {
+          margin-top: 10px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px 14px;
+          color: #0f766e;
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .ct-snapshot-strip {
+          max-width: 1800px;
+          margin: 14px auto;
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .ct-snapshot-card {
+          min-height: 112px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          border: 1px solid;
+          border-radius: 12px;
+          box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+        }
+
+        .ct-snapshot-card span,
+        .ct-snapshot-card small {
+          color: #667085;
+          font-size: 11px;
+        }
+
+        .ct-snapshot-card span {
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .ct-snapshot-card strong {
+          margin-top: 8px;
+          color: #0f172a;
+          font-size: 23px;
+          line-height: 1.15;
+        }
+
+        .ct-snapshot-teal { border-color: #b8ebe4; background: #f0fdfa; }
+        .ct-snapshot-blue { border-color: #bfdbfe; background: #eff6ff; }
+        .ct-snapshot-cyan { border-color: #bae6fd; background: #f0f9ff; }
+        .ct-snapshot-violet { border-color: #ddd6fe; background: #f5f3ff; }
+
+        .ct-upcoming {
+          max-width: 1800px;
+          margin: 14px auto;
+          padding: 18px 20px;
+          border: 1px solid #ddd6fe;
+          border-radius: 14px;
+          background: #faf9ff;
+        }
+
+        .ct-upcoming-heading {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 14px;
+        }
+
+        .ct-upcoming-heading h2 {
+          margin: 2px 0 0;
+          color: #1e1b4b;
+          font-size: 18px;
+        }
+
+        .ct-upcoming-heading p {
+          margin: 5px 0 0;
+          color: #6b7280;
+          font-size: 13px;
+        }
+
+        .ct-upcoming-count {
+          min-width: 32px;
+          height: 32px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 999px;
+          background: #ede9fe;
+          color: #6d28d9;
+          font-size: 13px;
+          font-weight: 800;
+        }
+
+        .ct-upcoming-list {
+          margin-top: 14px;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 10px;
+        }
+
+        .ct-upcoming-item {
+          min-height: 76px;
+          padding: 12px;
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          background: #ffffff;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .ct-upcoming-item:hover,
+        .ct-upcoming-item:focus-visible {
+          border-color: #a78bfa;
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.14);
+        }
+
+        .ct-upcoming-icon {
+          width: 30px;
+          height: 30px;
+          flex: 0 0 auto;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 9px;
+          background: #ede9fe;
+          color: #7c3aed;
+          font-size: 19px;
+        }
+
+        .ct-upcoming-copy {
+          min-width: 0;
+          display: flex;
+          flex: 1;
+          flex-direction: column;
+          gap: 3px;
+        }
+
+        .ct-upcoming-copy strong { color: #1f2937; font-size: 13px; }
+        .ct-upcoming-copy span { color: #374151; font-size: 12px; }
+        .ct-upcoming-copy small { color: #6b7280; font-size: 11px; }
+
+        .ct-checkbox-field {
+          margin: 16px 18px 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #475467;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .ct-checkbox-field input { width: 15px; height: 15px; accent-color: #0f766e; }
+
+        .ct-full-button { width: 100%; }
+
+        .ct-icon-button {
+          width: 38px;
+          height: 38px;
+          border: 1px solid #e2e8f0;
+          border-radius: 9px;
+          background: #ffffff;
+          color: #64748b;
+          cursor: pointer;
+          font-size: 22px;
+        }
+
+        .ct-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 50;
+          padding: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(15, 23, 42, 0.32);
+        }
+
+        .ct-summary-modal {
+          width: min(100%, 680px);
+          max-height: 90vh;
+          overflow-y: auto;
+          padding: 24px;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          background: #ffffff;
+          box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+        }
+
+        .ct-summary-modal-header,
+        .ct-summary-footer { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+        .ct-summary-modal-header h2 { margin: 2px 0 0; color: #0f172a; font-size: 20px; }
+        .ct-summary-modal-header p { margin: 5px 0 0; color: #64748b; font-size: 13px; }
+        .ct-summary-grid { margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+        .ct-summary-grid div { padding: 13px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+        .ct-summary-grid strong { display: block; color: #0f172a; font-size: 21px; }
+        .ct-summary-grid span { display: block; margin-top: 4px; color: #64748b; font-size: 11px; font-weight: 700; text-transform: capitalize; }
+        .ct-summary-list { margin-top: 20px; display: grid; gap: 8px; }
+        .ct-summary-list button { padding: 11px 12px; display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 7px 12px; border: 1px solid #edf0f4; border-radius: 9px; background: #ffffff; text-align: left; cursor: pointer; }
+        .ct-summary-list button:hover { background: #f8fafc; }
+        .ct-summary-list span { color: #0f766e; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+        .ct-summary-list strong { color: #1f2937; font-size: 13px; }
+        .ct-summary-list small { grid-column: 2; color: #64748b; font-size: 11px; }
+        .ct-summary-list p { padding: 16px; color: #64748b; font-size: 13px; text-align: center; }
+        .ct-summary-footer { margin-top: 20px; padding-top: 16px; border-top: 1px solid #edf0f4; justify-content: flex-end; }
 
         @keyframes ct-pulse {
           0% {
@@ -1232,12 +1758,21 @@ export default function ClinicalTimelineShell({
             position: static;
             grid-column: 1 / -1;
           }
+
+          .ct-snapshot-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         @media (max-width: 780px) {
           .ct-shell {
             padding: 12px;
           }
+
+          .ct-header-actions { flex-wrap: wrap; gap: 8px; }
+          .ct-header-actions .ct-count { flex: 1 0 100%; }
+          .ct-since-last { align-items: flex-start; flex-direction: column; }
+          .ct-snapshot-strip { grid-template-columns: 1fr; }
+          .ct-upcoming-list { grid-template-columns: 1fr; }
+          .ct-summary-modal { padding: 18px; }
 
           .ct-page-header {
             padding: 18px;
@@ -1279,5 +1814,92 @@ export default function ClinicalTimelineShell({
         }
       `}</style>
     </section>
+  );
+}
+
+function SinceLastVisitModal({ date, events, onClose }: { date: string | null; events: TimelineEvent[]; onClose: () => void }) {
+  const cutoff = date ? Date.parse(date) : NaN;
+  const changes = events.filter((event) => Number.isFinite(cutoff) && (getEventDate(event)?.getTime() || 0) > cutoff);
+  const counts = Array.from(new Set(changes.map((event) => getEventType(event)))).map((type) => ({ type, count: changes.filter((event) => getEventType(event) === type).length }));
+
+  return (
+    <div className="ct-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="ct-summary-modal" role="dialog" aria-modal="true" aria-labelledby="since-last-modal-title">
+        <div className="ct-summary-modal-header">
+          <div>
+            <div className="ct-eyebrow">Longitudinal context</div>
+            <h2 id="since-last-modal-title">Since Last Visit</h2>
+            <p>{date ? formatEventDate({ id: 'summary-date', occurredAt: date }) : 'No qualifying completed encounter is documented.'}</p>
+          </div>
+          <button type="button" className="ct-icon-button" aria-label="Close summary" onClick={onClose}>×</button>
+        </div>
+        <div className="ct-summary-grid">
+          <div><strong>{changes.length}</strong><span>documented events</span></div>
+          {counts.slice(0, 5).map((item) => <div key={item.type}><strong>{item.count}</strong><span>{item.type}</span></div>)}
+        </div>
+        <div className="ct-summary-list">
+          {changes.slice(0, 8).map((event) => <button key={event.id} type="button" onClick={onClose}><span>{getEventType(event)}</span><strong>{event.title}</strong><small>{formatEventDate(event)}{event.provider?.name ? ` · ${event.provider.name}` : ''}</small></button>)}
+          {changes.length === 0 && <p>No clinically meaningful changes are documented after the last qualifying visit.</p>}
+        </div>
+        <div className="ct-summary-footer"><button type="button" className="ct-secondary-button" onClick={onClose}>Close</button></div>
+      </section>
+    </div>
+  );
+}
+
+function ScheduleAppointmentModal({
+  submitting,
+  onCancel,
+  onSubmit,
+}: {
+  submitting: boolean;
+  onCancel: () => void;
+  onSubmit: (input: { doctor: string; type: string; date: string; location?: string }) => void;
+}) {
+  const [doctor, setDoctor] = useState('');
+  const [type, setType] = useState('Follow-up');
+  const [date, setDate] = useState('');
+  const [location, setLocation] = useState('');
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!doctor.trim() || !type.trim() || !date) return;
+    onSubmit({ doctor: doctor.trim(), type: type.trim(), date, location: location.trim() || undefined });
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/30 z-50 flex items-end md:items-center justify-center p-4">
+      <div className="bg-white w-full md:w-[480px] rounded-t-lg md:rounded-lg p-6 shadow-lg">
+        <h3 className="text-lg font-semibold text-slate-900">Schedule Appointment</h3>
+        <p className="text-sm text-slate-500 mt-1">This will appear immediately in the patient&apos;s timeline.</p>
+
+        <form onSubmit={handleSubmit} className="mt-4 grid grid-cols-1 gap-3">
+          <label className="block">
+            <div className="text-xs text-gray-500">Provider</div>
+            <input value={doctor} onChange={(e) => setDoctor(e.target.value)} placeholder="Dr. Aris Thorne" className="mt-1 w-full border rounded px-3 py-2" required />
+          </label>
+
+          <label className="block">
+            <div className="text-xs text-gray-500">Appointment type</div>
+            <input value={type} onChange={(e) => setType(e.target.value)} placeholder="Follow-up" className="mt-1 w-full border rounded px-3 py-2" required />
+          </label>
+
+          <label className="block">
+            <div className="text-xs text-gray-500">Date & time</div>
+            <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full border rounded px-3 py-2" required />
+          </label>
+
+          <label className="block">
+            <div className="text-xs text-gray-500">Location (optional)</div>
+            <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Toronto Cardiology Clinic" className="mt-1 w-full border rounded px-3 py-2" />
+          </label>
+
+          <div className="flex items-center gap-2 mt-2">
+            <button type="submit" disabled={submitting} className="px-4 py-2 bg-teal-600 text-white rounded disabled:opacity-60">{submitting ? 'Scheduling…' : 'Schedule'}</button>
+            <button type="button" onClick={onCancel} className="px-4 py-2 border rounded">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

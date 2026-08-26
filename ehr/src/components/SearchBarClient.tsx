@@ -33,7 +33,7 @@ export default function SearchBar({ onSearch }: Props) {
     <div className="relative">
       <input
         aria-label="Global search"
-        placeholder="Search patients, appointments..."
+        placeholder="Search Patients, Appointments..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="w-64 md:w-80 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm placeholder-gray-400 dark:bg-slate-800 dark:border-slate-700 dark:placeholder-slate-400"

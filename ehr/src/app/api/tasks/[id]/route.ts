@@ -1,70 +1,49 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { mockTasks } from '@/lib/mockClinicalData';
+import { canAccessTaskPatient, canActorUpdateTask, canCompleteTask, findCanonicalTask } from '@/lib/doctorWorkStore';
+import { addTaskNote, updateTask } from '@/lib/tasksStore';
+import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  const session = await auth().catch(() => null);
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const id = params.id;
-  const body = await req.json().catch(() => ({}));
-  const { action } = body;
-
-  if (!process.env.DATABASE_URL) {
-    // operate on mock data (non-persistent)
-    const t = mockTasks.find((m) => m.id === id);
-    if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    if (action === 'toggleComplete' || action === 'markComplete') {
-      t.status = 'completed';
-      t.completedAt = new Date().toISOString();
-    } else if (action === 'delegate') {
-      t.assignedTo = body.to;
-      t.status = 'delegated';
-    } else if (action === 'addNote') {
-      const note = { id: String(Math.random()).slice(2, 8), authorId: session.user.id!, body: body.note?.body ?? body.note ?? '', createdAt: new Date().toISOString() };
-      t.notes = [...(t.notes ?? []), note];
-    } else if (action === 'update') {
-      Object.assign(t, body.update ?? {});
-    }
-    return NextResponse.json({ task: t });
-  }
-
-  // DB-backed updates
-  if (action === 'toggleComplete' || action === 'markComplete') {
-    const updated = await prisma.task.update({ where: { id }, data: { status: 'completed', completedAt: new Date() } });
-    await prisma.taskActivity.create({ data: { taskId: id, type: 'status', detail: `${session.user.name ?? session.user.id} marked complete`, actorId: session.user.id } }).catch(() => null);
-    return NextResponse.json({ task: updated });
-  }
-
-  if (action === 'delegate') {
-    const to = body.to;
-    const updated = await prisma.task.update({ where: { id }, data: { assignedTo: to, status: 'delegated' } });
-    await prisma.taskAssignment.create({ data: { taskId: id, fromUser: session.user.id, toUser: to, reason: body.reason ?? null } }).catch(() => null);
-    await prisma.taskActivity.create({ data: { taskId: id, type: 'assignment', detail: `Delegated to ${to}`, actorId: session.user.id } }).catch(() => null);
-    return NextResponse.json({ task: updated });
-  }
-
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const access = await resolveDoctorWorkspaceActor(request);
+  if (access.response) return access.response;
+  const { id } = await params;
+  const found = await findCanonicalTask(id);
+  if (!found) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!canAccessTaskPatient(found.patient.id, access.actor!)) return NextResponse.json({ error: 'You do not have access to this patient work context.' }, { status: 403 });
+  if (!canActorUpdateTask(found.task, access.actor!)) return NextResponse.json({ error: 'You do not have permission to update this task.' }, { status: 403 });
+  const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+  const requestedAction = typeof body?.action === 'string' ? body.action : '';
+  const action = requestedAction === 'toggleComplete' || requestedAction === 'markComplete' ? 'complete' : requestedAction;
+  if (action === 'delegate' && access.actor!.role !== 'ADMIN' && access.actor!.role !== 'DEV') return NextResponse.json({ error: 'You do not have permission to reassign this task.' }, { status: 403 });
   if (action === 'addNote') {
-    const noteBody = body.note?.body ?? body.note ?? '';
-    const comment = await prisma.taskComment.create({ data: { taskId: id, authorId: session.user.id!, body: noteBody } });
-    await prisma.taskActivity.create({ data: { taskId: id, type: 'note', detail: noteBody, actorId: session.user.id } }).catch(() => null);
-    const task = await prisma.task.findUnique({ where: { id }, include: { comments: true, activities: true, assignee: true } });
-    return NextResponse.json({ task, comment });
-  }
-
-  if (action === 'update') {
-    const update = body.update ?? {};
-    const data: any = {};
-    if (update.title) data.title = update.title;
-    if (update.status) data.status = update.status;
-    if (update.priority) data.priority = update.priority;
-    if (update.assignedTo) data.assignedTo = update.assignedTo;
-    if (update.dueAt) data.dueAt = new Date(update.dueAt);
-    const updated = await prisma.task.update({ where: { id }, data });
-    await prisma.taskActivity.create({ data: { taskId: id, type: 'system', detail: `Task updated by ${session.user.id}`, actorId: session.user.id } }).catch(() => null);
+    const note = body?.note && typeof body.note === 'object' ? body.note as { body?: unknown } : null;
+    const noteBody = typeof note?.body === 'string' ? note.body.trim() : '';
+    if (!noteBody) return NextResponse.json({ error: 'A note body is required.' }, { status: 400 });
+    const updated = await addTaskNote(found.patient.id, id, noteBody, access.actor);
+    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json({ task: updated });
   }
-
-  return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+  if (['complete', 'toggleComplete', 'markComplete'].includes(action) && !(await canCompleteTask(found.task))) return NextResponse.json({ error: 'Complete the linked source workflow before completing this task.' }, { status: 409 });
+  if (['start', 'complete', 'defer', 'hold', 'resume', 'reset'].includes(action) && ['completed', 'cancelled', 'entered-in-error', 'failed', 'rejected'].includes(found.task.status || '')) return NextResponse.json({ error: 'This task is no longer open.' }, { status: 409 });
+  let patch: Record<string, unknown>;
+  if (action === 'start') patch = { status: 'in-progress', startDate: new Date().toISOString() };
+  else if (['complete', 'toggleComplete', 'markComplete'].includes(action)) patch = { status: 'completed', closedAt: new Date().toISOString() };
+  else if (action === 'hold') patch = { status: 'on-hold' };
+  else if (action === 'resume') patch = { status: 'in-progress' };
+  else if (action === 'reset') patch = { status: 'accepted' };
+  else if (action === 'defer' && typeof body?.dueDate === 'string' && !Number.isNaN(Date.parse(body.dueDate))) patch = { status: 'accepted', dueDate: body.dueDate };
+  else if (action === 'delegate') {
+    const target = typeof body?.to === 'string' ? body.to.trim() : '';
+    if (!target) return NextResponse.json({ error: 'A delegate is required.' }, { status: 400 });
+    patch = { assignee: { id: target, name: target, role: 'DOCTOR' }, status: 'accepted' };
+  }
+  else return NextResponse.json({ error: 'Unsupported task action.' }, { status: 400 });
+  try {
+    const task = await updateTask(found.patient.id, id, patch, access.actor, typeof body?.expectedUpdatedAt === 'string' ? body.expectedUpdatedAt : undefined);
+    if (!task) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return NextResponse.json({ task });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'TASK_VERSION_CONFLICT') return NextResponse.json({ error: 'This task changed since you opened it. Refresh the task to continue.' }, { status: 409 });
+    throw error;
+  }
 }

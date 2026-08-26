@@ -137,8 +137,8 @@ export default function PrescriptionComposer({ patient }: { patient?: any }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <main className="lg:col-span-8">
             <div className="bg-white rounded-xl p-6 shadow-sm">
-              <label htmlFor="med-search" className="sr-only">Search medications</label>
-              <input id="med-search" value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search medications by name or strength..." className="w-full text-sm px-4 py-3 border border-gray-200 rounded-lg shadow-sm" />
+              <label htmlFor="med-search" className="sr-only">Search Medications</label>
+              <input id="med-search" value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search Medications by Name or Strength..." className="w-full text-sm px-4 py-3 border border-gray-200 rounded-lg shadow-sm" />
 
               <div className="mt-4 space-y-3">
                 {filtered.map(m => (

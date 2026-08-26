@@ -7,6 +7,7 @@
   | 'in-progress'
   | 'on-hold'
   | 'failed'
+  | 'rejected'
   | 'completed'
   | 'cancelled'
   | 'entered-in-error';
@@ -26,7 +27,7 @@ export interface ClinicalTaskHistoryEntry {
   userName?: string;
   role?: string;
   timestamp: string; // ISO
-  details?: any;
+  details?: unknown;
 }
 
 export interface ClinicalTaskRelatedResource {

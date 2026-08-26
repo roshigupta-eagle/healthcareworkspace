@@ -11,6 +11,8 @@ export type AppointmentStatus =
   | 'fulfilled'
   | 'cancelled'
   | 'noshow'
+  | 'checked-in'
+  | 'waitlist'
   | 'entered-in-error';
 
 export type SlotStatus = 'free' | 'busy' | 'busy-unavailable' | 'busy-tentative' | 'entered-in-error';

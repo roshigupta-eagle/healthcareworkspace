@@ -34,7 +34,7 @@ export default function DashboardFiltersClient({ onChange }: { onChange?: (filte
         className="rounded-md border px-2 py-1 text-sm bg-white dark:bg-slate-800"
         onChange={(e) => onChangeRef.current?.({ role: e.target.value })}
       >
-        <option value="">All roles</option>
+        <option value="">All Roles</option>
         <option value="PATIENT">Patient</option>
         <option value="DOCTOR">Doctor</option>
         <option value="NURSE">Nurse</option>
@@ -47,9 +47,9 @@ export default function DashboardFiltersClient({ onChange }: { onChange?: (filte
         className="rounded-md border px-2 py-1 text-sm bg-white dark:bg-slate-800"
         onChange={(e) => onChangeRef.current?.({ status: e.target.value })}
       >
-        <option value="">All status</option>
+        <option value="">All Statuses</option>
         <option value="PENDING">Pending</option>
-        <option value="IN_PROGRESS">In progress</option>
+        <option value="IN_PROGRESS">In Progress</option>
         <option value="COMPLETED">Completed</option>
       </select>
     </div>

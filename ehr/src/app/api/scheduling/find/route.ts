@@ -1,24 +1,22 @@
 ﻿import { NextResponse } from 'next/server';
-import { findAvailableSlots } from '@/scheduling/services/scheduling.mock';
+import { getSchedulingSnapshot } from '@/lib/schedulingData';
+import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 
 export async function GET(req: Request) {
+  const access = await resolveDoctorWorkspaceActor(req);
+  if (access.response) return access.response;
   try {
     const url = new URL(req.url);
     const q = url.searchParams;
-    const filter: any = {};
-    if (q.get('practitionerId')) filter.practitionerId = q.get('practitionerId');
-    if (q.get('locationId')) filter.locationId = q.get('locationId');
-    if (q.get('serviceType')) filter.serviceType = q.get('serviceType');
-    if (q.get('from')) filter.from = q.get('from');
-    if (q.get('to')) filter.to = q.get('to');
-    if (q.get('durationMinutes')) filter.durationMinutes = parseInt(q.get('durationMinutes') || '0', 10);
-    if (q.get('includeTentative')) filter.includeTentative = q.get('includeTentative') === '1' || q.get('includeTentative') === 'true';
-
-    const slots = await findAvailableSlots(filter);
+    const snapshot = await getSchedulingSnapshot();
+    const practitionerId = q.get('practitionerId');
+    const locationId = q.get('locationId');
+    const serviceType = q.get('serviceType');
+    const from = q.get('from');
+    const to = q.get('to');
+    const slots = snapshot.slots.filter((slot) => slot.status === 'free' && (!practitionerId || slot.practitionerId === practitionerId) && (!locationId || slot.locationId === locationId) && (!serviceType || slot.serviceType === serviceType) && (!from || new Date(slot.end) >= new Date(from)) && (!to || new Date(slot.start) <= new Date(to)));
     return NextResponse.json(slots);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('find slots error', err);
+  } catch {
     return NextResponse.json({ error: 'failed to find slots' }, { status: 500 });
   }
 }

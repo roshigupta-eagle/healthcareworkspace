@@ -1,0 +1,339 @@
+.communication-page {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 4rem;
+  background: linear-gradient(135deg, #f0fdfa 0%, #f8fafc 48%, #fff7ed 100%);
+}
+
+.communication-route-bar,
+.communication-header,
+.communication-search-band,
+.communication-panel-heading,
+.communication-route-actions,
+.communication-header-actions,
+.communication-row-actions,
+.communication-quick-actions,
+.communication-unavailable-actions {
+  display: flex;
+  align-items: center;
+}
+
+.communication-route-bar {
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.communication-module-nav {
+  display: flex;
+  gap: .2rem;
+  overflow-x: auto;
+  border-bottom: 1px solid #cbd5e1;
+  scrollbar-width: thin;
+}
+
+.communication-module-nav a,
+.communication-filter-tabs button {
+  display: inline-flex;
+  min-height: 2.4rem;
+  align-items: center;
+  gap: .35rem;
+  border-bottom: 2px solid transparent;
+  padding: .55rem .7rem;
+  color: #64748b;
+  font-size: .77rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.communication-module-nav a:hover,
+.communication-filter-tabs button:hover,
+.communication-module-nav a.is-active,
+.communication-filter-tabs button[aria-selected="true"] {
+  border-color: #0f766e;
+  color: #0f766e;
+}
+
+.communication-route-actions,
+.communication-header-actions,
+.communication-unavailable-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.communication-primary-button,
+.communication-secondary-button,
+.communication-text-link,
+.communication-icon-button {
+  display: inline-flex;
+  min-height: 2.4rem;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  border-radius: .55rem;
+  padding: .5rem .75rem;
+  font-size: .77rem;
+  font-weight: 850;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.communication-primary-button {
+  border: 1px solid #0f766e;
+  background: #0f766e;
+  color: #fff;
+}
+
+.communication-primary-button:hover { border-color: #115e59; background: #115e59; }
+
+.communication-secondary-button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+
+.communication-secondary-button:hover { border-color: #99f6e4; background: #f0fdfa; color: #115e59; }
+.communication-secondary-button:disabled { cursor: not-allowed; opacity: .55; }
+.communication-text-link { min-height: 2rem; padding: .25rem .35rem; color: #0f766e; }
+
+.communication-header {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.communication-eyebrow,
+.communication-section-kicker {
+  color: #0f766e;
+  font-size: .67rem;
+  font-weight: 900;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.communication-header h1,
+.communication-unavailable-panel h1 {
+  margin-top: .35rem;
+  color: #0f172a;
+  font-size: clamp(1.8rem, 3vw, 2.45rem);
+  font-weight: 900;
+  letter-spacing: -.025em;
+}
+
+.communication-header p,
+.communication-unavailable-panel > p {
+  max-width: 52rem;
+  margin-top: .45rem;
+  color: #475569;
+  font-size: .92rem;
+  line-height: 1.55;
+}
+
+.communication-header-context {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  margin-top: .6rem;
+  color: #64748b;
+  font-size: .72rem;
+  font-weight: 750;
+}
+
+.communication-search-band {
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .8rem;
+  background: rgba(255,255,255,.86);
+  padding: .45rem;
+  box-shadow: 0 5px 18px rgba(15,23,42,.04);
+}
+
+.communication-search {
+  display: flex;
+  min-width: 260px;
+  flex: 1;
+  align-items: center;
+  gap: .55rem;
+  padding: 0 .65rem;
+  color: #64748b;
+}
+
+.communication-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: .82rem;
+}
+
+.communication-search kbd {
+  border: 1px solid #cbd5e1;
+  border-radius: .3rem;
+  padding: .15rem .35rem;
+  color: #64748b;
+  font-size: .64rem;
+  font-weight: 800;
+}
+
+.communication-filter-tabs {
+  display: flex;
+  gap: .1rem;
+  overflow-x: auto;
+}
+
+.communication-filter-tabs button { border-bottom: 0; border-radius: .45rem; }
+.communication-filter-tabs button[aria-selected="true"] { background: #ecfdf5; }
+.communication-filter-tabs button span { min-width: 1.25rem; border-radius: 99px; background: #0f766e; padding: .12rem .28rem; color: #fff; font-size: .62rem; text-align: center; }
+
+.communication-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+
+.communication-metrics > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: .7rem;
+  border: 1px solid #dbe4ec;
+  border-radius: .8rem;
+  background: #fff;
+  padding: .85rem;
+  box-shadow: 0 4px 14px rgba(15,23,42,.04);
+}
+
+.communication-metrics > div > span:last-child { min-width: 0; }
+.communication-metric-icon,
+.communication-channel-icon,
+.communication-unavailable-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: .65rem;
+}
+
+.communication-metric-icon { width: 2.2rem; height: 2.2rem; }
+.communication-metric-icon.is-blue { background: #eff6ff; color: #2563eb; }
+.communication-metric-icon.is-amber { background: #fffbeb; color: #b45309; }
+.communication-metric-icon.is-teal { background: #ecfdf5; color: #047857; }
+.communication-metric-icon.is-slate { background: #f1f5f9; color: #475569; }
+.communication-metrics small,
+.communication-metrics em { display: block; color: #64748b; font-size: .67rem; font-style: normal; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.communication-metrics strong { display: block; margin: .1rem 0; color: #0f172a; font-size: 1.45rem; font-weight: 900; line-height: 1.05; }
+.communication-metrics em { font-size: .68rem; font-weight: 650; letter-spacing: 0; text-transform: none; }
+
+.communication-channel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem;
+  margin-bottom: 1rem;
+}
+
+.communication-channel-card {
+  min-width: 0;
+  border: 1px solid #dbe4ec;
+  border-radius: .8rem;
+  background: #fff;
+  padding: 1rem;
+  box-shadow: 0 5px 18px rgba(15,23,42,.045);
+}
+
+.communication-channel-card.is-unavailable { background: #f8fafc; }
+.communication-channel-card-top { display: flex; align-items: center; justify-content: space-between; }
+.communication-channel-icon { width: 2.5rem; height: 2.5rem; }
+.communication-channel-icon.is-email { background: #fff7ed; color: #c2410c; }
+.communication-channel-icon.is-message { background: #ecfeff; color: #0e7490; }
+.communication-channel-icon.is-call, .communication-channel-icon.is-voicemail { background: #f1f5f9; color: #475569; }
+.communication-availability { border-radius: 99px; padding: .22rem .45rem; font-size: .63rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.communication-availability.is-live { background: #dcfce7; color: #166534; }
+.communication-availability.is-muted { background: #e2e8f0; color: #64748b; }
+.communication-channel-card h2 { margin-top: .85rem; color: #0f172a; font-size: 1.02rem; font-weight: 900; }
+.communication-channel-card > p { min-height: 2.6rem; margin-top: .3rem; color: #64748b; font-size: .77rem; line-height: 1.45; }
+.communication-channel-count { display: flex; align-items: baseline; gap: .45rem; margin-top: .8rem; }
+.communication-channel-count strong { color: #0f172a; font-size: 1.6rem; font-weight: 900; }
+.communication-channel-count span { color: #64748b; font-size: .7rem; font-weight: 750; }
+.communication-channel-reason { display: flex; min-height: 2.5rem; align-items: flex-start; gap: .35rem; margin-top: .7rem !important; color: #64748b !important; font-size: .7rem !important; }
+.communication-card-link { display: inline-flex; align-items: center; gap: .3rem; margin-top: .7rem; color: #0f766e; font-size: .75rem; font-weight: 850; }
+
+.communication-content-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .85fr); gap: 1rem; align-items: start; }
+.communication-main-column, .communication-side-column { display: grid; min-width: 0; gap: 1rem; }
+.communication-panel { overflow: hidden; border: 1px solid #dbe4ec; border-radius: .8rem; background: #fff; box-shadow: 0 5px 18px rgba(15,23,42,.045); }
+.communication-panel-heading { justify-content: space-between; gap: 1rem; padding: .95rem 1rem .8rem; }
+.communication-panel-heading h2 { margin-top: .25rem; color: #0f172a; font-size: 1.05rem; font-weight: 900; }
+.communication-panel-count { display: grid; min-width: 1.7rem; height: 1.7rem; place-items: center; border-radius: 99px; background: #f1f5f9; color: #475569; font-size: .7rem; font-weight: 900; }
+.communication-brief-status { color: #047857; font-size: .65rem; font-weight: 850; }
+.communication-row { display: flex; min-width: 0; align-items: center; gap: .7rem; border-top: 1px solid #eef2f6; padding: .75rem 1rem; }
+.communication-row.is-unread { background: #f8fffd; }
+.communication-row-main { display: flex; min-width: 0; flex: 1; align-items: flex-start; gap: .65rem; color: inherit; }
+.communication-row-channel { display: grid; width: 1.9rem; height: 1.9rem; flex: 0 0 auto; place-items: center; border-radius: .5rem; }
+.communication-row-channel.is-message { background: #ecfeff; color: #0e7490; }
+.communication-row-channel.is-email { background: #fff7ed; color: #c2410c; }
+.communication-row-channel.is-call, .communication-row-channel.is-voicemail { background: #f1f5f9; color: #475569; }
+.communication-row-copy { display: grid; min-width: 0; gap: .16rem; }
+.communication-row-copy strong { overflow: hidden; color: #0f172a; font-size: .8rem; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.communication-row-meta, .communication-row-preview { overflow: hidden; color: #64748b; font-size: .71rem; text-overflow: ellipsis; white-space: nowrap; }
+.communication-row-preview { color: #475569; }
+.communication-row-main time { margin-left: auto; flex: 0 0 auto; color: #94a3b8; font-size: .65rem; white-space: nowrap; }
+.communication-row-actions { flex: 0 0 auto; gap: .35rem; }
+.communication-follow-up { display: inline-flex; align-items: center; gap: .2rem; color: #b45309; font-size: .64rem; font-weight: 850; }
+.communication-patient-link { color: #0f766e; font-size: .67rem; font-weight: 850; }
+.communication-icon-button { min-height: 1.9rem; width: 1.9rem; padding: .25rem; color: #94a3b8; }
+.communication-icon-button:hover, .communication-icon-button.is-pinned { background: #fffbeb; color: #b45309; }
+.communication-brief > p { padding: 0 1rem; color: #475569; font-size: .78rem; line-height: 1.5; }
+.communication-brief-list { display: grid; gap: .55rem; margin: .9rem 1rem 1rem; border-top: 1px solid #eef2f6; padding-top: .75rem; }
+.communication-brief-list span { display: flex; align-items: center; gap: .35rem; color: #64748b; font-size: .72rem; }
+.communication-brief-list strong { margin-left: auto; color: #334155; font-size: .68rem; }
+.communication-empty { display: grid; place-items: center; padding: 1.7rem 1rem; text-align: center; }
+.communication-empty > span { display: grid; width: 2.4rem; height: 2.4rem; place-items: center; border-radius: .65rem; background: #f1f5f9; color: #64748b; }
+.communication-empty strong { margin-top: .6rem; color: #334155; font-size: .8rem; }
+.communication-empty p { max-width: 20rem; margin-top: .25rem; color: #64748b; font-size: .72rem; line-height: 1.45; }
+.communication-empty .communication-text-link { margin-top: .45rem; }
+
+.communication-quick-actions { flex-wrap: wrap; gap: .45rem; margin-top: 1rem; border-top: 1px solid #cbd5e1; padding-top: .9rem; }
+.communication-quick-actions > span { margin-right: .25rem; color: #64748b; font-size: .68rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.communication-quick-actions a { display: inline-flex; align-items: center; gap: .3rem; border: 1px solid #cbd5e1; border-radius: .5rem; background: rgba(255,255,255,.8); padding: .5rem .65rem; color: #334155; font-size: .71rem; font-weight: 800; }
+.communication-quick-actions a:hover { border-color: #99f6e4; background: #ecfdf5; color: #115e59; }
+
+.communication-unavailable-panel { max-width: 760px; margin: 4rem auto; border: 1px solid #dbe4ec; border-radius: 1rem; background: #fff; padding: 2rem; box-shadow: 0 10px 30px rgba(15,23,42,.07); }
+.communication-unavailable-icon { width: 3.5rem; height: 3.5rem; margin-bottom: 1rem; }
+.communication-unavailable-icon.is-email { background: #fff7ed; color: #c2410c; }
+.communication-unavailable-icon.is-call { background: #f1f5f9; color: #475569; }
+.communication-honesty { display: flex; align-items: flex-start; gap: .5rem; margin: 1.2rem 0; border: 1px solid #cbd5e1; border-radius: .65rem; background: #f8fafc; padding: .8rem; color: #64748b; font-size: .75rem; line-height: 1.45; }
+.communication-honesty strong { display: block; margin-bottom: .15rem; color: #334155; }
+
+@media (max-width: 1050px) {
+  .communication-route-bar, .communication-header { align-items: flex-start; flex-direction: column; }
+  .communication-route-actions, .communication-header-actions { justify-content: flex-start; }
+  .communication-search-band { align-items: stretch; flex-direction: column; }
+  .communication-channel-grid { grid-template-columns: 1fr 1fr; }
+  .communication-channel-card:last-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 760px) {
+  .communication-page { padding: 1rem .25rem 3rem; }
+  .communication-metrics { grid-template-columns: 1fr 1fr; }
+  .communication-content-grid { grid-template-columns: 1fr; }
+  .communication-row { align-items: flex-start; flex-wrap: wrap; }
+  .communication-row-main { flex-basis: calc(100% - 2.6rem); }
+  .communication-row-actions { width: 100%; padding-left: 2.55rem; }
+}
+
+@media (max-width: 520px) {
+  .communication-channel-grid, .communication-metrics { grid-template-columns: 1fr; }
+  .communication-channel-card:last-child { grid-column: auto; }
+  .communication-header-actions, .communication-route-actions, .communication-unavailable-actions { width: 100%; justify-content: flex-start; }
+  .communication-header-actions a, .communication-route-actions a, .communication-route-actions button { flex: 1; }
+  .communication-filter-tabs { width: 100%; }
+  .communication-row-main time { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .communication-primary-button, .communication-secondary-button, .communication-text-link, .communication-icon-button { transition: none; }
+}

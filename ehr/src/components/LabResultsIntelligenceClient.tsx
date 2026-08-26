@@ -9,7 +9,10 @@ import React, {
   useState,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { PatientBanner } from '@/design-system/clinical/PatientBanner';
+import { PatientBanner, type PatientVerificationStatus } from '@/design-system/clinical/PatientBanner';
+import { mapComparisonGroupToPanel } from '@/lib/labComparatorPresentation';
+import type { ComparatorStatus } from '@/lib/labComparator';
+import { fetchLabComparator } from '@/lib/labComparatorClient';
 
 type LabInterpretation =
   | 'normal'
@@ -85,6 +88,8 @@ type LabPanel = {
   orderingProvider: string;
   reviewingProvider?: string;
   sourceResourceType: 'DiagnosticReport' | 'Observation';
+  comparatorStatus?: ComparatorStatus;
+  comparatorExplanation?: readonly string[];
   sourceResourceId: string;
   summary: string;
 };
@@ -142,378 +147,6 @@ type IconProps = {
   className?: string;
 };
 
-const BASE_LABS: LabPanel[] = [
-  {
-    id: 'lipid-panel',
-    name: 'Lipid Panel',
-    shortName: 'LDL',
-    category: 'Cardiology / Metabolic',
-    unit: 'mmol/L',
-    referenceRange: {
-      high: 3,
-      text: '< 3.0 mmol/L',
-    },
-    trendGoal: 'lower',
-    interpretation: 'normal',
-    reviewState: 'reviewed',
-    reviewedBy: 'Dr. Patel',
-    reviewedAt: '2026-06-01T15:15:00-04:00',
-    reportStatus: 'final',
-    collectedAt: '2026-06-01T08:20:00-04:00',
-    issuedAt: '2026-06-01T11:05:00-04:00',
-    specimen: 'Blood',
-    orderingProvider: 'Dr. Aris Thorne',
-    reviewingProvider: 'Dr. Patel',
-    sourceResourceType: 'DiagnosticReport',
-    sourceResourceId: 'diagnosticreport-lipid-20260601',
-    summary: 'LDL is within the supplied target range.',
-    points: [
-      {
-        id: 'lipid-202509',
-        date: '2025-09-01T08:00:00-04:00',
-        value: 3.8,
-        interpretation: 'abnormal',
-      },
-      {
-        id: 'lipid-202511',
-        date: '2025-11-01T08:00:00-04:00',
-        value: 3.4,
-        interpretation: 'abnormal',
-      },
-      {
-        id: 'lipid-202601',
-        date: '2026-01-01T08:00:00-05:00',
-        value: 3,
-        interpretation: 'normal',
-      },
-      {
-        id: 'lipid-202603',
-        date: '2026-03-01T08:00:00-05:00',
-        value: 2.1,
-        interpretation: 'normal',
-      },
-      {
-        id: 'lipid-202606',
-        date: '2026-06-01T08:20:00-04:00',
-        value: 2.6,
-        interpretation: 'normal',
-      },
-    ],
-    analytes: [
-      {
-        id: 'total-cholesterol',
-        code: '2093-3',
-        name: 'Total Cholesterol',
-        value: 4.4,
-        unit: 'mmol/L',
-        referenceRange: {
-          high: 5.2,
-          text: '< 5.2 mmol/L',
-        },
-        interpretation: 'normal',
-      },
-      {
-        id: 'ldl',
-        code: '13457-7',
-        name: 'LDL Cholesterol',
-        value: 2.6,
-        unit: 'mmol/L',
-        referenceRange: {
-          high: 3,
-          text: '< 3.0 mmol/L',
-        },
-        interpretation: 'normal',
-      },
-      {
-        id: 'hdl',
-        code: '2085-9',
-        name: 'HDL Cholesterol',
-        value: 1.4,
-        unit: 'mmol/L',
-        referenceRange: {
-          low: 1,
-          text: '> 1.0 mmol/L',
-        },
-        interpretation: 'normal',
-      },
-      {
-        id: 'triglycerides',
-        code: '2571-8',
-        name: 'Triglycerides',
-        value: 1.3,
-        unit: 'mmol/L',
-        referenceRange: {
-          high: 1.7,
-          text: '< 1.7 mmol/L',
-        },
-        interpretation: 'normal',
-      },
-    ],
-  },
-  {
-    id: 'hba1c',
-    name: 'Hemoglobin A1c',
-    shortName: 'A1C',
-    category: 'Diabetes',
-    unit: '%',
-    referenceRange: {
-      high: 6.5,
-      text: '< 6.5%',
-    },
-    trendGoal: 'lower',
-    interpretation: 'abnormal',
-    reviewState: 'unreviewed',
-    reportStatus: 'final',
-    collectedAt: '2026-06-10T08:10:00-04:00',
-    issuedAt: '2026-06-10T10:30:00-04:00',
-    specimen: 'Blood',
-    orderingProvider: 'Dr. Aris Thorne',
-    sourceResourceType: 'Observation',
-    sourceResourceId: 'observation-hba1c-20260610',
-    summary: 'The latest result is outside the supplied reference range.',
-    points: [
-      {
-        id: 'hba1c-202501',
-        date: '2025-01-10T08:00:00-05:00',
-        value: 8.1,
-        interpretation: 'abnormal',
-      },
-      {
-        id: 'hba1c-202506',
-        date: '2025-06-10T08:00:00-04:00',
-        value: 7.9,
-        interpretation: 'abnormal',
-      },
-      {
-        id: 'hba1c-202601',
-        date: '2026-01-10T08:00:00-05:00',
-        value: 7.4,
-        interpretation: 'abnormal',
-      },
-      {
-        id: 'hba1c-202606',
-        date: '2026-06-10T08:10:00-04:00',
-        value: 7.2,
-        interpretation: 'abnormal',
-      },
-    ],
-    analytes: [
-      {
-        id: 'a1c',
-        code: '4548-4',
-        name: 'Hemoglobin A1c',
-        value: 7.2,
-        unit: '%',
-        referenceRange: {
-          high: 6.5,
-          text: '< 6.5%',
-        },
-        interpretation: 'abnormal',
-      },
-    ],
-  },
-  {
-    id: 'cbc',
-    name: 'Complete Blood Count',
-    shortName: 'CBC',
-    category: 'Hematology',
-    unit: 'g/dL',
-    referenceRange: {
-      low: 12,
-      high: 17,
-      text: '12–17 g/dL',
-    },
-    trendGoal: 'range',
-    interpretation: 'normal',
-    reviewState: 'reviewed',
-    reviewedBy: 'Dr. Patel',
-    reviewedAt: '2026-05-28T14:05:00-04:00',
-    reportStatus: 'final',
-    collectedAt: '2026-05-28T08:00:00-04:00',
-    issuedAt: '2026-05-28T10:20:00-04:00',
-    specimen: 'Blood',
-    orderingProvider: 'Dr. Chen',
-    reviewingProvider: 'Dr. Patel',
-    sourceResourceType: 'DiagnosticReport',
-    sourceResourceId: 'diagnosticreport-cbc-20260528',
-    summary: 'Selected CBC values are within supplied reference ranges.',
-    points: [
-      {
-        id: 'cbc-202509',
-        date: '2025-09-28T08:00:00-04:00',
-        value: 13.2,
-        interpretation: 'normal',
-      },
-      {
-        id: 'cbc-202601',
-        date: '2026-01-28T08:00:00-05:00',
-        value: 13.8,
-        interpretation: 'normal',
-      },
-      {
-        id: 'cbc-202605',
-        date: '2026-05-28T08:00:00-04:00',
-        value: 13.5,
-        interpretation: 'normal',
-      },
-    ],
-    analytes: [
-      {
-        id: 'hemoglobin',
-        code: '718-7',
-        name: 'Hemoglobin',
-        value: 13.5,
-        unit: 'g/dL',
-        referenceRange: {
-          low: 12,
-          high: 17,
-          text: '12–17 g/dL',
-        },
-        interpretation: 'normal',
-      },
-      {
-        id: 'wbc',
-        code: '6690-2',
-        name: 'White Blood Cell Count',
-        value: 6.2,
-        unit: '10⁹/L',
-        referenceRange: {
-          low: 4,
-          high: 11,
-          text: '4–11 × 10⁹/L',
-        },
-        interpretation: 'normal',
-      },
-      {
-        id: 'platelets',
-        code: '777-3',
-        name: 'Platelets',
-        value: 230,
-        unit: '10⁹/L',
-        referenceRange: {
-          low: 150,
-          high: 400,
-          text: '150–400 × 10⁹/L',
-        },
-        interpretation: 'normal',
-      },
-    ],
-  },
-  {
-    id: 'troponin',
-    name: 'Troponin I',
-    shortName: 'Troponin',
-    category: 'Cardiac',
-    unit: 'ng/L',
-    referenceRange: {
-      high: 14,
-      text: '< 14 ng/L',
-    },
-    trendGoal: 'lower',
-    interpretation: 'critical',
-    reviewState: 'unreviewed',
-    reportStatus: 'final',
-    collectedAt: '2026-04-12T18:45:00-04:00',
-    issuedAt: '2026-04-12T19:05:00-04:00',
-    specimen: 'Blood',
-    orderingProvider: 'Dr. Aris Thorne',
-    sourceResourceType: 'Observation',
-    sourceResourceId: 'observation-troponin-20260412',
-    summary:
-      'A critical interpretation is present in the supplied result data.',
-    points: [
-      {
-        id: 'troponin-202604',
-        date: '2026-04-12T18:45:00-04:00',
-        value: 120,
-        interpretation: 'critical',
-      },
-    ],
-    analytes: [
-      {
-        id: 'troponin-i',
-        code: '10839-9',
-        name: 'Troponin I',
-        value: 120,
-        unit: 'ng/L',
-        referenceRange: {
-          high: 14,
-          text: '< 14 ng/L',
-        },
-        interpretation: 'critical',
-      },
-    ],
-  },
-  {
-    id: 'kidney-function',
-    name: 'Kidney Function',
-    shortName: 'eGFR',
-    category: 'Renal',
-    unit: 'mL/min/1.73 m²',
-    referenceRange: {
-      low: 60,
-      text: '> 60 mL/min/1.73 m²',
-    },
-    trendGoal: 'higher',
-    interpretation: 'abnormal',
-    reviewState: 'unreviewed',
-    reportStatus: 'final',
-    collectedAt: '2026-03-04T08:15:00-05:00',
-    issuedAt: '2026-03-04T11:00:00-05:00',
-    specimen: 'Blood',
-    orderingProvider: 'Dr. Chen',
-    sourceResourceType: 'DiagnosticReport',
-    sourceResourceId: 'diagnosticreport-renal-20260304',
-    summary: 'The latest eGFR is below the supplied reference range.',
-    points: [
-      {
-        id: 'kidney-202503',
-        date: '2025-03-04T08:00:00-05:00',
-        value: 60,
-        interpretation: 'normal',
-      },
-      {
-        id: 'kidney-202511',
-        date: '2025-11-04T08:00:00-05:00',
-        value: 58,
-        interpretation: 'abnormal',
-      },
-      {
-        id: 'kidney-202603',
-        date: '2026-03-04T08:15:00-05:00',
-        value: 55,
-        interpretation: 'abnormal',
-      },
-    ],
-    analytes: [
-      {
-        id: 'egfr',
-        code: '33914-3',
-        name: 'eGFR',
-        value: 55,
-        unit: 'mL/min/1.73 m²',
-        referenceRange: {
-          low: 60,
-          text: '> 60 mL/min/1.73 m²',
-        },
-        interpretation: 'abnormal',
-      },
-      {
-        id: 'creatinine',
-        code: '2160-0',
-        name: 'Creatinine',
-        value: 120,
-        unit: 'µmol/L',
-        referenceRange: {
-          low: 60,
-          high: 110,
-          text: '60–110 µmol/L',
-        },
-        interpretation: 'abnormal',
-      },
-    ],
-  },
-];
 
 const FILTERS: Array<{
   id: LabFilter;
@@ -543,21 +176,6 @@ const STATUS_PRIORITY: Record<LabInterpretation, number> = {
   normal: 1,
 };
 
-function cloneBaseLabs(): LabPanel[] {
-  return BASE_LABS.map((lab) => ({
-    ...lab,
-    points: lab.points.map((point) => ({ ...point })),
-    analytes: lab.analytes.map((analyte) => ({
-      ...analyte,
-      referenceRange: analyte.referenceRange
-        ? { ...analyte.referenceRange }
-        : undefined,
-    })),
-    referenceRange: lab.referenceRange
-      ? { ...lab.referenceRange }
-      : undefined,
-  }));
-}
 
 function slugify(value: string): string {
   return value
@@ -685,8 +303,7 @@ function resultMatchesPanel(
 function mergePatientLabs(
   patient: PatientRecord,
 ): LabPanel[] {
-  const labs = cloneBaseLabs();
-
+  const labs: LabPanel[] = [];
   for (const raw of patient.labResults ?? []) {
     const rawName = String(raw.name ?? '').trim();
 
@@ -1351,27 +968,63 @@ export default function LabResultsIntelligenceClient({
     string | null
   >(null);
 
+
   useEffect(() => {
-    setLabs(initialLabs);
+    let isCurrent = true;
 
-    if (
-      initialSelectedLabId &&
-      initialLabs.some(
-        (lab) => lab.id === initialSelectedLabId,
-      )
-    ) {
-      setSelectedId(initialSelectedLabId);
-      return;
-    }
+    void fetchLabComparator(patient.id)
+      .then((response) => {
+        if (!isCurrent) {
+          return;
+        }
 
-    setSelectedId((current) =>
-      initialLabs.some((lab) => lab.id === current)
-        ? current
-        : initialLabs[0]?.id ?? '',
-    );
+        const sourceUnavailable = response.warnings.some(
+          (warning) => warning.code === 'sourceUnavailable',
+        );
 
-    setLastUpdatedAt(Date.now());
-  }, [initialLabs, initialSelectedLabId]);
+        if (sourceUnavailable) {
+          setLabs([]);
+          setSelectedId('');
+          setErrorMessage('The canonical laboratory source is unavailable. No results were substituted.');
+          return;
+        }
+
+        const nextLabs = response.data.parameters
+          .map((group) => mapComparisonGroupToPanel(group))
+          .filter((lab): lab is NonNullable<ReturnType<typeof mapComparisonGroupToPanel>> => lab !== undefined);
+
+        setLabs(nextLabs);
+        setSelectedId((current) => {
+          if (initialSelectedLabId && nextLabs.some((lab) => lab.id === initialSelectedLabId)) {
+            return initialSelectedLabId;
+          }
+
+          return nextLabs.some((lab) => lab.id === current)
+            ? current
+            : nextLabs[0]?.id ?? '';
+        });
+        setLastUpdatedAt(Date.now());
+
+        if (response.warnings.length > 0) {
+          setNotice(`${response.warnings.length} laboratory comparison warning${response.warnings.length === 1 ? '' : 's'} available.`);
+        }
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) {
+          setLabs([]);
+          setSelectedId('');
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : 'The laboratory comparison could not be loaded.',
+          );
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [initialSelectedLabId, patient.id]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -1441,17 +1094,13 @@ export default function LabResultsIntelligenceClient({
     });
   }, [activeFilter, activeReviewFilter, deferredQuery, labs]);
 
-  useEffect(() => {
-    if (
-      filteredLabs.length > 0 &&
-      !filteredLabs.some((lab) => lab.id === selectedId)
-    ) {
-      setSelectedId(filteredLabs[0].id);
-    }
-  }, [filteredLabs, selectedId]);
+
+  const activeSelectedId = filteredLabs.some((lab) => lab.id === selectedId)
+    ? selectedId
+    : filteredLabs[0]?.id ?? selectedId;
 
   const selectedLab =
-    labs.find((lab) => lab.id === selectedId) ??
+    labs.find((lab) => lab.id === activeSelectedId) ??
     filteredLabs[0] ??
     labs[0];
 
@@ -1548,6 +1197,12 @@ export default function LabResultsIntelligenceClient({
       .slice(1)
       .join(' ') ?? '';
 
+  const verificationStatus: PatientVerificationStatus =
+    patient.verificationStatus === 'verified'
+      || patient.verificationStatus === 'unverified'
+      ? patient.verificationStatus
+      : 'none';
+
   async function handleReviewResult(): Promise<void> {
     if (!selectedLab || isReviewing) {
       return;
@@ -1640,7 +1295,7 @@ export default function LabResultsIntelligenceClient({
     }
 
     router.push(
-      `/dashboard/records/${patient.id}/lab-results/${selectedLab.id}`,
+      `/dashboard/records/${patient.id}/labs/${selectedLab.sourceResourceId || selectedLab.id}`,
     );
   }
 
@@ -1770,7 +1425,7 @@ export default function LabResultsIntelligenceClient({
                 value: String(patient.mrn ?? '—'),
               },
             ]}
-            verificationStatus={patient.verificationStatus as any}
+            verificationStatus={verificationStatus}
           />
         </section>
 
@@ -1894,7 +1549,7 @@ export default function LabResultsIntelligenceClient({
                   onChange={(event) =>
                     setQuery(event.target.value)
                   }
-                  placeholder="Search tests, providers, IDs…"
+                  placeholder="Search Tests, Providers, IDs…"
                   className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-9 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-100"
                 />
                 {query ? (
@@ -2065,6 +1720,7 @@ export default function LabResultsIntelligenceClient({
                           <StatusBadge
                             status={lab.interpretation}
                           />
+                          <ComparatorBadge status={lab.comparatorStatus} />
                         </span>
                       </button>
                     );
@@ -2086,6 +1742,7 @@ export default function LabResultsIntelligenceClient({
                       <StatusBadge
                         status={selectedLab.interpretation}
                       />
+                      <ComparatorBadge status={selectedLab.comparatorStatus} />
                       <span
                         className={[
                           'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold',
@@ -2731,6 +2388,54 @@ function MetricCard({
   );
 }
 
+function comparatorStatusLabel(status: ComparatorStatus): string {
+  switch (status) {
+    case 'major-increase':
+      return 'Major increase';
+    case 'major-decrease':
+      return 'Major decrease';
+    case 'newly-abnormal':
+      return 'Newly abnormal';
+    case 'returned-to-range':
+      return 'Returned to range';
+    case 'not-comparable':
+      return 'Not directly comparable';
+    case 'increasing':
+      return 'Increasing';
+    case 'decreasing':
+      return 'Decreasing';
+    case 'stable':
+      return 'Stable';
+    case 'new':
+      return 'New result';
+  }
+}
+
+function ComparatorBadge({ status }: { status?: ComparatorStatus }) {
+  if (!status) {
+    return null;
+  }
+
+  const emphasized = status === 'major-increase'
+    || status === 'major-decrease'
+    || status === 'newly-abnormal';
+  const positive = status === 'returned-to-range';
+  const className = emphasized
+    ? 'border-amber-200 bg-amber-50 text-amber-800'
+    : positive
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : status === 'not-comparable'
+        ? 'border-slate-200 bg-slate-50 text-slate-700'
+        : 'border-blue-200 bg-blue-50 text-blue-700';
+
+  return (
+    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}>
+      <span aria-hidden="true">{emphasized ? '!' : positive ? '+' : 'i'}</span>
+      Roshi: {comparatorStatusLabel(status)}
+    </span>
+  );
+}
+
 function StatusBadge({
   status,
 }: {
@@ -2987,7 +2692,6 @@ function TrendChart({
       <svg
         viewBox={`0 0 ${width} ${height}`}
         width="100%"
-        height="auto"
         role="img"
         aria-labelledby="lab-trend-title lab-trend-description"
         className="min-h-[260px] overflow-visible"

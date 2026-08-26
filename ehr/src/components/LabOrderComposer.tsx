@@ -524,8 +524,8 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
 
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-500">Reason for order</label>
-                  <textarea ref={reasonRef} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Clinical rationale" className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm" rows={3} />
+                  <label className="block text-xs text-gray-500">Reason for Order</label>
+                  <textarea ref={reasonRef} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Clinical Rationale" className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm" rows={3} />
                 </div>
 
                 <div>
@@ -540,7 +540,7 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
                 </div>
 
                 <div>
-                  <label className="text-xs text-gray-500">Collection location</label>
+                  <label className="text-xs text-gray-500">Collection Location</label>
                   <input value={location} onChange={(e) => setLocation(e.target.value)} className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm" />
                 </div>
 
@@ -554,33 +554,33 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
                 </div>
 
                 <div>
-                  <label className="text-xs text-gray-500">Order date</label>
+                  <label className="text-xs text-gray-500">Order Date</label>
                   <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm" />
                 </div>
 
                 <div>
-                  <label className="text-xs text-gray-500">Collect by</label>
+                  <label className="text-xs text-gray-500">Collect By</label>
                   <input type="date" value={collectBy} onChange={(e) => setCollectBy(e.target.value)} className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm" />
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} /> Repeat order</label>
-                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={morning} onChange={(e) => setMorning(e.target.checked)} /> Morning collection preferred</label>
+                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} /> Repeat Order</label>
+                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={morning} onChange={(e) => setMorning(e.target.checked)} /> Morning Collection Preferred</label>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={fasting} onChange={(e) => setFasting(e.target.checked)} /> Fasting required</label>
+                  <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={fasting} onChange={(e) => setFasting(e.target.checked)} /> Fasting Required</label>
                   <div className="ml-auto text-xs text-gray-400">TATs shown in catalog help prioritize STAT</div>
                 </div>
 
               </div>
 
               <div className="mt-6">
-                <h4 className="text-sm font-medium text-gray-700">Patient instructions</h4>
+                <h4 className="text-sm font-medium text-gray-700">Patient Instructions</h4>
                 <div className="mt-2">
-                  <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Patient-friendly instructions" className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm" rows={3} />
+                  <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Patient-Friendly Instructions" className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm" rows={3} />
                   <div className="mt-2 flex gap-2">
-                    <button onClick={generateInstructions} className="px-3 py-1 rounded-md bg-white border border-gray-200 text-sm">Generate simple patient instructions</button>
+                    <button onClick={generateInstructions} className="px-3 py-1 rounded-md bg-white border border-gray-200 text-sm">Generate Simple Patient Instructions</button>
                     <button onClick={() => setInstructions('')} className="px-3 py-1 rounded-md bg-white border border-gray-200 text-sm">Clear</button>
                   </div>
                 </div>

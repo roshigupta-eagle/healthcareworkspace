@@ -183,7 +183,7 @@ export default function MedicationHistoryClient({ patient }: { patient: any }) {
               <div className="text-xs text-gray-500">{meds.length}</div>
             </div>
             <div className="mb-3">
-              <input aria-label="Search medications" placeholder="Search medications..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full px-3 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-100" />
+              <input aria-label="Search medications" placeholder="Search Medications..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full px-3 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-100" />
             </div>
 
             <div className="mb-3 flex flex-wrap gap-2">

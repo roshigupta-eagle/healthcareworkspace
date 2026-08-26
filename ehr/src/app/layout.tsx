@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { auth } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
+import MobileDoctorNav from "@/components/MobileDoctorNav";
 import ClientLandingMode from '@/components/ClientLandingMode';
 import ThemeLangProvider from '@/components/ThemeLangProvider';
 import GlobalHeader from '@/components/GlobalHeader';
@@ -48,14 +49,15 @@ export default async function RootLayout({
         </a>
 
         <div className="min-h-screen flex">
-          <aside className="hidden md:block min-h-screen md:w-80 lg:w-96">
+          <aside className="hidden md:block min-h-screen md:w-64 lg:w-72">
             <div className="h-full">
               <Sidebar session={session} role={role} />
             </div>
           </aside>
 
-          <main id="main-content" className="flex-1 p-8 max-w-8xl w-full">
+          <main id="main-content" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8 max-w-8xl w-full">
             <GlobalHeader session={session} role={role} />
+            <MobileDoctorNav role={role} />
             <FloatingActions />
 
             <PageTransition>

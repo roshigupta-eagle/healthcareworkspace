@@ -51,6 +51,11 @@ export async function getEvent(patientId: string, eventId: string) {
   return list.find(e => e.id === eventId) || null;
 }
 
+export async function readPatientEvents(patientId: string): Promise<ClinicalTimelineEvent[]> {
+  const all = await readAll();
+  return (all[patientId] || []).slice();
+}
+
 export async function appendEvent(patientId: string, event: ClinicalTimelineEvent) {
   const all = await readAll();
   const list = all[patientId] || [];
@@ -58,6 +63,17 @@ export async function appendEvent(patientId: string, event: ClinicalTimelineEven
   all[patientId] = list;
   await writeAll(all);
   return event;
+}
+
+export async function updateEvent(patientId: string, eventId: string, patch: Partial<ClinicalTimelineEvent>) {
+  const all = await readAll();
+  const list = all[patientId] || [];
+  const idx = list.findIndex(e => e.id === eventId);
+  if (idx < 0) return null;
+  list[idx] = { ...list[idx], ...patch };
+  all[patientId] = list;
+  await writeAll(all);
+  return list[idx];
 }
 
 export function mapEventToFhir(event: ClinicalTimelineEvent) {

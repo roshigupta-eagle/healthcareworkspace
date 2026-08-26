@@ -1,41 +1,32 @@
-import { auth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { getPatientById } from '../../mockPatients';
+import { getPatientById } from '@/app/dashboard/records/mockPatients';
 import PatientProfileHeader from '@/components/PatientProfileHeader';
-import WeightTrendClient from '@/components/WeightTrendClient';
+import WeightTrendShell from '@/components/weight-trend/WeightTrendShell';
 
-export default async function WeightTrendPage({ params, searchParams }: { params: any; searchParams?: any }) {
+export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const resolvedParams = await params;
-  const id = resolvedParams?.id ?? (params && params.id);
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const patientId = resolvedParams.id;
+  const patient = getPatientById(String(patientId));
 
-  let session: any = null;
-  try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    session = await auth();
-  } catch (e) {
-    // allow dev preview
+  if (!patient) {
+    return (
+      <div className="p-6">
+        <div className="max-w-2xl mx-auto bg-white border rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Patient not found</h2>
+          <p className="text-sm text-slate-600 mt-2">We could not find the requested patient record. The patient identifier may be incorrect or you may not have access to this record.</p>
+        </div>
+      </div>
+    );
   }
-  if (!session && resolvedSearchParams && resolvedSearchParams.asUser && process.env.NODE_ENV !== 'production') {
-    const override = Array.isArray(resolvedSearchParams.asUser) ? resolvedSearchParams.asUser[0] : resolvedSearchParams.asUser;
-    if (override) session = { user: { id: override, name: override } };
-  }
-  if (!session) redirect('/login');
 
-  const patient = getPatientById(String(id));
-  if (!patient) redirect('/dashboard/records');
+  // pass initial range if provided
+  const initialRange = typeof resolvedSearchParams?.range === 'string' ? resolvedSearchParams.range : undefined;
 
   return (
-    <div className="mx-auto w-full max-w-[1700px] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-4">
-        {/* back handled by browser */}
-      </div>
-
+    <div>
       <PatientProfileHeader patient={patient} />
-
-      <div className="mt-6">
-        <WeightTrendClient patient={patient} />
+      <div className="p-4">
+        <WeightTrendShell patientId={patientId} patientData={patient} initialRange={initialRange} />
       </div>
     </div>
   );

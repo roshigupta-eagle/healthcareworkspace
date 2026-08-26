@@ -113,7 +113,7 @@ export default function NotesWorkbench() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs"
           >
-            <option value="">All statuses</option>
+            <option value="">All Statuses</option>
             <option value="draft">Draft</option>
             <option value="signed">Signed</option>
           </select>
@@ -123,7 +123,7 @@ export default function NotesWorkbench() {
             onChange={(e) => setTypeFilter(e.target.value as NoteType | "")}
             className="w-1/2 rounded border border-gray-200 px-2 py-1 text-xs"
           >
-            <option value="">All types</option>
+            <option value="">All Types</option>
             {perms.availableTypes.map((t) => (
               <option key={t} value={t}>
                 {NOTE_TYPE_LABELS[t]}

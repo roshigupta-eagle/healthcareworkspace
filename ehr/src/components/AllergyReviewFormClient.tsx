@@ -21,27 +21,27 @@ export default function AllergyReviewFormClient({ defaultOpen = false }: { defau
       {open && (
         <form onSubmit={(e) => { e.preventDefault(); setSaving(true); setTimeout(() => { setSaving(false); setSuccess('Review saved'); setTimeout(()=>setSuccess(null),2000); }, 800); }} className="mt-4 space-y-3">
           <label className="flex flex-col text-sm">
-            <span className="text-xs text-gray-600">Review status</span>
+            <span className="text-xs text-gray-600">Review Status</span>
             <select required className="mt-1 p-2 border rounded">
-              <option>No known allergies confirmed</option>
-              <option>Allergy reported</option>
-              <option>Unable to verify</option>
+              <option>No Known Allergies Confirmed</option>
+              <option>Allergy Reported</option>
+              <option>Unable to Verify</option>
             </select>
           </label>
 
           <label className="flex flex-col text-sm">
-            <span className="text-xs text-gray-600">Reviewed by</span>
-            <input className="mt-1 p-2 border rounded" placeholder="Clinician name" />
+            <span className="text-xs text-gray-600">Reviewed By</span>
+            <input className="mt-1 p-2 border rounded" placeholder="Clinician Name" />
           </label>
 
           <label className="flex flex-col text-sm">
-            <span className="text-xs text-gray-600">Review date</span>
+            <span className="text-xs text-gray-600">Review Date</span>
             <input type="date" className="mt-1 p-2 border rounded" />
           </label>
 
           <label className="flex flex-col text-sm">
             <span className="text-xs text-gray-600">Notes</span>
-            <textarea className="mt-1 p-2 border rounded" rows={3} placeholder="Optional notes" />
+            <textarea className="mt-1 p-2 border rounded" rows={3} placeholder="Optional Notes" />
           </label>
 
           <div className="flex items-center gap-3">

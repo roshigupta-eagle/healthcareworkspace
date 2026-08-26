@@ -3,8 +3,8 @@ import { listCareGaps } from '@/lib/careGapStore';
 import { auth } from '@/lib/auth';
 import { getPatientById } from '@/app/dashboard/records/mockPatients';
 
-export async function GET(req: Request, { params }: { params: { patientId: string } }) {
-  const { patientId } = params;
+export async function GET(req: Request, { params }: { params: Promise<{ patientId: string }> }) {
+  const { patientId } = await params;
   const patient = getPatientById(String(patientId));
   if (!patient) return NextResponse.json({ error: 'patient not found' }, { status: 404 });
 
@@ -19,6 +19,7 @@ export async function GET(req: Request, { params }: { params: { patientId: strin
   return NextResponse.json(result);
 }
 
-export async function POST(req: Request, { params }: { params: { patientId: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ patientId: string }> }) {
+  await params;
   return NextResponse.json({ error: 'not implemented' }, { status: 501 });
 }

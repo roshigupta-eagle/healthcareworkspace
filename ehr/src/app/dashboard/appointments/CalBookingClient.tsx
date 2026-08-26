@@ -96,10 +96,10 @@ export default function CalBookingClient({ initialAppointments = [], currentUser
         </div>
         <div className="flex items-center gap-3">
           <select value={filterProvider || ''} onChange={(e) => setFilterProvider(e.target.value || null)} className="border rounded px-2 py-1">
-            <option value="">All providers</option>
+            <option value="">All Providers</option>
             {providers.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          <label className="text-sm"><input type="checkbox" checked={availableOnly} onChange={(e) => setAvailableOnly(e.target.checked)} className="mr-1"/>Available only</label>
+          <label className="text-sm"><input type="checkbox" checked={availableOnly} onChange={(e) => setAvailableOnly(e.target.checked)} className="mr-1"/>Available Only</label>
         </div>
       </div>
 
@@ -145,21 +145,21 @@ export default function CalBookingClient({ initialAppointments = [], currentUser
         <div className="col-span-7 bg-white rounded shadow-sm p-4">
           <div className="grid grid-cols-1 gap-3">
             <div>
-              <label className="text-sm font-medium">Search patient</label>
-              <input value={searchQ} onChange={(e)=>setSearchQ(e.target.value)} placeholder="Search patient..." className="mt-1 w-full border rounded px-3 py-2" />
+              <label className="text-sm font-medium">Search Patient</label>
+              <input value={searchQ} onChange={(e)=>setSearchQ(e.target.value)} placeholder="Search Patient..." className="mt-1 w-full border rounded px-3 py-2" />
               <div className="mt-2 text-sm text-neutral-500">Type to search — mock autocomplete</div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium">Patient name</label>
+                <label className="text-sm font-medium">Patient Name</label>
                 <input value={patientName} onChange={(e)=>setPatientName(e.target.value)} className="mt-1 w-full border rounded px-3 py-2" />
               </div>
               <div>
-                <label className="text-sm font-medium">Appointment type</label>
+                <label className="text-sm font-medium">Appointment Type</label>
                 <select value={appointmentType} onChange={(e)=>setAppointmentType(e.target.value)} className="mt-1 w-full border rounded px-2 py-2">
                   <option>Consultation</option>
-                  <option>Follow-up</option>
+                  <option>Follow-Up</option>
                   <option>Vaccination</option>
                   <option>Virtual</option>
                 </select>
@@ -167,7 +167,7 @@ export default function CalBookingClient({ initialAppointments = [], currentUser
             </div>
 
             <div>
-              <label className="text-sm font-medium">Selected slot</label>
+              <label className="text-sm font-medium">Selected Slot</label>
               <div className="mt-1 p-3 border rounded bg-neutral-50">
                 {selectedSlot ? (
                   <div>

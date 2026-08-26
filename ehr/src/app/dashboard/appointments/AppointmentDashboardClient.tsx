@@ -217,11 +217,11 @@ export default function AppointmentDashboardClient({ initialAppointments = [], p
 
           <div className="flex items-center gap-2 w-full md:w-auto mt-3 md:mt-0">
             <select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value)} className="border rounded-md px-3 py-1.5 text-sm">
-              <option value="all">All providers</option>
+              <option value="all">All Providers</option>
               {providers.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
             <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="border rounded-md px-3 py-1.5 text-sm ml-2">
-              <option value="all">All locations</option>
+              <option value="all">All Locations</option>
               {locations.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
             <button type="button" onClick={() => { setLoading(true); fetch('/api/scheduling/appointments').then(r => r.json()).then(d => setAppointments(d || [])).finally(()=>setLoading(false)); }} className="ml-2 px-3 py-1.5 rounded-lg border text-sm">Refresh</button>
@@ -255,7 +255,7 @@ export default function AppointmentDashboardClient({ initialAppointments = [], p
           </div>
           <div className="sm:hidden chips-scroll">
             {STATUS_KEYS.map((s) => { const key = s.toLowerCase(); const active = statusSet.has(key); return (<button key={s} onClick={() => toggleStatus(key)} aria-pressed={active} className={cls('flex-shrink-0 px-3 py-1 rounded-full text-xs border', active ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-neutral-700')}>{capitalize(s)}</button>); })}
-            <button onClick={clearFilters} className="flex-shrink-0 px-3 py-1 text-xs text-neutral-600">Clear</button>
+            <button onClick={clearFilters} className="flex-shrink-0 px-3 py-1 text-xs text-neutral-600">Clear Filters</button>
           </div>
         </div>
       </div>

@@ -16,6 +16,36 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## AI drafting gateway
+
+Doctor-note AI drafting is gateway-only. Configure these server-side environment variables before using it:
+
+```text
+ROSHI_AI_DRAFT_URL=https://your-approved-gateway.example/draft
+ROSHI_AI_DRAFT_API_KEY=your-server-side-key
+ROSHI_AI_DRAFT_TIMEOUT_MS=60000
+```
+
+Alternatively, configure a server-side OpenAI-compatible provider:
+
+```text
+OPENAI_API_KEY=your-server-side-key
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.openai.com/v1/chat/completions
+```
+
+For open-weight inference through Hugging Face Inference Providers, use the configured local defaults and add a server-side token:
+
+```text
+HUGGINGFACE_INFERENCE_URL=https://router.huggingface.co/v1/chat/completions
+HUGGINGFACE_MODEL=google/gemma-2-2b-it
+HF_TOKEN=hf_your_fine_grained_inference_token
+```
+
+`HUGGINGFACE_API_KEY` is accepted as an alternative token name. Create a fine-grained Hugging Face token with Inference Providers permission; never expose it through `NEXT_PUBLIC_*` variables or client code.
+
+The configured provider receives the clinician's structured drafting settings and only the patient context selected in the assistant. It must return JSON containing a non-empty `draft` string, an OpenAI-compatible `choices[0].message.content` string, or a Hugging Face `generated_text` string. When no provider is configured or the provider is unavailable, the route returns an explicit error and does not generate local substitute prose.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

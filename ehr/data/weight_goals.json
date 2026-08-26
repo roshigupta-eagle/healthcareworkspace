@@ -1,0 +1,116 @@
+{
+  "items": [
+    {
+      "targetWeight": 62,
+      "baselineWeight": 56,
+      "goalType": "weight-gain",
+      "targetDate": "2026-10-30",
+      "owner": "clinician",
+      "status": "superseded",
+      "patientId": "patient-001",
+      "id": "gmt0b8hot196",
+      "effectiveUntil": "2026-08-21T16:17:47.673Z",
+      "replacedBy": "gmt35kuxl79",
+      "updatedAt": "2026-08-21T16:17:47.673Z"
+    },
+    {
+      "targetWeight": 62,
+      "targetDate": "2026-08-20",
+      "owner": "clinician",
+      "status": "superseded",
+      "patientId": "patient-001",
+      "id": "gmt0bcdh1154",
+      "effectiveUntil": "2026-08-21T16:17:47.673Z",
+      "replacedBy": "gmt35kuxl79",
+      "updatedAt": "2026-08-21T16:17:47.673Z"
+    },
+    {
+      "id": "g1",
+      "patientId": "patient-001",
+      "status": "superseded",
+      "baselineWeight": 69.2,
+      "targetWeight": 62,
+      "targetDate": "2026-10-01T00:00:00.000Z",
+      "owner": "clinician",
+      "createdAt": "2026-01-15T10:00:00.000Z",
+      "notes": "Weight management plan, target agreed with patient",
+      "history": [
+        {
+          "when": "2026-01-15T10:00:00.000Z",
+          "actor": "Dr. Aris Thorne",
+          "action": "created",
+          "details": "Initial goal"
+        }
+      ],
+      "effectiveUntil": "2026-08-21T16:17:47.673Z",
+      "replacedBy": "gmt35kuxl79",
+      "updatedAt": "2026-08-21T16:17:47.673Z"
+    },
+    {
+      "patientId": "patient-001",
+      "goalType": "target-weight",
+      "targetWeight": 64,
+      "baselineWeight": 69.2,
+      "targetDate": "2026-10-01T00:00:00.000Z",
+      "owner": "clinician",
+      "status": "superseded",
+      "notes": "Weight management plan, target agreed with patient",
+      "effectiveFrom": "2026-08-21T16:17:47.666Z",
+      "history": [
+        {
+          "when": "2026-01-15T10:00:00.000Z",
+          "actor": "Dr. Aris Thorne",
+          "action": "created",
+          "details": "Initial goal"
+        },
+        {
+          "when": "2026-08-21T16:17:47.666Z",
+          "actor": "roshi",
+          "action": "updated",
+          "details": "Documented target-weight goal."
+        }
+      ],
+      "id": "gmt35kuxl79",
+      "createdAt": "2026-08-21T16:17:47.673Z",
+      "updatedAt": "2026-08-24T01:35:32.507Z",
+      "version": 1,
+      "effectiveUntil": "2026-08-24T01:35:32.507Z",
+      "replacedBy": "gmt6kdtwb862"
+    },
+    {
+      "patientId": "patient-001",
+      "goalType": "target-weight",
+      "targetWeight": 64,
+      "baselineWeight": 69.2,
+      "targetDate": "2026-10-01T00:00:00.000Z",
+      "owner": "clinician",
+      "status": "active",
+      "notes": "Weight management plan, target agreed with patient",
+      "effectiveFrom": "2026-08-24T01:35:32.500Z",
+      "history": [
+        {
+          "when": "2026-01-15T10:00:00.000Z",
+          "actor": "Dr. Aris Thorne",
+          "action": "created",
+          "details": "Initial goal"
+        },
+        {
+          "when": "2026-08-21T16:17:47.666Z",
+          "actor": "roshi",
+          "action": "updated",
+          "details": "Documented target-weight goal."
+        },
+        {
+          "when": "2026-08-24T01:35:32.500Z",
+          "actor": "roshi",
+          "action": "updated",
+          "details": "Documented target-weight goal."
+        }
+      ],
+      "id": "gmt6kdtwb862",
+      "createdAt": "2026-08-24T01:35:32.507Z",
+      "updatedAt": "2026-08-24T01:35:32.507Z",
+      "version": 1
+    }
+  ]
+}

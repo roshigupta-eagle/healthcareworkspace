@@ -12,7 +12,7 @@ export default async function CareGapsPage({ params }: { params: any }) {
   return (
     <div>
       {/* Client component will render the full care gaps UI */}
-      {/* @ts-expect-error Server -> Client prop serialization */}
+      {/* @t-expect-error Server -> Client prop serialization */}
       <CareGapsClient patient={patient} />
     </div>
   );

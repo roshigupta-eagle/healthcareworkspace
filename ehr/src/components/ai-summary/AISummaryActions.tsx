@@ -3,6 +3,7 @@
 import React, {
   FormEvent,
   ReactNode,
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -231,7 +232,7 @@ function AccessibleDialog({
           onClose();
         }
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center backdrop:bg-slate-950/50"
+      className={`fixed inset-0 z-50 items-center justify-center backdrop:bg-slate-950/50 ${open ? 'flex' : 'hidden'}`}
     >
       <div className="w-[min(94vw,34rem)] rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl">
         <div className="border-b border-slate-200 px-6 py-5">
@@ -287,10 +288,15 @@ export default function AISummaryActions({
   const currentSearchParams = useSearchParams();
 
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const exportTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const exportWasOpenRef = useRef(false);
 
-  const [regenerateDialogOpen, setRegenerateDialogOpen] =
-    useState(false);
-  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(
+    () => currentSearchParams.get('openRegenerate') === '1',
+  );
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(
+    () => currentSearchParams.get('openReview') === '1',
+  );
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
@@ -329,6 +335,16 @@ export default function AISummaryActions({
   const encodedPatientId = encodeURIComponent(patientId);
   const apiBase = `/api/patients/${encodedPatientId}/ai-summary`;
   const pageBase = `/dashboard/records/${encodedPatientId}/ai-clinical-summary`;
+  const previewActor = process.env.NODE_ENV !== 'production'
+    ? currentSearchParams.get('asUser') || (currentSearchParams.get('noauth') ? 'dev' : '')
+    : '';
+
+  function actionUrl(path: string, query?: string): string {
+    const params = new URLSearchParams(query || '');
+    if (previewActor) params.set('asUser', previewActor);
+    const serialized = params.toString();
+    return `${path}${serialized ? `?${serialized}` : ''}`;
+  }
 
   const resolvedAuditHref =
     auditHref ??
@@ -380,12 +396,6 @@ export default function AISummaryActions({
     };
   }, [moreMenuOpen]);
 
-  function announce(
-    type: NotificationState extends null ? never : never,
-  ): void {
-    // Intentionally unused. Notifications are set directly below.
-  }
-
   function openRegenerateDialog(): void {
     setActionError(null);
     setRegenerateDialogOpen(true);
@@ -400,6 +410,43 @@ export default function AISummaryActions({
     setActionError(null);
     setExportDialogOpen(true);
   }
+
+  const closeExportDialog = useCallback((): void => {
+    if (exporting) {
+      return;
+    }
+
+    setExportDialogOpen(false);
+    setActionError(null);
+  }, [exporting]);
+
+  useEffect(() => {
+    if (exportDialogOpen) {
+      exportWasOpenRef.current = true;
+      return;
+    }
+
+    if (exportWasOpenRef.current) {
+      exportWasOpenRef.current = false;
+      exportTriggerRef.current?.focus();
+    }
+  }, [exportDialogOpen]);
+
+  useEffect(() => {
+    if (!exportDialogOpen) {
+      return;
+    }
+
+    function handleExportEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeExportDialog();
+      }
+    }
+
+    document.addEventListener('keydown', handleExportEscape);
+    return () => document.removeEventListener('keydown', handleExportEscape);
+  }, [exportDialogOpen, closeExportDialog]);
 
   function refreshToNewVersion(newVersionId?: string): void {
     if (!newVersionId) {
@@ -431,7 +478,7 @@ export default function AISummaryActions({
 
     try {
       const result = await requestJson<RegenerateResponse>(
-        `${apiBase}/regenerate`,
+        actionUrl(`${apiBase}/regenerate`),
         {
           method: 'POST',
           body: JSON.stringify({
@@ -475,7 +522,7 @@ export default function AISummaryActions({
 
     try {
       const result = await requestJson<ReviewResponse>(
-        `${apiBase}/review`,
+        actionUrl(`${apiBase}/review`),
         {
           method: 'POST',
           body: JSON.stringify({
@@ -521,7 +568,7 @@ export default function AISummaryActions({
     setActionError(null);
 
     try {
-      const response = await fetch(`${apiBase}/export`, {
+      const response = await fetch(actionUrl(`${apiBase}/export`), {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -618,8 +665,7 @@ export default function AISummaryActions({
       params.set('versionId', versionId);
     }
 
-    const query = params.toString();
-    openSecureTab(`${apiBase}/fhir${query ? `?${query}` : ''}`);
+    openSecureTab(actionUrl(`${apiBase}/fhir`, params.toString()));
   }
 
   function openAuditHistory(): void {
@@ -720,6 +766,7 @@ export default function AISummaryActions({
           <button
             type="button"
             onClick={openExportDialog}
+            ref={exportTriggerRef}
             disabled={exporting || !permissions.canExport}
             aria-disabled={
               exporting || !permissions.canExport
@@ -1059,10 +1106,7 @@ export default function AISummaryActions({
 
       <AccessibleDialog
         open={exportDialogOpen}
-        onClose={() => {
-          setExportDialogOpen(false);
-          setActionError(null);
-        }}
+        onClose={closeExportDialog}
         title="Export AI clinical summary"
         description="Choose an approved format and the information to include."
       >
@@ -1080,6 +1124,7 @@ export default function AISummaryActions({
 
             <select
               id="export-format"
+              autoFocus
               value={exportFormat}
               onChange={(event) =>
                 setExportFormat(
@@ -1160,7 +1205,7 @@ export default function AISummaryActions({
           <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
             <button
               type="button"
-              onClick={() => setExportDialogOpen(false)}
+              onClick={closeExportDialog}
               className={secondaryButton}
             >
               Cancel

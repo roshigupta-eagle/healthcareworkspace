@@ -21,7 +21,8 @@ export default function ClinicalTasksClient({ initialTasks: initialTasksProp, pa
   const [search, setSearch] = useState<string>((searchParams.get('q') ?? ''));
   const [filters, setFilters] = useState<{ priorities: string[]; statuses: string[]; assignedTo?: string | undefined }>({ priorities: [], statuses: [], assignedTo: undefined });
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('task') ?? tasks[0]?.id ?? null);
-  const [openNew, setOpenNew] = useState(false);
+  const [openNew, setOpenNew] = useState(searchParams.get('new') === '1');
+  const prefillTitle = searchParams.get('title') ?? '';
   const [openDelegate, setOpenDelegate] = useState(false);
   const [openResults, setOpenResults] = useState<{ open: boolean; resultId?: string | null }>({ open: false });
   const [lastSynced, setLastSynced] = useState<string | null>(null);
@@ -310,7 +311,7 @@ export default function ClinicalTasksClient({ initialTasks: initialTasksProp, pa
           <div aria-live="polite" className="sr-only" ref={announcementsRef}></div>
 
           <Modal open={openNew} onClose={() => setOpenNew(false)} title="Create new task">
-            <NewTaskForm patientId={patientId} onCreate={handleCreateTask} onCancel={() => setOpenNew(false)} />
+            <NewTaskForm patientId={patientId} initialTitle={prefillTitle} onCreate={handleCreateTask} onCancel={() => setOpenNew(false)} />
           </Modal>
 
           <Modal open={openDelegate} onClose={() => setOpenDelegate(false)} title="Delegate task">
@@ -347,8 +348,8 @@ export default function ClinicalTasksClient({ initialTasks: initialTasksProp, pa
   );
 }
 
-function NewTaskForm({ patientId: propPatientId, onCreate, onCancel }: { patientId?: string; onCreate: (p: { title: string; patientId?: string; assignedTo?: string | null; priority?: string; category?: string; dueAt?: string | null }) => void; onCancel: () => void }) {
-  const [title, setTitle] = useState('');
+function NewTaskForm({ patientId: propPatientId, initialTitle, onCreate, onCancel }: { patientId?: string; initialTitle?: string; onCreate: (p: { title: string; patientId?: string; assignedTo?: string | null; priority?: string; category?: string; dueAt?: string | null }) => void; onCancel: () => void }) {
+  const [title, setTitle] = useState(initialTitle ?? '');
   const [assignedTo, setAssignedTo] = useState<string | undefined>(undefined);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
   const [dueAt, setDueAt] = useState<string | null>(new Date().toISOString().slice(0, 10));

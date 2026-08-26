@@ -5,6 +5,7 @@ import { Card, Button } from '@/design-system';
 import DataTable from '@/components/DataTable';
 import DoughnutChart from '@/components/charts/DoughnutChart';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import type { CardiologyDashboard } from '@/cardiology/types/fhir-domain';
 import { VisitPriority } from '@/cardiology/types/fhir-domain';
 
@@ -12,16 +13,18 @@ type Props = { initialDashboard: CardiologyDashboard; isAdmin?: boolean };
 
 export default function HealthRecordsListClient({ initialDashboard, isAdmin = false }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const patientId = searchParams.get('patientId');
   const visits = useMemo(() => {
     const urgent = initialDashboard?.visits?.urgent || [];
     const recent = initialDashboard?.visits?.recentDischarges || [];
     const map = new Map<string, any>();
     [...urgent, ...recent].forEach((v) => map.set(v.id, v));
-    const arr = Array.from(map.values());
+    const arr = Array.from(map.values()).filter((visit) => !patientId || visit.patientId === patientId);
     // sort by priority (lower numeric = more urgent)
     arr.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
     return arr;
-  }, [initialDashboard]);
+  }, [initialDashboard, patientId]);
 
   const tableData = visits.map((v: any) => ({
     id: v.id,

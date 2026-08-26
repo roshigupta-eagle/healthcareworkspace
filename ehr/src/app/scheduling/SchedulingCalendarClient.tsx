@@ -162,15 +162,15 @@ export default function SchedulingCalendarClient({ initialAppointments, initialS
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <input className="border rounded px-3 py-2" placeholder="Search patients, providers, services" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input className="border rounded px-3 py-2" placeholder="Search Patients, Providers, Services..." value={search} onChange={(e) => setSearch(e.target.value)} />
 
           <select className="border rounded px-3 py-2" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value as string)}>
-            <option value="all">All providers</option>
+            <option value="all">All Providers</option>
             {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
 
           <select className="border rounded px-3 py-2" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value as string)}>
-            <option value="all">All locations</option>
+            <option value="all">All Locations</option>
             {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
 

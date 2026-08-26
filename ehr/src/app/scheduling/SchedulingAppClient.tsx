@@ -119,7 +119,7 @@ export default function SchedulingAppClient() {
       <div className="filters-bar">
         <div className="search-container">
           <div className="search-wrapper">
-            <input className="search-input" placeholder="Search patients, appointments, or providers..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input className="search-input" placeholder="Search Patients, Appointments, or Providers..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </div>
 

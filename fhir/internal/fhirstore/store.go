@@ -23,6 +23,9 @@ var ErrNotFound = errors.New("resource not found")
 // ErrGone is returned when a resource exists but has been deleted.
 var ErrGone = errors.New("resource has been deleted")
 
+// ErrPreconditionFailed is returned when an optimistic-lock version is stale.
+var ErrPreconditionFailed = errors.New("resource version precondition failed")
+
 // Resource is an in-memory representation of a stored FHIR resource.
 type Resource struct {
 	ID           string          `json:"id"`
@@ -157,6 +160,15 @@ func (s *Store) ReadVersion(ctx context.Context, resourceType, fhirID string, ve
 // Update replaces a FHIR resource with a new version (optimistic locking via
 // version increment). Returns the updated Resource.
 func (s *Store) Update(ctx context.Context, resourceType, fhirID string, body json.RawMessage) (*Resource, error) {
+	return s.update(ctx, resourceType, fhirID, body, nil)
+}
+
+// UpdateIfMatch replaces a resource only when its current version matches.
+func (s *Store) UpdateIfMatch(ctx context.Context, resourceType, fhirID string, body json.RawMessage, expectedVersion int64) (*Resource, error) {
+	return s.update(ctx, resourceType, fhirID, body, &expectedVersion)
+}
+
+func (s *Store) update(ctx context.Context, resourceType, fhirID string, body json.RawMessage, expectedVersion *int64) (*Resource, error) {
 	tenantID := tenant.FromContext(ctx)
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -174,6 +186,9 @@ func (s *Store) Update(ctx context.Context, resourceType, fhirID string, body js
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("lock resource: %w", err)
+	}
+	if expectedVersion != nil && currentVersion != *expectedVersion {
+		return nil, ErrPreconditionFailed
 	}
 
 	newVersion := currentVersion + 1

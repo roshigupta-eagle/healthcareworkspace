@@ -130,9 +130,23 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.store.Update(r.Context(), rt, id, body)
+	expectedVersion, hasExpectedVersion, err := ifMatchVersion(r.Header.Get("If-Match"))
 	if err != nil {
-		if errors.Is(err, fhirstore.ErrNotFound) {
+		writeOutcome(w, http.StatusBadRequest, "invalid", "Invalid If-Match header")
+		return
+	}
+	var res *fhirstore.Resource
+	if hasExpectedVersion {
+		res, err = h.store.UpdateIfMatch(r.Context(), rt, id, body, expectedVersion)
+	} else {
+		res, err = h.store.Update(r.Context(), rt, id, body)
+	}
+	if err != nil {
+		if errors.Is(err, fhirstore.ErrPreconditionFailed) {
+			writeOutcome(w, http.StatusPreconditionFailed, "error", "Resource has changed; refresh and retry")
+			return
+		}
+		if errors.Is(err, fhirstore.ErrNotFound) && !hasExpectedVersion {
 			// FHIR allows conditional create via PUT — create if not found
 			res, err = h.store.Create(r.Context(), rt, body)
 			if err != nil {
@@ -349,6 +363,8 @@ func writeOutcome(w http.ResponseWriter, status int, severity, msg string) {
 
 func writeError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, fhirstore.ErrPreconditionFailed):
+		writeOutcome(w, http.StatusPreconditionFailed, "error", "Resource has changed; refresh and retry")
 	case errors.Is(err, fhirstore.ErrNotFound):
 		writeOutcome(w, http.StatusNotFound, "error", "Resource not found")
 	case errors.Is(err, fhirstore.ErrGone):
@@ -357,6 +373,22 @@ func writeError(w http.ResponseWriter, err error) {
 		slog.Error("fhir handler error", "error", err)
 		writeOutcome(w, http.StatusInternalServerError, "exception", "Internal server error")
 	}
+}
+
+func ifMatchVersion(value string) (int64, bool, error) {
+	if value == "" || value == "*" {
+		return 0, value != "", nil
+	}
+	trimmed := value
+	if len(trimmed) >= 4 && trimmed[:2] == "W/" && trimmed[2] == '"' && trimmed[len(trimmed)-1] == '"' {
+		trimmed = trimmed[3 : len(trimmed)-1]
+	} else if len(trimmed) >= 2 && trimmed[0] == '"' && trimmed[len(trimmed)-1] == '"' {
+		trimmed = trimmed[1 : len(trimmed)-1]
+	} else {
+		return 0, false, errors.New("invalid if-match")
+	}
+	version, err := strconv.ParseInt(trimmed, 10, 64)
+	return version, true, err
 }
 
 func versionETag(versionID int64) string {

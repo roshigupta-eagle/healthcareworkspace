@@ -3,7 +3,8 @@
   patientId: string;
   resourceType: string;
   resourceId: string;
-  eventType: 'encounter'|'note'|'result'|'medication'|'order'|'procedure'|'document'|'immunization'|'allergy'|'task'|'vital'|'message'|'other';
+  eventType: 'encounter'|'note'|'result'|'medication'|'order'|'procedure'|'document'|'immunization'|'allergy'|'task'|'vital'|'message'|'appointment'|'referral'|'other';
+  temporalState?: 'past' | 'current' | 'future';
   title: string;
   summary?: string;
   status?: string;
@@ -17,6 +18,7 @@
   reviewState?: 'unreviewed'|'reviewed'|'acknowledged' | null;
   relatedResources?: Array<{ type: string; id: string; display?: string }>;
   provenanceAvailable?: boolean;
+  recordHref?: string | null;
 };
 
 export type TimelineListResponse = {

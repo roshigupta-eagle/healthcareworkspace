@@ -12,7 +12,7 @@ export async function resolveSession(req: Request) {
     try {
       const url = new URL(req.url);
       const asUser = url.searchParams.get('asUser') || url.searchParams.get('as_user');
-      if (asUser && process.env.NODE_ENV !== 'production') {
+      if (asUser && process.env.NODE_ENV !== 'production' && ['dev', 'dev-doctor'].includes(asUser)) {
         session = { user: { id: asUser, name: asUser, role: 'dev' } };
       }
     } catch (e) {

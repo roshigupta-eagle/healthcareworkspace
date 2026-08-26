@@ -37,7 +37,7 @@ export default function TriagePage() {
         <div className="mb-4">
           <label className="block text-sm font-medium text-neutral-700 mb-1">Patient Name</label>
           <input value={patientName} onChange={e => setPatientName(e.target.value)}
-            placeholder="Enter patient name or MRN..."
+            placeholder="Enter Patient Name or MRN..."
             className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
         </div>
         {!saved ? (

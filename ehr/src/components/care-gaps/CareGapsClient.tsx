@@ -25,7 +25,12 @@ export default function CareGapsClient({ patient }: { patient: any }) {
       const params: any = {};
       if (status && status !== 'all') params.status = status === 'due-soon' ? 'due-soon' : status;
       const qs = new URLSearchParams(params).toString();
-      const res = await fetch(`/api/patients/${patient.id}/care-gaps${qs ? `?${qs}` : ''}`);
+      // Use proxy endpoint to avoid dev dynamic-route mismatch issues
+      const qp = new URLSearchParams({ patientId: String(patient.id) });
+      if (qs) qp.append(qs, ''); // noop when qs is already a string
+      // Merge status param if present
+      const finalQs = qs ? `&${qs}` : '';
+      const res = await fetch(`/api/care-gaps?${qp.toString()}${finalQs}`);
       if (!res.ok) throw new Error('Failed to load');
       const body = await res.json();
       setItems(body.items || []);

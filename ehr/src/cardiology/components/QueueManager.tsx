@@ -203,7 +203,7 @@ export const QueueManager: React.FC<QueueManagerProps> = ({
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <FormField label="Search" className="flex-1">
           <Input
-            placeholder="Search by patient name, queue, or visit ID…"
+            placeholder="Search by Patient Name, Queue, or Visit ID…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />

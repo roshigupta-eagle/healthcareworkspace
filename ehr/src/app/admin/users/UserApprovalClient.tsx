@@ -53,7 +53,7 @@ export default function UserApprovalClient({ users, mode }: { users: User[]; mod
               <select defaultValue="" onChange={e => e.target.value && approve(u.id, e.target.value)}
                 disabled={loading === u.id}
                 className="text-sm border border-neutral-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-500">
-                <option value="" disabled>Assign role…</option>
+                <option value="" disabled>Assign Role…</option>
                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
               <button onClick={() => reject(u.id)} disabled={loading === u.id}

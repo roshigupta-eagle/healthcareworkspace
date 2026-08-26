@@ -394,11 +394,11 @@ export default function EncounterEditor({ patient }: { patient: any }) {
               {openSections.setup && (
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-gray-600">Encounter type</label>
+                    <label className="text-xs font-medium text-gray-600">Encounter Type</label>
                     <select value={encounterType} onChange={(e) => setEncounterType(e.target.value)} className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm serene-input">
-                      <option>Office visit</option>
-                      <option>Virtual visit</option>
-                      <option>Follow-up</option>
+                      <option>Office Visit</option>
+                      <option>Virtual Visit</option>
+                      <option>Follow-Up</option>
                       <option>Emergency</option>
                     </select>
                   </div>
@@ -413,22 +413,22 @@ export default function EncounterEditor({ patient }: { patient: any }) {
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-gray-600">Date & time</label>
+                    <label className="text-xs font-medium text-gray-600">Date &amp; Time</label>
                     <input type="datetime-local" value={dateTime} onChange={(e) => setDateTime(e.target.value)} className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm serene-input" />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-gray-600">Assigned doctor</label>
+                    <label className="text-xs font-medium text-gray-600">Assigned Doctor</label>
                     <input value={assignedDoctor} onChange={(e) => setAssignedDoctor(e.target.value)} placeholder="Dr. ..." className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm serene-input" />
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="text-xs font-medium text-gray-600">Reason for visit</label>
-                    <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Routine follow-up" className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm serene-input" />
+                    <label className="text-xs font-medium text-gray-600">Reason for Visit</label>
+                    <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Routine Follow-Up" className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm serene-input" />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-gray-600">Assigned nurse / assistant</label>
+                    <label className="text-xs font-medium text-gray-600">Assigned Nurse / Assistant</label>
                     <input value={assignedNurse} onChange={(e) => setAssignedNurse(e.target.value)} placeholder="Nurse ..." className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm serene-input" />
                   </div>
                 </div>
@@ -478,32 +478,32 @@ export default function EncounterEditor({ patient }: { patient: any }) {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <input value={s.name} onChange={(e) => updateSymptom(s.id, 'name', e.target.value)} placeholder="Symptom name" className="rounded-md border border-gray-200 px-2 text-sm serene-input" />
+                            <input value={s.name} onChange={(e) => updateSymptom(s.id, 'name', e.target.value)} placeholder="Symptom Name" className="rounded-md border border-gray-200 px-2 text-sm serene-input" />
                             <select value={s.severity} onChange={(e) => updateSymptom(s.id, 'severity', e.target.value)} className="rounded-md border border-gray-200 px-2 py-1 text-sm">
                               <option>Mild</option>
                               <option>Moderate</option>
                               <option>Severe</option>
                             </select>
-                            <input value={s.start} onChange={(e) => updateSymptom(s.id, 'start', e.target.value)} placeholder="Start date" type="date" className="rounded-md border border-gray-200 px-2 py-1 text-sm" />
+                            <input value={s.start} onChange={(e) => updateSymptom(s.id, 'start', e.target.value)} placeholder="Start Date" type="date" className="rounded-md border border-gray-200 px-2 py-1 text-sm" />
                           </div>
 
                           <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <input value={s.duration} onChange={(e) => updateSymptom(s.id, 'duration', e.target.value)} placeholder="Duration" className="rounded-md border border-gray-200 px-2 py-1 text-sm" />
                             <input value={s.frequency} onChange={(e) => updateSymptom(s.id, 'frequency', e.target.value)} placeholder="Frequency" className="rounded-md border border-gray-200 px-2 py-1 text-sm" />
-                            <input value={s.location} onChange={(e) => updateSymptom(s.id, 'location', e.target.value)} placeholder="Body location" className="rounded-md border border-gray-200 px-2 py-1 text-sm" />
+                            <input value={s.location} onChange={(e) => updateSymptom(s.id, 'location', e.target.value)} placeholder="Body Location" className="rounded-md border border-gray-200 px-2 py-1 text-sm" />
                           </div>
 
                           <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <select value={s.improving} onChange={(e) => updateSymptom(s.id, 'improving', e.target.value)} className="rounded-md border border-gray-200 px-2 py-1 text-sm">
                               <option>Unknown</option>
-                              <option>Getting better</option>
-                              <option>Getting worse</option>
+                              <option>Getting Better</option>
+                              <option>Getting Worse</option>
                             </select>
-                            <input value={s.patientNotes} onChange={(e) => updateSymptom(s.id, 'patientNotes', e.target.value)} placeholder="Patient notes" className="rounded-md border border-gray-200 px-2 py-1 text-sm" />
+                            <input value={s.patientNotes} onChange={(e) => updateSymptom(s.id, 'patientNotes', e.target.value)} placeholder="Patient Notes" className="rounded-md border border-gray-200 px-2 py-1 text-sm" />
                           </div>
 
                           <div className="mt-2">
-                            <textarea value={s.doctorNotes} onChange={(e) => updateSymptom(s.id, 'doctorNotes', e.target.value)} placeholder="Doctor notes" className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm" />
+                            <textarea value={s.doctorNotes} onChange={(e) => updateSymptom(s.id, 'doctorNotes', e.target.value)} placeholder="Doctor Notes" className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm" />
                           </div>
                         </div>
 
@@ -771,14 +771,14 @@ export default function EncounterEditor({ patient }: { patient: any }) {
 
               {openSections.plan && (
                 <div className="mt-4 grid grid-cols-1 gap-2">
-                  <textarea value={carePlan.instructions} onChange={(e) => setCarePlan((s:any) => ({ ...s, instructions: e.target.value }))} placeholder="Doctor instructions" className="rounded-md border border-gray-200 px-3 py-2 text-sm" rows={3} />
-                  <textarea value={carePlan.meds} onChange={(e) => setCarePlan((s:any) => ({ ...s, meds: e.target.value }))} placeholder="Medication instructions" className="rounded-md border border-gray-200 px-3 py-2 text-sm" rows={2} />
-                  <textarea value={carePlan.lifestyle} onChange={(e) => setCarePlan((s:any) => ({ ...s, lifestyle: e.target.value }))} placeholder="Lifestyle / nutrition advice" className="rounded-md border border-gray-200 px-3 py-2 text-sm" rows={2} />
+                  <textarea value={carePlan.instructions} onChange={(e) => setCarePlan((s:any) => ({ ...s, instructions: e.target.value }))} placeholder="Doctor Instructions" className="rounded-md border border-gray-200 px-3 py-2 text-sm" rows={3} />
+                  <textarea value={carePlan.meds} onChange={(e) => setCarePlan((s:any) => ({ ...s, meds: e.target.value }))} placeholder="Medication Instructions" className="rounded-md border border-gray-200 px-3 py-2 text-sm" rows={2} />
+                  <textarea value={carePlan.lifestyle} onChange={(e) => setCarePlan((s:any) => ({ ...s, lifestyle: e.target.value }))} placeholder="Lifestyle / Nutrition Advice" className="rounded-md border border-gray-200 px-3 py-2 text-sm" rows={2} />
 
                   <div className="pt-2">
                     <div className="flex items-center gap-2">
-                      <input value={taskText} onChange={(e) => setTaskText(e.target.value)} placeholder="Add follow-up task (e.g. call lab)" className="rounded-md border border-gray-200 px-2 py-1 text-sm flex-1" />
-                      <button onClick={addTask} className="rounded-md bg-white border border-gray-200 px-3 py-1 text-sm">Add task</button>
+                      <input value={taskText} onChange={(e) => setTaskText(e.target.value)} placeholder="Add follow-up task (e.g. call lab)..." className="rounded-md border border-gray-200 px-2 py-1 text-sm flex-1" />
+                      <button onClick={addTask} className="rounded-md bg-white border border-gray-200 px-3 py-1 text-sm">Add Task</button>
                     </div>
 
                     <div className="mt-2 space-y-2">
@@ -805,7 +805,7 @@ export default function EncounterEditor({ patient }: { patient: any }) {
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-sm font-semibold text-gray-700">Follow-up</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">Follow-Up</h3>
                   {isSectionComplete('followup') && <span className="text-xs text-emerald-700">Completed</span>}
                 </div>
                 <div>
@@ -816,8 +816,8 @@ export default function EncounterEditor({ patient }: { patient: any }) {
               {openSections.followup && (
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <input type="date" value={followUp.date} onChange={(e) => setFollowUp((s:any) => ({ ...s, date: e.target.value }))} className="rounded-md border border-gray-200 px-2 py-1 text-sm" />
-                  <input value={followUp.reason} onChange={(e) => setFollowUp((s:any) => ({ ...s, reason: e.target.value }))} placeholder="Reason for follow-up" className="rounded-md border border-gray-200 px-2 py-1 text-sm" />
-                  <label className="inline-flex items-center gap-2"><input type="checkbox" checked={followUp.reminder} onChange={(e) => setFollowUp((s:any) => ({ ...s, reminder: e.target.checked }))} /> Set reminder</label>
+                  <input value={followUp.reason} onChange={(e) => setFollowUp((s:any) => ({ ...s, reason: e.target.value }))} placeholder="Reason for Follow-Up" className="rounded-md border border-gray-200 px-2 py-1 text-sm" />
+                  <label className="inline-flex items-center gap-2"><input type="checkbox" checked={followUp.reminder} onChange={(e) => setFollowUp((s:any) => ({ ...s, reminder: e.target.checked }))} /> Set Reminder</label>
                 </div>
               )}
             </div>

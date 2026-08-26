@@ -1,0 +1,52 @@
+{
+  "items": [
+    {
+      "id": "w1",
+      "patientId": "patient-001",
+      "value": 69.2,
+      "unit": "kg",
+      "occurredAt": "2025-12-04T09:15:00.000Z",
+      "source": "clinic",
+      "recorder": { "id": "u1", "name": "Dr. Aris Thorne" },
+      "encounterId": "enc-1001",
+      "note": "Routine wellness visit",
+      "sourceResource": { "resourceType": "Observation", "id": "obs-w1" }
+    },
+    {
+      "id": "w2",
+      "patientId": "patient-001",
+      "value": 69.0,
+      "unit": "kg",
+      "occurredAt": "2026-02-04T10:00:00.000Z",
+      "source": "clinic",
+      "recorder": { "id": "u2", "name": "Nurse Olivia" },
+      "encounterId": "enc-1101",
+      "note": "Nursing vitals",
+      "sourceResource": { "resourceType": "Observation", "id": "obs-w2" }
+    },
+    {
+      "id": "w3",
+      "patientId": "patient-001",
+      "value": 68.2,
+      "unit": "kg",
+      "occurredAt": "2026-04-04T08:30:00.000Z",
+      "source": "clinic",
+      "recorder": { "id": "u3", "name": "Dr. Chen" },
+      "encounterId": "enc-1201",
+      "note": "Follow-up",
+      "sourceResource": { "resourceType": "Observation", "id": "obs-w3" }
+    },
+    {
+      "id": "w4",
+      "patientId": "patient-001",
+      "value": 68.0,
+      "unit": "kg",
+      "occurredAt": "2026-06-04T09:15:00.000Z",
+      "source": "clinic",
+      "recorder": { "id": "u3", "name": "Dr. Chen" },
+      "encounterId": "enc-1301",
+      "note": "Routine check",
+      "sourceResource": { "resourceType": "Observation", "id": "obs-w4" }
+    }
+  ]
+}

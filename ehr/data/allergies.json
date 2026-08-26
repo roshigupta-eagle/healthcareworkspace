@@ -1,0 +1,51 @@
+{
+  "items": [
+    {
+      "id": "alg-penicillin-001",
+      "patientId": "patient-001",
+      "substance": { "display": "Penicillin", "code": "70618006", "system": "http://snomed.info/sct" },
+      "type": "allergy",
+      "category": ["medication"],
+      "clinicalStatus": "active",
+      "verificationStatus": "confirmed",
+      "criticality": "high",
+      "reactions": [
+        { "manifestation": "Anaphylaxis", "severity": "severe", "onset": "2024-06-01" }
+      ],
+      "onset": "2024-06-01",
+      "lastOccurrence": "2026-06-01",
+      "recordedAt": "2024-06-01",
+      "lastReviewedAt": "2026-06-05",
+      "recorder": { "display": "Dr. Chen" },
+      "source": "Hospital Import",
+      "note": "Severe reaction experienced during childhood hospitalization.",
+      "history": [
+        { "date": "2024-06-01T09:00:00.000Z", "actor": "Dr. Chen", "action": "recorded", "detail": "Imported from hospital discharge summary" },
+        { "date": "2026-06-05T09:20:00.000Z", "actor": "Dr. Chen", "action": "reviewed", "detail": "Re-verified during annual review" }
+      ]
+    },
+    {
+      "id": "alg-peanut-001",
+      "patientId": "patient-001",
+      "substance": { "display": "Peanuts", "code": "256349002", "system": "http://snomed.info/sct" },
+      "type": "allergy",
+      "category": ["food"],
+      "clinicalStatus": "active",
+      "verificationStatus": "confirmed",
+      "criticality": "low",
+      "reactions": [
+        { "manifestation": "Hives", "severity": "moderate", "onset": "2020-03-10" }
+      ],
+      "onset": "2020-03-10",
+      "lastOccurrence": "2025-08-15",
+      "recordedAt": "2020-03-10",
+      "lastReviewedAt": "2026-05-12",
+      "recorder": { "display": "Primary care" },
+      "source": "Patient Reported",
+      "note": "Mild hives upon ingestion of trace peanuts.",
+      "history": [
+        { "date": "2020-03-10T10:00:00.000Z", "actor": "Primary care", "action": "recorded", "detail": "Patient reported food allergy" }
+      ]
+    }
+  ]
+}

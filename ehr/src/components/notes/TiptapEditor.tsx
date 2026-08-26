@@ -96,6 +96,7 @@ interface Props {
   editable: boolean;
   placeholder?: string;
   onChangeText: (plainText: string) => void;
+  onSelectionText?: (plainText: string) => void;
 }
 
 export interface TiptapEditorHandle {
@@ -103,7 +104,7 @@ export interface TiptapEditorHandle {
 }
 
 const TiptapEditor = forwardRef<TiptapEditorHandle, Props>(function TiptapEditor(
-  { initialText, editable, placeholder, onChangeText },
+  { initialText, editable, placeholder, onChangeText, onSelectionText },
   ref
 ) {
   const initialHtml = useMemo(() => plainTextToHtml(initialText), [initialText]);
@@ -121,11 +122,22 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, Props>(function TiptapEditor
     onUpdate: ({ editor: e }) => {
       onChangeText(e.getText({ blockSeparator: "\n\n" }));
     },
+    onSelectionUpdate: ({ editor: e }) => {
+      onSelectionText?.(e.state.doc.textBetween(e.state.selection.from, e.state.selection.to, '\n\n'));
+    },
   });
 
   useEffect(() => {
     editor?.setEditable(editable);
   }, [editable, editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const currentText = editor.getText({ blockSeparator: "\n\n" });
+    if (currentText !== initialText) {
+      editor.commands.setContent(plainTextToHtml(initialText), false);
+    }
+  }, [editor, initialText]);
 
   useImperativeHandle(
     ref,
@@ -146,7 +158,7 @@ const TiptapEditor = forwardRef<TiptapEditorHandle, Props>(function TiptapEditor
       {editable && <Toolbar editor={editor} />}
       <EditorContent
         editor={editor}
-        className="min-h-[220px] max-h-[480px] overflow-y-auto px-3 py-2 text-sm leading-relaxed text-gray-800 [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-gray-400 [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-gray-300 [&_blockquote]:pl-3 [&_blockquote]:text-gray-500 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold"
+        className="min-h-[360px] max-h-[720px] overflow-y-auto px-4 py-4 text-[15px] leading-7 text-gray-800 [&_.ProseMirror]:min-h-[330px] [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-gray-400 [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-gray-300 [&_blockquote]:pl-3 [&_blockquote]:text-gray-500 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold"
       />
       <div className="border-t border-gray-100 px-3 py-1 text-right text-[10px] text-gray-400">
         {editor.getText().trim() ? editor.getText().trim().split(/\s+/).filter(Boolean).length : 0} words

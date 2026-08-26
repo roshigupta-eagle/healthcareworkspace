@@ -1,0 +1,192 @@
+{
+  "patient-001": [
+    {
+      "id": "n1",
+      "patientId": "patient-001",
+      "type": "general",
+      "status": "signed",
+      "author": {
+        "id": "legacy-dr.-chen",
+        "name": "Dr. Chen",
+        "role": "DOCTOR"
+      },
+      "signer": {
+        "id": "legacy-dr.-chen",
+        "name": "Dr. Chen",
+        "role": "DOCTOR"
+      },
+      "signedAt": "2026-06-05T00:00:00.000Z",
+      "createdAt": "2026-06-05T00:00:00.000Z",
+      "updatedAt": "2026-06-05T00:00:00.000Z",
+      "encounterId": null,
+      "templateId": null,
+      "templateLabel": null,
+      "sections": [
+        {
+          "heading": "",
+          "body": "Reviewed blood pressure; medication adjustment recommended."
+        }
+      ],
+      "followUpTaskId": null,
+      "pinned": false,
+      "addenda": [],
+      "correction": null,
+      "enteredInError": null,
+      "history": [
+        {
+          "id": "h-2026-06-05T00:00:00.000Z",
+          "action": "signed",
+          "actor": {
+            "id": "legacy-dr.-chen",
+            "name": "Dr. Chen",
+            "role": "DOCTOR"
+          },
+          "timestamp": "2026-06-05T00:00:00.000Z"
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "n0",
+      "patientId": "patient-001",
+      "type": "general",
+      "status": "signed",
+      "author": {
+        "id": "legacy-dr.-aris-thorne",
+        "name": "Dr. Aris Thorne",
+        "role": "DOCTOR"
+      },
+      "signer": {
+        "id": "legacy-dr.-aris-thorne",
+        "name": "Dr. Aris Thorne",
+        "role": "DOCTOR"
+      },
+      "signedAt": "2026-05-20T00:00:00.000Z",
+      "createdAt": "2026-05-20T00:00:00.000Z",
+      "updatedAt": "2026-05-20T00:00:00.000Z",
+      "encounterId": null,
+      "templateId": null,
+      "templateLabel": null,
+      "sections": [
+        {
+          "heading": "",
+          "body": "Discussed lifestyle modification and home BP monitoring plan."
+        }
+      ],
+      "followUpTaskId": null,
+      "pinned": false,
+      "addenda": [],
+      "correction": null,
+      "enteredInError": null,
+      "history": [
+        {
+          "id": "h-2026-05-20T00:00:00.000Z",
+          "action": "signed",
+          "actor": {
+            "id": "legacy-dr.-aris-thorne",
+            "name": "Dr. Aris Thorne",
+            "role": "DOCTOR"
+          },
+          "timestamp": "2026-05-20T00:00:00.000Z"
+        }
+      ],
+      "version": 1
+    }
+  ],
+  "patient-002": [
+    {
+      "id": "n2",
+      "patientId": "patient-002",
+      "type": "general",
+      "status": "signed",
+      "author": {
+        "id": "legacy-dr.-aris-thorne",
+        "name": "Dr. Aris Thorne",
+        "role": "DOCTOR"
+      },
+      "signer": {
+        "id": "legacy-dr.-aris-thorne",
+        "name": "Dr. Aris Thorne",
+        "role": "DOCTOR"
+      },
+      "signedAt": "2026-05-12T00:00:00.000Z",
+      "createdAt": "2026-05-12T00:00:00.000Z",
+      "updatedAt": "2026-05-12T00:00:00.000Z",
+      "encounterId": null,
+      "templateId": null,
+      "templateLabel": null,
+      "sections": [
+        {
+          "heading": "",
+          "body": "Patient referred for stress test."
+        }
+      ],
+      "followUpTaskId": null,
+      "pinned": false,
+      "addenda": [],
+      "correction": null,
+      "enteredInError": null,
+      "history": [
+        {
+          "id": "h-2026-05-12T00:00:00.000Z",
+          "action": "signed",
+          "actor": {
+            "id": "legacy-dr.-aris-thorne",
+            "name": "Dr. Aris Thorne",
+            "role": "DOCTOR"
+          },
+          "timestamp": "2026-05-12T00:00:00.000Z"
+        }
+      ],
+      "version": 1
+    }
+  ],
+  "patient-003": [
+    {
+      "id": "n3",
+      "patientId": "patient-003",
+      "type": "general",
+      "status": "signed",
+      "author": {
+        "id": "legacy-nurse-patel",
+        "name": "Nurse Patel",
+        "role": "DOCTOR"
+      },
+      "signer": {
+        "id": "legacy-nurse-patel",
+        "name": "Nurse Patel",
+        "role": "DOCTOR"
+      },
+      "signedAt": "2026-03-03T00:00:00.000Z",
+      "createdAt": "2026-03-03T00:00:00.000Z",
+      "updatedAt": "2026-03-03T00:00:00.000Z",
+      "encounterId": null,
+      "templateId": null,
+      "templateLabel": null,
+      "sections": [
+        {
+          "heading": "",
+          "body": "Reviewed inhaler technique."
+        }
+      ],
+      "followUpTaskId": null,
+      "pinned": false,
+      "addenda": [],
+      "correction": null,
+      "enteredInError": null,
+      "history": [
+        {
+          "id": "h-2026-03-03T00:00:00.000Z",
+          "action": "signed",
+          "actor": {
+            "id": "legacy-nurse-patel",
+            "name": "Nurse Patel",
+            "role": "DOCTOR"
+          },
+          "timestamp": "2026-03-03T00:00:00.000Z"
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

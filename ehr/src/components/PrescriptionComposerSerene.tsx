@@ -142,7 +142,7 @@ export default function PrescriptionComposerSerene({ patient }: { patient?: any 
                 </div>
                 <input
                   className="h-14 w-full pl-14 pr-4 rounded-lg border border-slate-200 text-base placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-[#14B8A6]/20 transition"
-                  placeholder="Search by brand name, generic, or condition..."
+                  placeholder="Search by Brand Name, Generic, or Condition..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />

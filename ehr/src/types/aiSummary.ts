@@ -7,6 +7,9 @@ export interface AIEvidenceReference {
   title?: string;
   fhirReference?: string;
   source?: string;
+  href?: string;
+  status?: 'used' | 'excluded' | 'restricted';
+  reason?: string;
 }
 
 export interface AIClinicalFinding {
@@ -30,8 +33,20 @@ export interface AIClinicalSummaryVersion {
   findings: AIClinicalFinding[];
   summaryText: string;
   patientFriendlySummary?: string;
+  clinicalBrief?: {
+    whatMatters: string[];
+    whatChanged: string[];
+    itemsToReview: string[];
+  };
+  recommendedReview?: string[];
+  evidenceStats?: {
+    analyzed: number;
+    used: number;
+    excluded: number;
+    updatedAt: string;
+  };
   review?: { reviewedBy?: string; reviewedAt?: string; disposition?: string; note?: string };
-  provenance?: any;
+  provenance?: unknown;
 }
 
 export interface AIClinicalSummary {

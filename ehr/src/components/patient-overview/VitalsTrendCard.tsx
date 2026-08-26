@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { OverviewCard, FooterLink } from './OverviewCard';
+import CurrentWeightBadge from './CurrentWeightBadge';
 import { ActivityIcon } from './icons';
 import LineChart from '@/components/LineChart';
 
@@ -43,6 +44,7 @@ export function VitalsTrendCard({ patient }: { patient: any }) {
 
   const values = filtered.map((p) => p.value);
   const latest = filtered[filtered.length - 1];
+  const prev = filtered.length > 1 ? filtered[filtered.length - 2] : undefined;
   const first = filtered[0];
   const delta = latest && first ? latest.value - first.value : 0;
   const trendDirection = delta === 0 ? '→' : delta < 0 ? '↓' : '↑';
@@ -90,6 +92,7 @@ export function VitalsTrendCard({ patient }: { patient: any }) {
 
       {latest ? (
         <>
+          <CurrentWeightBadge latest={latest} prev={prev} />
           <div className="text-2xl font-bold text-gray-900">
             {latest.value} <span className="text-sm font-medium text-gray-500">{latest.unit}</span>
           </div>

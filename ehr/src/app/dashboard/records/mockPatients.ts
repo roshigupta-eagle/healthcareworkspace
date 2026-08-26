@@ -1,3 +1,76 @@
+import { readPersistedPatientsSync } from '@/lib/patientRecordStore';
+
+export type AgendaItem = {
+  id: string;
+  title: string;
+  source: 'Clinician' | 'Patient' | 'Previous Appointment' | 'Open Care Task' | 'Health Concern' | 'Care Plan';
+  owner: 'Clinician' | 'Patient' | 'Shared';
+  status: 'not-addressed' | 'addressed' | 'follow-up-needed';
+  priority?: 'Normal' | 'Important';
+};
+
+export type VisitDocumentation = {
+  status: 'not-started' | 'draft' | 'pending-signature' | 'signed';
+  noteId?: string;
+  author?: string;
+  template?: string;
+  lastSavedAt?: string;
+  signedAt?: string;
+};
+
+export type FollowUpItem = {
+  id: string;
+  title: string;
+  dueDate?: string;
+  assignee?: string;
+  status: 'open' | 'done';
+};
+
+export type ChartActivityRecord = {
+  id: string;
+  action: string;
+  user: string;
+  date: string;
+  resourceType?: string;
+  status?: string;
+  sourceRecordId?: string;
+  sourceRecordType?: string;
+  sourceRecordDisplay?: string;
+  organization?: string;
+  actorRole?: string;
+  isActionable?: boolean;
+  attentionReason?: string;
+};
+
+export type AppointmentRecord = {
+  id: string;
+  date: string;
+  end?: string;
+  doctor: string;
+  type: string;
+  status?: string;
+  location?: string;
+  room?: string;
+  department?: string;
+  modality?: 'In-Person' | 'Video Visit' | 'Phone';
+  prep?: string;
+  createdAt?: string;
+  bookedBy?: string;
+  confirmationStatus?: 'Confirmed' | 'Unconfirmed';
+  referralSource?: string;
+  arrivedAt?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancelReason?: string;
+  instructionsSentAt?: string;
+  instructionsChannel?: string;
+  agenda?: AgendaItem[];
+  documentation?: VisitDocumentation;
+  followUp?: FollowUpItem[];
+  previousAppointmentId?: string;
+  nextAppointmentId?: string;
+};
+
 export type Patient = {
   id: string;
   name: string;
@@ -13,7 +86,7 @@ export type Patient = {
   conditions?: string[];
   conditionDetails?: { name: string; status?: string; lastReviewed?: string; managedBy?: string; severity?: string }[];
   medications?: { name: string; dose?: string; freq?: string; route?: string; prescriber?: string; status?: string; refill?: string; startDate?: string; indication?: string }[];
-  upcoming?: { id: string; date: string; doctor: string; type: string; status?: string; location?: string; room?: string; prep?: string }[];
+  upcoming?: AppointmentRecord[];
   notes?: { id: string; date: string; author: string; snippet: string; status?: string }[];
   history?: { id: string; date: string; provider: string; reason: string; status?: string }[];
   tests?: { id: string; name: string; date: string; status?: string }[];
@@ -21,15 +94,16 @@ export type Patient = {
   allergies?: string[];
   allergyReviewedDate?: string;
   immunizations?: { id?: string; name: string; date?: string; status?: string; nextReview?: string }[];
-  goals?: any[];
-  outstanding?: any[];
+  goals?: unknown[];
+  outstanding?: unknown[];
   allergyDetails?: { id?: string; date?: string; reaction?: string; severity?: string }[];
   photoUrl?: string;
   contact?: { phone?: string; email?: string; address?: string };
   insurance?: { provider?: string; plan?: string; policyNumber?: string };
   currentConcerns?: (string | { title: string; status?: string; priority?: string; firstNoted?: string; lastReviewed?: string; context?: string })[];
-  labResults?: { id: string; name: string; date: string; result: string; unit?: string; normalRange?: string; interpretation?: string; status?: string; reviewed?: boolean }[];
+  labResults?: { id: string; name: string; date: string; result: string; unit?: string; normalRange?: string; referenceRange?: string; interpretation?: string; status?: string; reviewed?: boolean; code?: string; codeSystem?: string; provider?: string; laboratory?: string; specimen?: string; method?: string; dataQuality?: { state: 'review'; reason: string; source?: string } }[];
   lastAttendingDoctor?: string;
+  organization?: string;
   preferredName?: string;
   preferredLanguage?: string;
   preferredContactMethod?: string;
@@ -46,7 +120,7 @@ export type Patient = {
   clinicalTasks?: { id: string; title: string; dueDate: string; priority?: 'Low' | 'Normal' | 'High'; assignedTo?: string; status?: string; relatedTo?: string }[];
   careGaps?: { id: string; item: string; dueDate: string; priority?: 'Low' | 'Medium' | 'High'; clinician?: string; status?: string }[];
   careTeam?: { id: string; name: string; role: string; specialty?: string; initials?: string }[];
-  chartActivity?: { id: string; action: string; user: string; date: string; resourceType?: string; status?: string }[];
+  chartActivity?: ChartActivityRecord[];
 };
 
 export const mockPatients: Patient[] = [
@@ -79,7 +153,67 @@ export const mockPatients: Patient[] = [
       { name: 'Atorvastatin', dose: '20 mg', freq: 'once daily', route: 'Oral', prescriber: 'Dr. Chen', status: 'Active', refill: '2026-07-01', startDate: '2025-01-15', indication: 'Hyperlipidemia' },
       { name: 'Metformin', dose: '500 mg', freq: 'twice daily', route: 'Oral', prescriber: 'Dr. Chen', status: 'Active', startDate: '2024-11-02', indication: 'Type 2 Diabetes' },
     ],
-    upcoming: [{ id: 'a1', date: '2026-07-18 10:30', doctor: 'Dr. Aris Thorne', type: 'Follow-up', status: 'Scheduled', location: 'Toronto Cardiology Clinic', room: '103', prep: 'Bring current medication list and recent home BP readings.' }],
+    upcoming: [
+      {
+        id: 'a1-prev',
+        date: '2026-05-15 09:00',
+        end: '2026-05-15 09:30',
+        doctor: 'Dr. Aris Thorne',
+        type: 'Follow-up',
+        status: 'Completed',
+        location: 'Toronto Cardiology Clinic',
+        room: '103',
+        department: 'Cardiology',
+        modality: 'In-Person',
+        createdAt: '2026-04-02 11:00',
+        bookedBy: 'Front Desk',
+        confirmationStatus: 'Confirmed',
+        documentation: { status: 'signed', noteId: 'n0', author: 'Dr. Aris Thorne', signedAt: '2026-05-15 09:52' },
+        followUp: [{ id: 'fu0', title: 'Recheck home BP log at next visit', dueDate: '2026-07-18', assignee: 'Dr. Aris Thorne', status: 'open' }],
+      },
+      {
+        id: 'a1',
+        date: '2026-07-18 10:30',
+        end: '2026-07-18 11:00',
+        doctor: 'Dr. Aris Thorne',
+        type: 'Follow-up',
+        status: 'Scheduled',
+        location: 'Toronto Cardiology Clinic',
+        room: '103',
+        department: 'Cardiology',
+        modality: 'In-Person',
+        prep: 'Bring current medication list and recent home BP readings.',
+        createdAt: '2026-05-10 14:20',
+        bookedBy: 'Front Desk',
+        confirmationStatus: 'Confirmed',
+        agenda: [
+          { id: 'ag1', title: 'Review blood pressure trend', source: 'Clinician', owner: 'Clinician', status: 'not-addressed', priority: 'Normal' },
+          { id: 'ag2', title: 'Review current medications', source: 'Clinician', owner: 'Clinician', status: 'not-addressed', priority: 'Important' },
+          { id: 'ag3', title: 'Discuss dizziness symptoms', source: 'Patient', owner: 'Shared', status: 'not-addressed', priority: 'Normal' },
+        ],
+        documentation: { status: 'not-started' },
+        followUp: [{ id: 'fu0', title: 'Recheck home BP log at next visit', dueDate: '2026-07-18', assignee: 'Dr. Aris Thorne', status: 'open' }],
+        previousAppointmentId: 'a1-prev',
+        nextAppointmentId: 'a1-next',
+      },
+      {
+        id: 'a1-next',
+        date: '2027-07-18 10:30',
+        end: '2027-07-18 11:00',
+        doctor: 'Dr. Aris Thorne',
+        type: 'Follow-up',
+        status: 'Scheduled',
+        location: 'Toronto Cardiology Clinic',
+        room: '103',
+        department: 'Cardiology',
+        modality: 'In-Person',
+        createdAt: '2026-07-18 11:05',
+        bookedBy: 'Dr. Aris Thorne',
+        confirmationStatus: 'Unconfirmed',
+        documentation: { status: 'not-started' },
+        previousAppointmentId: 'a1',
+      },
+    ],
     notes: [
       { id: 'n1', date: '2026-06-05', author: 'Dr. Chen', snippet: 'Reviewed blood pressure; medication adjustment recommended.', status: 'Signed' },
       { id: 'n0', date: '2026-05-20', author: 'Dr. Aris Thorne', snippet: 'Discussed lifestyle modification and home BP monitoring plan.', status: 'Signed' },
@@ -88,7 +222,137 @@ export const mockPatients: Patient[] = [
       { id: 'h1', date: '2024-09-28', provider: 'Dr. Lee', reason: 'Annual review', status: 'Completed' },
     ],
     tests: [{ id: 't1', name: 'Lipid Panel', date: '2026-06-01', status: 'Normal' }],
-    labResults: [{ id: 'l1', name: 'Lipid Panel — LDL', date: '2026-06-01', result: '2.6', unit: 'mmol/L', normalRange: '< 3.0', interpretation: 'Within Target', status: 'Final', reviewed: true }],
+    labResults: [
+      {
+        id: 'l1',
+        name: 'Lipid Panel — LDL',
+        date: '2026-06-01',
+        result: '2.6',
+        unit: 'mmol/L',
+        normalRange: '< 3.0 mmol/L',
+        interpretation: 'Within Target',
+        status: 'Final',
+        reviewed: true,
+        code: '13457-7',
+        codeSystem: 'http://loinc.org',
+        provider: 'Dr. Chen',
+        laboratory: 'Maple Health Laboratory',
+        specimen: 'Serum',
+        method: 'Automated',
+      },
+      {
+        id: 'l0',
+        name: 'Lipid Panel — LDL',
+        date: '2026-03-01',
+        result: '3.4',
+        unit: 'mmol/L',
+        normalRange: '< 3.0 mmol/L',
+        interpretation: 'High',
+        status: 'Final',
+        code: '13457-7',
+        codeSystem: 'http://loinc.org',
+        provider: 'Dr. Chen',
+        laboratory: 'Maple Health Laboratory',
+        specimen: 'Serum',
+        method: 'Automated',
+      },
+      {
+        id: 'hba1c-current',
+        name: 'Hemoglobin A1c',
+        date: '2026-06-10',
+        result: '7.2',
+        unit: '%',
+        normalRange: '< 6.5 %',
+        interpretation: 'High',
+        status: 'Final',
+        code: '4548-4',
+        codeSystem: 'http://loinc.org',
+        provider: 'Dr. Chen',
+        laboratory: 'Maple Health Laboratory',
+        specimen: 'Blood',
+        method: 'Automated',
+      },
+      {
+        id: 'hba1c-previous',
+        name: 'Hemoglobin A1c',
+        date: '2026-01-10',
+        result: '7.4',
+        unit: '%',
+        normalRange: '< 6.5 %',
+        interpretation: 'High',
+        status: 'Final',
+        code: '4548-4',
+        codeSystem: 'http://loinc.org',
+        provider: 'Dr. Chen',
+        laboratory: 'Maple Health Laboratory',
+        specimen: 'Blood',
+        method: 'Automated',
+      },
+      {
+        id: 'creatinine-current',
+        name: 'Creatinine',
+        date: '2026-08-19',
+        result: '120',
+        unit: 'umol/L',
+        normalRange: '60-110 umol/L',
+        interpretation: 'High',
+        status: 'Final',
+        code: '2160-0',
+        codeSystem: 'http://loinc.org',
+        provider: 'Lab technician',
+        laboratory: 'Maple Health Laboratory',
+        specimen: 'Serum',
+        method: 'Automated',
+      },
+      {
+        id: 'creatinine-previous',
+        name: 'Creatinine',
+        date: '2026-04-20',
+        result: '98',
+        unit: 'umol/L',
+        normalRange: '60-110 umol/L',
+        interpretation: 'Normal',
+        status: 'Final',
+        code: '2160-0',
+        codeSystem: 'http://loinc.org',
+        provider: 'Lab technician',
+        laboratory: 'Maple Health Laboratory',
+        specimen: 'Serum',
+        method: 'Automated',
+      },
+      {
+        id: 'egfr-current',
+        name: 'eGFR',
+        date: '2026-08-18',
+        result: '55',
+        unit: 'mL/min/1.73 m²',
+        normalRange: '> 60 mL/min/1.73 m²',
+        interpretation: 'Low',
+        status: 'Final',
+        code: '33914-3',
+        codeSystem: 'http://loinc.org',
+        provider: 'Lab technician',
+        laboratory: 'Maple Health Laboratory',
+        specimen: 'Serum',
+        method: 'Automated',
+      },
+      {
+        id: 'egfr-previous',
+        name: 'eGFR',
+        date: '2026-04-20',
+        result: '62',
+        unit: 'mL/min/1.73 m²',
+        normalRange: '> 60 mL/min/1.73 m²',
+        interpretation: 'Normal',
+        status: 'Final',
+        code: '33914-3',
+        codeSystem: 'http://loinc.org',
+        provider: 'Lab technician',
+        laboratory: 'Maple Health Laboratory',
+        specimen: 'Serum',
+        method: 'Automated',
+      },
+    ],
     documents: [{ id: 'd1', name: 'ED Discharge Summary', date: '2026-06-03', url: '/docs/ed-discharge-001.pdf', status: 'Final' }],
     allergyReviewedDate: 'June 5, 2026',
     preferredName: 'Sarah',
@@ -129,9 +393,9 @@ export const mockPatients: Patient[] = [
       { id: 'team3', name: 'Nurse Sarah Lee', role: 'Care Coordinator' },
     ],
     chartActivity: [
-      { id: 'act1', action: 'Updated the progress note.', user: 'Dr. Chen', date: 'June 5, 2026', resourceType: 'Note' },
-      { id: 'act2', action: 'Lipid panel result was reviewed.', user: 'Dr. Aris Thorne', date: 'June 1, 2026', resourceType: 'Result' },
-      { id: 'act3', action: 'Follow-up appointment was scheduled.', user: 'Front Desk', date: 'May 28, 2026', resourceType: 'Appointment' },
+      { id: 'act1', action: 'Updated the progress note.', user: 'Dr. Chen', date: 'June 5, 2026', resourceType: 'Note', sourceRecordId: 'n1', sourceRecordType: 'Clinical Note', sourceRecordDisplay: 'Progress note' },
+      { id: 'act2', action: 'Lipid panel result was reviewed.', user: 'Dr. Aris Thorne', date: 'June 1, 2026', resourceType: 'Result', sourceRecordId: 'l1', sourceRecordType: 'Laboratory Result', sourceRecordDisplay: 'Lipid Panel - LDL' },
+      { id: 'act3', action: 'Follow-up appointment was scheduled.', user: 'Front Desk', date: 'May 28, 2026', resourceType: 'Appointment', sourceRecordId: 'a1', sourceRecordType: 'Appointment', sourceRecordDisplay: 'Follow-up appointment' },
       { id: 'act4', action: 'Medication list was reconciled.', user: 'Dr. Chen', date: 'May 20, 2026', resourceType: 'Medication' },
     ],
   },
@@ -193,12 +457,27 @@ export const mockPatients: Patient[] = [
   },
 ];
 
-export function getMockPatients(): any[] {
-  return mockPatients;
+export function getMockPatients(): Patient[] {
+  return [...mockPatients, ...readPersistedPatientsSync()];
 }
 
-export function getPatientById(id: string): any {
+export function getPatientById(id: string): Patient | undefined {
   if (!id) return null;
-  const decoded = String(id);
-  return mockPatients.find((p) => p.id === decoded || p.mrn === decoded);
+
+  try {
+    const raw = String(id);
+    const decoded = decodeURIComponent(raw).trim();
+    // remove any trailing path segments if present
+    const cleaned = decoded.replace(/\/.*/, '');
+    const normalized = cleaned.toLowerCase();
+
+    return getMockPatients().find((p) => {
+      const pid = String(p.id || '').toLowerCase();
+      const pmrn = String(p.mrn || '').toLowerCase();
+
+      return pid === normalized || pmrn === normalized || p.id === cleaned || p.mrn === cleaned;
+    });
+  } catch {
+    return null;
+  }
 }

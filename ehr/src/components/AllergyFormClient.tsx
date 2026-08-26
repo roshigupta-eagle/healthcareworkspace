@@ -9,6 +9,31 @@ export default function AllergyFormClient({ defaultOpen = false }: { defaultOpen
 
   useEffect(() => { if (defaultOpen) setOpen(true); }, [defaultOpen]);
 
+  async function handleSubmit(form: FormData) {
+    setSaving(true);
+    try {
+      const body: any = {
+        patientId: 'patient-001',
+        substance: { display: String(form.get('allergen') || '') },
+        category: [String(form.get('type') || '').toLowerCase()],
+        clinicalStatus: String(form.get('status') || 'active'),
+        verificationStatus: String(form.get('source') || 'patient reported'),
+        reactions: [{ manifestation: String(form.get('reaction') || ''), severity: String(form.get('severity') || '') }],
+        recordedAt: new Date().toISOString(),
+      };
+      const res = await fetch('/api/allergies', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      if (res.ok) {
+        setSuccess('Allergy added');
+      } else {
+        setSuccess('Failed to save');
+      }
+    } catch (e) {
+      setSuccess('Failed to save');
+    }
+    setSaving(false);
+    setTimeout(()=>setSuccess(null),2000);
+  }
+
   return (
     <div className="bg-white rounded-2xl p-6 border border-[#DDE7F0] shadow-sm">
       <div className="flex items-center justify-between">
@@ -21,12 +46,12 @@ export default function AllergyFormClient({ defaultOpen = false }: { defaultOpen
       </div>
 
       {open && (
-        <form onSubmit={(e) => { e.preventDefault(); setSaving(true); setTimeout(() => { setSaving(false); setSuccess('Allergy added'); setTimeout(()=>setSuccess(null),2000); }, 800); }} className="mt-4 space-y-3">
+        <form onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); await handleSubmit(fd); }} className="mt-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="flex flex-col text-sm">
-              <span className="text-xs text-gray-600">Allergy type</span>
-              <select required className="mt-1 p-2 border rounded">
-                <option>Drug</option>
+              <span className="text-xs text-gray-600">Allergy Type</span>
+              <select name="type" required className="mt-1 p-2 border rounded">
+                <option>Medication</option>
                 <option>Food</option>
                 <option>Environmental</option>
                 <option>Latex</option>
@@ -35,27 +60,27 @@ export default function AllergyFormClient({ defaultOpen = false }: { defaultOpen
             </label>
 
             <label className="flex flex-col text-sm">
-              <span className="text-xs text-gray-600">Allergen name</span>
-              <input required className="mt-1 p-2 border rounded" placeholder="e.g. Penicillin" />
+              <span className="text-xs text-gray-600">Allergen Name</span>
+              <input name="allergen" required className="mt-1 p-2 border rounded" placeholder="e.g. Penicillin" />
             </label>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <label className="flex flex-col text-sm">
               <span className="text-xs text-gray-600">Reaction</span>
-              <input className="mt-1 p-2 border rounded" placeholder="Rash, hives, swelling" />
+              <input name="reaction" className="mt-1 p-2 border rounded" placeholder="Rash, Hives, Swelling" />
             </label>
             <label className="flex flex-col text-sm">
               <span className="text-xs text-gray-600">Severity</span>
-              <select className="mt-1 p-2 border rounded">
+              <select name="severity" className="mt-1 p-2 border rounded">
                 <option>Mild</option>
                 <option>Moderate</option>
                 <option>Severe</option>
-                <option>Life-threatening</option>
+                <option>Life-Threatening</option>
               </select>
             </label>
             <label className="flex flex-col text-sm">
-              <span className="text-xs text-gray-600">Onset date</span>
+              <span className="text-xs text-gray-600">Onset Date</span>
               <input type="date" className="mt-1 p-2 border rounded" />
             </label>
           </div>
@@ -63,20 +88,20 @@ export default function AllergyFormClient({ defaultOpen = false }: { defaultOpen
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="flex flex-col text-sm">
               <span className="text-xs text-gray-600">Status</span>
-              <select className="mt-1 p-2 border rounded">
-                <option>Active</option>
-                <option>Inactive</option>
-                <option>Resolved</option>
-                <option>Entered in error</option>
+              <select name="status" className="mt-1 p-2 border rounded">
+                <option>active</option>
+                <option>inactive</option>
+                <option>resolved</option>
+                <option>entered-in-error</option>
               </select>
             </label>
             <label className="flex flex-col text-sm">
               <span className="text-xs text-gray-600">Source</span>
-              <select className="mt-1 p-2 border rounded">
-                <option>Patient reported</option>
-                <option>Clinician documented</option>
-                <option>External record</option>
-                <option>Unknown</option>
+              <select name="source" className="mt-1 p-2 border rounded">
+                <option>patient reported</option>
+                <option>clinician documented</option>
+                <option>external record</option>
+                <option>unknown</option>
               </select>
             </label>
           </div>

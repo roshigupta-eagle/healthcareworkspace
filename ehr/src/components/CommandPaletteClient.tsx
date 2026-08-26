@@ -35,7 +35,7 @@ export default function CommandPaletteClient() {
       <div className="w-full max-w-2xl mx-4">
         <div className="bg-white rounded-lg shadow-xl ring-1 ring-gray-200">
           <div className="p-3 border-b border-gray-100">
-            <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Type a command or search..." className="w-full px-3 py-2 rounded-md border border-gray-200" />
+            <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Type a Command or Search..." className="w-full px-3 py-2 rounded-md border border-gray-200" />
           </div>
           <div className="p-2">
             {filtered.map(cmd => (

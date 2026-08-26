@@ -72,7 +72,10 @@ const precautionLabels: Record<IsolationPrecaution, string> = {
 
 function formatDOB(isoDate: string): string {
   try {
-    return new Date(isoDate).toLocaleDateString('en-CA', {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(isoDate)
+      ? (() => { const [year, month, day] = isoDate.split('-').map(Number); return new Date(year, month - 1, day); })()
+      : new Date(isoDate);
+    return date.toLocaleDateString('en-CA', {
       year: 'numeric', month: 'short', day: 'numeric',
     });
   } catch {
@@ -203,7 +206,7 @@ export const PatientBanner: React.FC<PatientBannerProps> = ({
       <div className="flex-1" aria-hidden="true" />
 
       {/* ── 4. MRN + SECONDARY IDENTIFIERS ── */}
-      <div className="flex items-center gap-5 flex-shrink-0">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 min-w-0">
         <div className="flex flex-col">
           <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">MRN</span>
           <span className="text-sm font-semibold text-neutral-900 font-mono tracking-wider">{mrn}</span>
@@ -211,14 +214,14 @@ export const PatientBanner: React.FC<PatientBannerProps> = ({
         {identifiers.map((id) => (
           <React.Fragment key={id.label}>
             <div className="h-8 w-px bg-neutral-200 hidden sm:block" aria-hidden="true" />
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{id.label}</span>
               {id.href ? (
-                <Link href={id.href} className="text-sm font-semibold text-neutral-900 font-mono tracking-wider hover:underline">
+                <Link href={id.href} className="text-sm font-semibold text-neutral-900 font-mono tracking-wider hover:underline truncate max-w-[220px]">
                   {id.value}
                 </Link>
               ) : (
-                <span className="text-sm font-semibold text-neutral-900 font-mono tracking-wider">{id.value}</span>
+                <span className="text-sm font-semibold text-neutral-900 font-mono tracking-wider truncate max-w-[220px]">{id.value}</span>
               )}
             </div>
           </React.Fragment>

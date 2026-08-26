@@ -4,9 +4,25 @@ import { NextResponse } from "next/server";
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const searchParams = req.nextUrl.searchParams;
+  const previewActor = process.env.NODE_ENV !== 'production' && (['1', 'true'].includes(searchParams.get('noauth') || '') || searchParams.get('asUser') === 'dev' || searchParams.get('asUser') === 'dev-doctor');
 
   // Allow dev bypass for doctor view when ?noauth=1 is present
-  if (pathname.startsWith('/doctor') && searchParams.get('noauth')) {
+  if (pathname.startsWith('/doctor') && previewActor) {
+    return NextResponse.next();
+  }
+
+  const previewWorkspacePaths = ['/dashboard/tasks', '/dashboard/messages', '/dashboard/documents'];
+  if (previewActor && previewWorkspacePaths.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
+    return NextResponse.next();
+  }
+
+  const previewClinicalPaths = ['/dashboard/appointments', '/dashboard/encounters', '/dashboard/records', '/dashboard/orders', '/dashboard/patients', '/schedule/today', '/communication'];
+  if (previewActor && previewClinicalPaths.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
+    return NextResponse.next();
+  }
+
+  const previewWorkspaceApiPaths = ['/api/doctor-view', '/api/doctor-work-summary', '/api/doctor/work', '/api/doctor/messages', '/api/doctor/documents', '/api/alerts/acknowledge', '/api/health-records', '/api/scheduling', '/api/communication', '/api/tasks', '/api/patients'];
+  if (previewActor && previewWorkspaceApiPaths.some((route) => pathname === route || pathname.startsWith(`${route}/`)) && !req.auth) {
     return NextResponse.next();
   }
 

@@ -57,14 +57,14 @@ export default function BookingModal({ open, slots = [], onClose, onBook }: Prop
             <form onSubmit={(e) => { e.preventDefault(); if (!patientName) { alert('Please enter patient name'); return; } onBook(selectedSlot, { patientName, appointmentType, reason }); }}>
               <div style={{ marginBottom: 12 }}>
                 <label className="form-label">Patient Name <span style={{ color: "var(--status-cancelled)" }}>*</span></label>
-                <input className="form-input" value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Full name" />
+                <input className="form-input" value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Full Name" />
               </div>
 
               <div style={{ marginBottom: 12 }}>
                 <label className="form-label">Appointment Type</label>
                 <select className="form-select" value={appointmentType} onChange={(e) => setAppointmentType(e.target.value)}>
                   <option value="checkup">Annual Checkup</option>
-                  <option value="followup">Follow-up</option>
+                  <option value="followup">Follow-Up</option>
                   <option value="consultation">Consultation</option>
                   <option value="emergency">Emergency</option>
                 </select>

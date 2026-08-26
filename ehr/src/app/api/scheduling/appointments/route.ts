@@ -1,13 +1,14 @@
 ﻿import { NextResponse } from 'next/server';
-import { fetchAppointments } from '@/scheduling/services/scheduling.mock';
+import { getSchedulingSnapshot } from '@/lib/schedulingData';
+import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const access = await resolveDoctorWorkspaceActor(request);
+  if (access.response) return access.response;
   try {
-    const appts = await fetchAppointments();
-    return NextResponse.json(appts);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('scheduling appointments fetch error', err);
+    const snapshot = await getSchedulingSnapshot(new URL(request.url).searchParams.get('q') || '');
+    return NextResponse.json(snapshot.appointments);
+  } catch {
     return NextResponse.json({ error: 'failed to fetch appointments' }, { status: 500 });
   }
 }

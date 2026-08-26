@@ -1,13 +1,14 @@
 ﻿import { NextResponse } from 'next/server';
-import { fetchSlots } from '@/scheduling/services/scheduling.mock';
+import { getSchedulingSnapshot } from '@/lib/schedulingData';
+import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const access = await resolveDoctorWorkspaceActor(request);
+  if (access.response) return access.response;
   try {
-    const slots = await fetchSlots();
-    return NextResponse.json(slots);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('scheduling slots fetch error', err);
+    const snapshot = await getSchedulingSnapshot();
+    return NextResponse.json(snapshot.slots);
+  } catch {
     return NextResponse.json({ error: 'failed to fetch slots' }, { status: 500 });
   }
 }

@@ -183,13 +183,13 @@ export default function DoctorCalendar({ practitionerId, compact = false }: { pr
             <h3 className="text-lg font-semibold">Appointments</h3>
             <div className="text-sm text-neutral-500">{date.toDateString()}</div>
             <div className="ml-3 flex items-center gap-2">
-              <input className="px-3 py-2 border rounded-md text-sm" placeholder="Search patients, types, providers" value={search} onChange={(e) => setSearch(e.target.value)} />
+              <input className="px-3 py-2 border rounded-md text-sm" placeholder="Search Patients, Types, Providers..." value={search} onChange={(e) => setSearch(e.target.value)} />
               <select value={providerFilter} onChange={(e) => setProviderFilter(e.target.value as any)} className="border rounded px-2 py-1 text-sm">
-                <option value="all">All providers</option>
+                <option value="all">All Providers</option>
                 {providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value as any)} className="border rounded px-2 py-1 text-sm">
-                <option value="all">All locations</option>
+                <option value="all">All Locations</option>
                 {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             </div>
@@ -346,7 +346,7 @@ export default function DoctorCalendar({ practitionerId, compact = false }: { pr
             <div className="text-sm">Status: {selectedAppt.status}</div>
             <div className="text-sm text-neutral-600">{selectedAppt.description}</div>
             <div className="flex gap-2 mt-2">
-              <Button size="sm" variant="ghost" onClick={() => { if (selectedAppt?.slotIds && selectedAppt.slotIds.length) { const slot = slots.find(s => s.id === selectedAppt.slotIds[0]); if (slot) { setBookSlot(slot); setBookModalOpen(true); } } }}>Find slot</Button>
+              <Button size="sm" variant="ghost" onClick={() => { if (selectedAppt?.slotIds && selectedAppt.slotIds.length) { const slot = slots.find(s => s.id === selectedAppt.slotIds[0]); if (slot) { setBookSlot(slot); setBookModalOpen(true); } } }}>Find Slot</Button>
               <Button size="sm" variant="ghost" onClick={() => selectedAppt && handleCancel(selectedAppt)}>Cancel</Button>
               <Button size="sm" variant="secondary" onClick={() => { const pid = selectedAppt.participants.find(p => p.type==='patient')?.actorId; if (pid) router.push(`/doctor/patients/${selectedAppt.participants.find(p => p.type==='patient')?.actorId}`); }}>Open Patient</Button>
             </div>

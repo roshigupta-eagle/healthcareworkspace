@@ -11,16 +11,9 @@ export default async function AppointmentDetailPage({ params }: { params: any })
   const patient = getPatientById(String(patientId));
   if (!patient) return redirect('/dashboard/records');
 
-  const appointment = (patient.upcoming || []).find((a: any) => a.id === appointmentId) || {
-    id: appointmentId,
-    date: '2026-07-18 10:30',
-    doctor: 'Dr. Aris Thorne',
-    type: 'Follow-up',
-    status: 'Scheduled',
-    location: 'Main Clinic — Room 203',
-    duration: '30 minutes',
-    bookedOn: '2026-05-10',
-  };
+  // Never fabricate a fallback appointment — an unmatched id must render the
+  // "Appointment Not Found" state instead of silently showing wrong data.
+  const appointment = (patient.upcoming || []).find((a: any) => a.id === appointmentId) || null;
 
   return (
     <div className="min-h-[88vh] bg-[#F6F9FB] py-10">
