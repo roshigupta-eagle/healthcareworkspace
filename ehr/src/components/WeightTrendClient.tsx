@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 
 type VitalsPoint = { date: string; value: number };
 
@@ -32,17 +33,8 @@ function buildSmoothPathSimple(points: { x: number; y: number }[]) {
 }
 
 export default function WeightTrendClient({ patient }: { patient: PatientLite }) {
-  // local editable copy of weights for quick demo interactions
   const initial: VitalsPoint[] = (patient?.vitals?.weight ?? []).map((w) => ({ date: w.date, value: Number(w.value) }));
-  const [weights, setWeights] = useState<VitalsPoint[]>(initial.length ? initial : [
-    { date: new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString().slice(0,10), value: 79.2 },
-    { date: new Date(Date.now() - 300 * 24 * 3600 * 1000).toISOString().slice(0,10), value: 78.7 },
-    { date: new Date(Date.now() - 200 * 24 * 3600 * 1000).toISOString().slice(0,10), value: 76.1 },
-    { date: new Date(Date.now() - 120 * 24 * 3600 * 1000).toISOString().slice(0,10), value: 72.3 },
-    { date: new Date(Date.now() - 60 * 24 * 3600 * 1000).toISOString().slice(0,10), value: 69.4 },
-    { date: new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString().slice(0,10), value: 68.8 },
-    { date: new Date().toISOString().slice(0,10), value: 68.0 },
-  ]);
+  const [weights, setWeights] = useState<VitalsPoint[]>(() => initial);
 
   const [range, setRange] = useState<'1M'|'3M'|'6M'|'1Y'|'2Y'|'ALL'>('2Y');
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
@@ -53,15 +45,12 @@ export default function WeightTrendClient({ patient }: { patient: PatientLite })
 
   const sorted = useMemo(() => [...weights].sort((a,b)=>new Date(a.date).getTime()-new Date(b.date).getTime()), [weights]);
 
-  const now = Date.now();
-  function inRangePoint(p: VitalsPoint) {
-    const d = new Date(p.date).getTime();
-    if (range === 'ALL') return true;
-    const days = range === '1M' ? 31 : range === '3M' ? 92 : range === '6M' ? 184 : range === '1Y' ? 365 : 365*2;
-    return d >= now - days * 24 * 3600 * 1000;
-  }
-
-  const viewPoints = useMemo(() => sorted.filter(inRangePoint), [sorted, range]);
+  const [now] = useState(() => Date.now());
+  const viewPoints = useMemo(() => {
+    if (range === 'ALL') return sorted;
+    const days = range === '1M' ? 31 : range === '3M' ? 92 : range === '6M' ? 184 : range === '1Y' ? 365 : 365 * 2;
+    return sorted.filter((point) => new Date(point.date).getTime() >= now - days * 24 * 3600 * 1000);
+  }, [now, range, sorted]);
 
   const values = viewPoints.map(v=>v.value);
   const min = Math.min(...values, 0) - 1;
@@ -194,8 +183,8 @@ export default function WeightTrendClient({ patient }: { patient: PatientLite })
                 <div className="text-xs text-slate-500">Showing measurements — interactive</div>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                {['1M','3M','6M','1Y','2Y','ALL'].map(r=> (
-                  <button key={r} onClick={()=>setRange(r as any)} className={`px-3 py-1 rounded ${range===r? 'bg-sky-50 text-sky-700' : 'bg-white border'}`}>{r}</button>
+                {(['1M', '3M', '6M', '1Y', '2Y', 'ALL'] as const).map((period) => (
+                  <button type="button" key={period} onClick={() => setRange(period)} className={`px-3 py-1 rounded ${range === period ? 'bg-sky-50 text-sky-700' : 'bg-white border'}`}>{period}</button>
                 ))}
               </div>
             </div>
@@ -284,13 +273,13 @@ export default function WeightTrendClient({ patient }: { patient: PatientLite })
           <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-semibold text-slate-900">Weight Insights</h4>
-              <button onClick={()=>{}} className="text-xs text-sky-600">View All Insights</button>
+              <Link href={`/dashboard/records/${encodeURIComponent(patient.id)}/weight-trend?tab=insights`} className="text-xs text-sky-600">View All Insights</Link>
             </div>
             <ul className="mt-3 space-y-3 text-sm text-slate-700">
               <li className="flex items-start justify-between">
                 <div>
                   <div className="font-medium">Great Progress!</div>
-                  <div className="text-xs text-gray-500">You've lost {Math.abs(totalChange)} kg since {formatDateShort(first?.date)}</div>
+                  <div className="text-xs text-gray-500">You&apos;ve lost {Math.abs(totalChange)} kg since {formatDateShort(first?.date)}</div>
                 </div>
                 <div className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">Positive</div>
               </li>

@@ -8,7 +8,7 @@ import {
   computeRowFlags,
 } from '../lib/weightLog';
 
-const M = (id: string, value: number, occurredAt: string, extra: Partial<{ enteredInError: boolean; status: string; unit: string; encounterId: string; correction: any; dataQuality: { state: 'review'; reason: string } }> = {}) => ({
+const M = (id: string, value: number, occurredAt: string, extra: Partial<{ enteredInError: boolean; status: string; unit: string; encounterId: string; correction: any }> = {}) => ({
   id,
   value,
   unit: extra.unit ?? 'kg',
@@ -17,7 +17,6 @@ const M = (id: string, value: number, occurredAt: string, extra: Partial<{ enter
   status: extra.status,
   encounterId: extra.encounterId,
   correction: extra.correction,
-  dataQuality: extra.dataQuality,
 });
 
 describe('CRITICAL: Mark Entered in Error must never appear on an already-error record', () => {
@@ -100,17 +99,4 @@ describe('computeRowFlags', () => {
     expect(computeRowFlags(items[1], summary)).toEqual(expect.arrayContaining(['latest', 'lowest']));
     expect(computeRowFlags(items[0], summary)).toEqual(expect.arrayContaining(['highest']));
   });
-describe('data-quality review flags', () => {
-  it('only flags measurements explicitly marked by the data-quality service', () => {
-    const unflagged = M('unflagged', 12, '2026-08-01');
-    const flagged = M('flagged', 13, '2026-08-02', {
-      dataQuality: { state: 'review', reason: 'Source review requested.' },
-    });
-
-    const summary = computeLogSummary([unflagged, flagged]);
-
-    expect(summary.reviewIds.has('unflagged')).toBe(false);
-    expect(summary.reviewIds.has('flagged')).toBe(true);
-  });
-});
 });

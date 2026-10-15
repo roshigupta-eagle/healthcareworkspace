@@ -11,7 +11,6 @@ type ClinicalEvent = {
   title: string;
   actor?: string;
   details?: string;
-  recordHref?: string;
 };
 
 const ICON_BY_TYPE: Record<string, { bg: string; text: string; ring: string }> = {
@@ -50,7 +49,7 @@ export default function EventDetailPopover({
   onManageGoal: () => void;
 }) {
   const tone = ICON_BY_TYPE[event.type || ''] || ICON_BY_TYPE.plan;
-  const link = event.type === 'goal' ? { label: 'View Goal', onClick: onManageGoal } : event.recordHref ? { label: 'View Record', href: event.recordHref } : linkFor(event, patientId);
+  const link = event.type === 'goal' ? { label: 'View Goal', onClick: onManageGoal } : linkFor(event, patientId);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-in fade-in duration-150" onClick={onClose}>

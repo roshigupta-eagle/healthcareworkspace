@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getCommunicationSnapshot, type CommunicationSnapshot } from '@/lib/communicationStore';
-import { CLINICAL_WORKSPACE_ROLES } from '@/lib/doctorWorkspaceAuth';
+import { CLINICAL_WORKSPACE_ROLES, isDevelopmentPreviewRequest, resolveDevelopmentPreviewActor } from '@/lib/doctorWorkspaceAuth';
 
 export type CommunicationPageActor = { id: string; name: string; role: string };
 
@@ -12,14 +12,16 @@ function firstValue(value: string | string[] | undefined) {
 }
 
 function isPreview(params: SearchParams) {
-  return process.env.NODE_ENV !== 'production' && (Boolean(params.noauth) || ['dev', 'dev-doctor'].includes(firstValue(params.asUser) || ''));
+  return isDevelopmentPreviewRequest(firstValue(params.asUser));
 }
 
 export async function getCommunicationPageData(params: SearchParams = {}, input: { channel?: CommunicationSnapshot['channel'] } = {}) {
   const session = await auth().catch(() => null);
   if (!session?.user && !isPreview(params)) redirect('/login');
   const user = session?.user as { id?: string; name?: string; role?: string } | undefined;
-  const actor: CommunicationPageActor = { id: user?.id || firstValue(params.asUser) || 'dev-doctor', name: user?.name || 'Doctor User', role: String(user?.role || 'DEV').toUpperCase() };
+  const previewActor = isPreview(params) ? resolveDevelopmentPreviewActor(firstValue(params.asUser)) : undefined;
+  if (!previewActor && !user?.id) redirect('/unauthorized');
+  const actor: CommunicationPageActor = previewActor || { id: user!.id!, name: user?.name || 'Clinical workspace user', role: String(user?.role || 'DOCTOR').toUpperCase() };
   if (session?.user && !CLINICAL_WORKSPACE_ROLES.has(actor.role)) redirect('/unauthorized');
   const query = firstValue(params.q) || '';
   const channelValue = firstValue(params.channel);
@@ -32,6 +34,5 @@ export function communicationSearchParams(params: SearchParams) {
   const query = new URLSearchParams();
   const asUser = firstValue(params.asUser);
   if (asUser) query.set('asUser', asUser);
-  else if (firstValue(params.noauth) === '1' || firstValue(params.noauth) === 'true') query.set('noauth', '1');
   return query.toString();
 }

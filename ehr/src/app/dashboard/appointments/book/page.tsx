@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getBookingDraft } from '@/lib/bookingDraftStore';
 import { getSchedulingSnapshot } from '@/lib/schedulingData';
 import { CLINICAL_WORKSPACE_ROLES } from '@/lib/doctorWorkspaceAuth';
+import { getCanonicalPatientDirectory } from '@/lib/patientDirectory';
 import BookingWorkspace from './BookingWorkspace';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,7 @@ export default async function BookAppointmentsPage({ searchParams }: { searchPar
   const actorId = user?.id || firstValue(params.asUser) || 'dev-doctor';
   const role = String(user?.role || 'DEV').toUpperCase();
   if (session?.user && !CLINICAL_WORKSPACE_ROLES.has(role)) redirect('/unauthorized');
-  const snapshot = await getSchedulingSnapshot();
-  return <BookingWorkspace initialData={{ ...snapshot, patients: [] }} initialDraft={await getBookingDraft(actorId)} />;
+  const snapshot = await getSchedulingSnapshot('', { preview: preview(params) });
+  const directory = await getCanonicalPatientDirectory({ preview: preview(params) });
+  return <BookingWorkspace initialData={{ ...snapshot, patients: directory.patients }} initialDraft={await getBookingDraft(actorId)} />;
 }

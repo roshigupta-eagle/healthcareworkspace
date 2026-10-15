@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import type { AchievementsModel, WeightAchievement, AchievementCategory } from '@/lib/weightAchievements';
 import AchievementDetailsDrawer from './AchievementDetailsDrawer';
 import FullAchievementCatalogDrawer from './FullAchievementCatalogDrawer';
@@ -35,6 +34,7 @@ function CategoryIcon({ category, className }: { category: AchievementCategory; 
     </svg>
   );
 }
+
 function AchievementCard({ a, onOpen }: { a: WeightAchievement; onOpen: () => void }) {
   const rarity = RARITY_STYLES[a.rarity] || RARITY_STYLES.common;
   const pct = a.progress ? Math.min(100, Math.round((a.progress.current / (a.progress.target || 1)) * 100)) : a.status === 'completed' ? 100 : 0;
@@ -50,7 +50,7 @@ function AchievementCard({ a, onOpen }: { a: WeightAchievement; onOpen: () => vo
     <button
       onClick={onOpen}
       aria-label={summary}
-      className={`weight-trend-surface text-left h-full min-h-[180px] flex flex-col p-5 transition-colors duration-150 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 ${
+      className={`text-left h-full flex flex-col rounded-2xl border p-4 sm:p-[18px] transition-colors duration-150 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 ${
         isCompleted ? 'bg-emerald-50/40 border-emerald-200' : 'bg-white border-slate-100 hover:border-violet-200'
       }`}
     >
@@ -91,6 +91,7 @@ function AchievementCard({ a, onOpen }: { a: WeightAchievement; onOpen: () => vo
     </button>
   );
 }
+
 export default function AchievementsView({
   model,
   onSetGoal,
@@ -98,14 +99,12 @@ export default function AchievementsView({
   model: AchievementsModel | null;
   onSetGoal: () => void;
 }) {
-  const pathname = usePathname() || '';
-  const router = useRouter();
   const [category, setCategory] = useState<'all' | AchievementCategory>('all');
   const [sort, setSort] = useState<'most-recent' | 'closest-to-unlock' | 'completed-first' | 'points'>('most-recent');
   const [selected, setSelected] = useState<WeightAchievement | null>(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
 
-  const list = useMemo(() => model?.list || [], [model]);
+  const list = model?.list || [];
   const summary = model?.summary || null;
   const closestToUnlock = model?.closestToUnlock || null;
 
@@ -128,7 +127,7 @@ export default function AchievementsView({
 
   if (!model) {
     return (
-      <div id="weight-panel-achievements" role="tabpanel" aria-labelledby="weight-tab-achievements" className="weight-trend-view" aria-busy="true" aria-live="polite">
+      <div className="mt-6 space-y-5" aria-busy="true" aria-live="polite">
         <div className="h-40 bg-slate-100 rounded-2xl animate-pulse" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-40 bg-slate-100 rounded-2xl animate-pulse" />)}
@@ -138,13 +137,13 @@ export default function AchievementsView({
   }
 
   return (
-    <section id="weight-panel-achievements" role="tabpanel" aria-labelledby="weight-tab-achievements" className="weight-trend-view">
+    <section aria-labelledby="achievements-heading" className="mt-6 space-y-6">
       {/* Hero */}
-      <div className="weight-trend-surface relative overflow-hidden bg-gradient-to-br from-violet-50 via-violet-50/60 to-white p-6 lg:p-7">
+      <div className="relative overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-violet-50/60 to-white p-6 lg:p-7">
         <div className="relative flex flex-col lg:flex-row gap-6 items-stretch">
           <div className="flex-1 min-w-0">
             <h2 id="achievements-heading" className="text-2xl font-bold text-slate-900">Achievements</h2>
-            <p className="text-sm text-slate-600 mt-1.5 max-w-sm">Tracking engagement and progress toward documented goals, based on all-time valid measurements.</p>
+            <p className="text-sm text-slate-600 mt-1.5 max-w-sm">Celebrate consistent tracking and progress toward your documented goals.</p>
             <div className="mt-4 flex gap-3 flex-wrap">
               <div className="bg-white/80 rounded-xl px-4 py-3 shadow-sm border border-violet-100/60">
                 <div className="text-[11px] font-semibold text-violet-700 uppercase tracking-wide">Completed</div>
@@ -208,11 +207,11 @@ export default function AchievementsView({
         <h3 className="text-[17px] font-semibold text-slate-900">Your Achievements</h3>
         <div className="flex items-center gap-2.5 flex-wrap">
           <label className="text-xs text-slate-500" htmlFor="achv-category">Category</label>
-          <select id="achv-category" value={category} onChange={(e) => setCategory(e.target.value as 'all' | AchievementCategory)} className="weight-trend-control border border-slate-200 rounded-lg px-2.5 text-xs">
+          <select id="achv-category" value={category} onChange={(e) => setCategory(e.target.value as any)} className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs">
             {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
           <label className="text-xs text-slate-500" htmlFor="achv-sort">Sort</label>
-          <select id="achv-sort" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="weight-trend-control border border-slate-200 rounded-lg px-2.5 text-xs">
+          <select id="achv-sort" value={sort} onChange={(e) => setSort(e.target.value as any)} className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs">
             <option value="most-recent">Most Recent</option>
             <option value="closest-to-unlock">Closest to Unlock</option>
             <option value="completed-first">Completed First</option>
@@ -222,24 +221,24 @@ export default function AchievementsView({
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {filtered.map((a) => (
           <AchievementCard key={a.id} a={a} onOpen={() => setSelected(a)} />
         ))}
       </div>
 
       {/* Banner */}
-      <div className="weight-trend-surface bg-violet-50/70 border-violet-100 p-5 flex items-center justify-between gap-4 flex-wrap">
+      <div className="rounded-2xl bg-violet-50/70 border border-violet-100 p-5 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-violet-700 flex-shrink-0">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M20 12v9H4v-9M2 7h20v5H2V7zm10 0v14M12 7a2.5 2.5 0 010-5C13.5 2 15 4 12 7zm0 0a2.5 2.5 0 000-5C10.5 2 9 4 12 7z" /></svg>
           </div>
           <div>
-            <div className="font-semibold text-slate-900">New achievements coming soon!</div>
-            <div className="text-sm text-slate-600">We&apos;re continuing to expand the achievement catalog.</div>
+            <div className="font-semibold text-slate-900">Achievement catalog</div>
+            <div className="text-sm text-slate-600">Browse the documented achievements for this patient.</div>
           </div>
         </div>
-        <button onClick={() => setCatalogOpen(true)} className="px-4 py-2 border border-violet-200 rounded-lg text-violet-700 bg-white text-sm font-semibold hover:bg-violet-50 flex-shrink-0">View All Achievements →</button>
+        <button type="button" onClick={() => setCatalogOpen(true)} className="px-4 py-2 border border-violet-200 rounded-lg text-violet-700 bg-white text-sm font-semibold hover:bg-violet-50 flex-shrink-0">Browse Achievement Catalog →</button>
       </div>
 
       {selected && (
@@ -247,7 +246,6 @@ export default function AchievementsView({
           achievement={selected}
           onClose={() => setSelected(null)}
           onSetGoal={() => { setSelected(null); onSetGoal(); }}
-          onViewMeasurements={() => { setSelected(null); router.replace(`${pathname}?tab=log&achievement=${encodeURIComponent(selected.id)}`, { scroll: false }); }}
         />
       )}
 

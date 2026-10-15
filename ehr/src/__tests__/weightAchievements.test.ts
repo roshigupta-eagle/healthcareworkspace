@@ -78,7 +78,7 @@ describe('computeAchievements — goal-based achievements never assume a directi
 
   it('Turning the Corner requires a documented goal and uses direction-aware progress', () => {
     const items = [M('a', '2026-01-01', 98), M('b', '2026-01-10', 90)];
-    const goal = { goalType: 'weight-reduction', baselineWeight: 98, targetWeight: 62 };
+    const goal = { baselineWeight: 98, targetWeight: 62 }; // reduction goal, inferred
     const model = computeAchievements(items, goal);
     const turning = model.list.find((a) => a.id === 'turning')!;
     // (98-90)/(98-62) = 22% >= 20% threshold
@@ -111,7 +111,7 @@ describe('computeAchievements — closest to unlock', () => {
 describe('computeAchievements — unit normalization', () => {
   it('treats a lb-recorded measurement identically to its kg equivalent for goal math', () => {
     const items = [M('a', '2026-01-01', 220.46, { unit: 'lb' })]; // ~100kg
-    const goal = { goalType: 'weight-reduction', baselineWeight: 120, targetWeight: 100 };
+    const goal = { baselineWeight: 120, targetWeight: 100 };
     const model = computeAchievements(items, goal);
     const goalAch = model.list.find((a) => a.id === 'goal')!;
     expect(goalAch.status).toBe('completed');

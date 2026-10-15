@@ -2,8 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { splitComparisonWindows, summarizePeriod } from '@/lib/weightInsights';
-import { formatWeight } from '@/lib/weightMath';
-import type { WeightTrendGoal, WeightTrendMeasurement } from './weightTrendTypes';
 
 type Preset = '30' | '90' | '180' | '365';
 
@@ -14,31 +12,31 @@ const PRESET_LABELS: Record<Preset, string> = {
   '365': '1 Year',
 };
 
-function fmt(n: number | null | undefined, unit: 'kg' | 'lb' = 'kg', decimals = 2) {
-  return n == null ? '—' : formatWeight(n, 'kg', unit, decimals);
+function fmt(n: number | null | undefined, unit = 'kg') {
+  return n == null ? '—' : `${n} ${unit}`;
 }
 
 export default function ComparePeriodsDrawer({
   patientId,
   goal,
-  displayUnit = 'kg',
   onClose,
 }: {
   patientId: string;
-  goal?: WeightTrendGoal | null;
-  displayUnit?: 'kg' | 'lb';
+  goal?: any;
   onClose: () => void;
 }) {
   const [preset, setPreset] = useState<Preset>('90');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [allMeasurements, setAllMeasurements] = useState<WeightTrendMeasurement[] | null>(null);
+  const [allMeasurements, setAllMeasurements] = useState<any[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(false);
     fetch(`/api/patients/${encodeURIComponent(patientId)}/weight-trend`)
       .then((res) => { if (!res.ok) throw new Error('failed'); return res.json(); })
-      .then((json) => { if (!cancelled) { setAllMeasurements(Array.isArray(json.items) ? json.items as WeightTrendMeasurement[] : []); setLoading(false); } })
+      .then((json) => { if (!cancelled) { setAllMeasurements(Array.isArray(json.items) ? json.items : []); setLoading(false); } })
       .catch(() => { if (!cancelled) { setError(true); setLoading(false); } });
     return () => { cancelled = true; };
   }, [patientId]);
@@ -58,7 +56,7 @@ export default function ComparePeriodsDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
-      <div className="weight-trend-drawer flex h-full flex-col bg-white shadow-2xl">
+      <div className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100/80 text-blue-700 ring-1 ring-blue-600/20">
@@ -114,9 +112,9 @@ export default function ComparePeriodsDrawer({
               <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-4 space-y-1">
                 <div className="text-[11px] font-semibold text-blue-900 uppercase tracking-wider">Average Weight</div>
                 <div className="flex items-center justify-between text-slate-900 font-bold text-lg tabular-nums">
-                  <span>{fmt(comparison.previous.average, displayUnit)}</span>
+                  <span>{fmt(comparison.previous.average)}</span>
                   <span className="text-blue-400">→</span>
-                  <span>{fmt(comparison.current.average, displayUnit)}</span>
+                  <span>{fmt(comparison.current.average)}</span>
                 </div>
                 <p className="text-[11px] text-blue-800/80">{describeDelta(comparison.current.average, comparison.previous.average, 'Average weight increased', 'Average weight decreased')}</p>
               </div>
@@ -128,7 +126,7 @@ export default function ComparePeriodsDrawer({
 
               <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 flex items-center justify-between">
                 <span className="font-medium text-slate-600">Fluctuation</span>
-                <span className="font-bold text-slate-900 tabular-nums">{fmt(comparison.previous.fluctuation, displayUnit)} → {fmt(comparison.current.fluctuation, displayUnit)}</span>
+                <span className="font-bold text-slate-900 tabular-nums">{fmt(comparison.previous.fluctuation)} → {fmt(comparison.current.fluctuation)}</span>
               </div>
 
               <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 flex items-center justify-between">
@@ -139,14 +137,14 @@ export default function ComparePeriodsDrawer({
               <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 flex items-center justify-between">
                 <span className="font-medium text-slate-600">Full Range</span>
                 <span className="font-bold text-slate-900 tabular-nums">
-                  {comparison.previous.range ? fmt(comparison.previous.range.difference, displayUnit) : '—'} → {comparison.current.range ? fmt(comparison.current.range.difference, displayUnit) : '—'}
+                  {comparison.previous.range ? `${comparison.previous.range.difference} kg` : '—'} → {comparison.current.range ? `${comparison.current.range.difference} kg` : '—'}
                 </span>
               </div>
 
               {goal && (
                 <div className="rounded-xl border border-violet-100 bg-violet-50/40 p-3.5">
                   <div className="text-[11px] font-semibold text-violet-900 uppercase tracking-wider">Goal Context</div>
-                  <div className="text-slate-800 font-medium mt-1">{goal.targetWeight != null ? `Target: ${formatWeight(Number(goal.targetWeight), 'kg', displayUnit)}` : 'Documented target range'}</div>
+                  <div className="text-slate-800 font-medium mt-1">Target: {goal.targetWeight} kg</div>
                 </div>
               )}
             </>

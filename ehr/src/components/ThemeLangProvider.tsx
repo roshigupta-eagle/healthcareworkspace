@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 
 type Theme = 'light' | 'dark';
 
@@ -162,7 +163,17 @@ const ThemeLangContext = createContext<ContextShape>({
 });
 
 export default function ThemeLangProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'light';
+    try {
+      const saved = window.localStorage.getItem('theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+  const pathname = usePathname();
   const [lang, setLang] = useState<string>('en');
   const [loadedTranslations, setLoadedTranslations] = useState<Record<string, string>>(builtInTranslations['en']);
   const [liveMessage, setLiveMessage] = useState<string>('');
@@ -172,14 +183,6 @@ export default function ThemeLangProvider({ children }: { children: React.ReactN
 
   useEffect(() => {
     mountedRef.current = true;
-    try {
-      const saved = window.localStorage.getItem('theme') as Theme | null;
-      if (saved) setTheme(saved);
-      else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
-    } catch (e) {
-      // ignore
-    }
-
     try {
       const savedLang = window.localStorage.getItem('lang');
       if (savedLang) setLang(savedLang);
@@ -200,7 +203,8 @@ export default function ThemeLangProvider({ children }: { children: React.ReactN
       window.localStorage.setItem('theme', theme);
     } catch (e) {}
 
-    if (theme === 'dark') document.documentElement.classList.add('dark');
+    const dashboardUsesLightTheme = pathname === '/dashboard';
+    if (theme === 'dark' && !dashboardUsesLightTheme) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
 
     // Skip the transition flash on first mount (no visible change yet)
@@ -215,7 +219,7 @@ export default function ThemeLangProvider({ children }: { children: React.ReactN
       document.documentElement.classList.remove('theme-transition');
     }, 350);
     return () => clearTimeout(t);
-  }, [theme]);
+  }, [pathname, theme]);
 
   // language change: persist, load locale file if available, apply to DOM
   useEffect(() => {

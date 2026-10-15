@@ -1,0 +1,32 @@
+@startuml
+actor Doctor
+participant "Roshi Web" as DW
+participant "Communication API" as API
+participant "Authorization" as AZ
+database PostgreSQL as DB
+participant "Call Orchestrator" as CO
+participant "LiveKit" as LK
+participant "Realtime Gateway" as RT
+actor Patient
+Doctor -> DW : Call Patient
+DW -> API : POST /calls
+API -> AZ : authorize doctor + Patient.id + conversation
+AZ --> API : allow
+API -> DB : create CallSession(CONNECTING)
+API -> CO : create media session
+CO -> LK : create room / issue scoped tokens
+CO --> API : opaque room + participant grants
+API -> RT : call.incoming(patientPortalUserId)
+RT -> Patient : incoming call
+Patient -> API : POST /calls/{id}/accept
+API -> AZ : authorize participant
+AZ --> API : allow
+API -> CO : issue patient token
+CO --> Patient : short-lived LiveKit token
+Doctor -> LK : join room
+Patient -> LK : join room
+LK --> Doctor : remote audio/video
+LK --> Patient : remote audio/video
+LK -> API : signed webhook participant_joined
+API -> DB : state=ACTIVE, timestamps
+@enduml

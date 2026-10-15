@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { OverviewCard, FooterLink } from './OverviewCard';
 import { HistoryIcon } from './icons';
+import type { Patient } from '@/app/dashboard/records/mockPatients';
 
 type TimelineEvent = {
   id: string;
@@ -23,35 +24,35 @@ const FILTERS: { key: string; label: string; types: TimelineEvent['type'][] }[] 
   { key: 'documents', label: 'Documents', types: ['document'] },
 ];
 
-function buildEvents(patient: any): TimelineEvent[] {
+function buildEvents(patient: Patient): TimelineEvent[] {
   const events: TimelineEvent[] = [];
-  (patient.upcoming || []).forEach((a: any) =>
+  (patient.upcoming || []).forEach((a) =>
     events.push({ id: `appt-${a.id}`, date: a.date, type: 'appointment', title: a.type, provider: a.doctor, status: a.status || 'Scheduled' })
   );
-  (patient.notes || []).forEach((n: any) =>
+  (patient.notes || []).forEach((n) =>
     events.push({ id: `note-${n.id}`, date: n.date, type: 'note', title: 'Progress Note', provider: n.author, description: n.snippet, status: n.status || 'Signed' })
   );
-  (patient.labResults || []).forEach((l: any) =>
+  (patient.labResults || []).forEach((l) =>
     events.push({ id: `lab-${l.id}`, date: l.date, type: 'result', title: l.name, description: `${l.result}${l.unit ? ' ' + l.unit : ''}`, status: l.status || 'Final' })
   );
-  (patient.history || []).forEach((h: any) =>
+  (patient.history || []).forEach((h) =>
     events.push({ id: `hist-${h.id}`, date: h.date, type: 'encounter', title: h.reason, provider: h.provider, status: h.status || 'Completed' })
   );
-  (patient.medications || []).forEach((m: any, i: number) => {
+  (patient.medications || []).forEach((m, i) => {
     if (m.startDate) events.push({ id: `med-${i}`, date: m.startDate, type: 'medication', title: `${m.name} started`, description: `${m.dose || ''} ${m.freq || ''}`.trim(), status: 'Active' });
   });
-  (patient.documents || []).forEach((d: any) =>
+  (patient.documents || []).forEach((d) =>
     events.push({ id: `doc-${d.id}`, date: d.date, type: 'document', title: d.name, status: d.status || 'Final' })
   );
   return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
-export function ClinicalTimeline({ patient }: { patient: any }) {
+export function ClinicalTimeline({ patient, renderedAt }: { patient: Patient; renderedAt: number }) {
   const [active, setActive] = useState('all');
   const events = useMemo(() => buildEvents(patient), [patient]);
   const filterDef = FILTERS.find((f) => f.key === active) || FILTERS[0];
   const filtered = filterDef.types.length ? events.filter((e) => filterDef.types.includes(e.type)) : events;
-  const now = Date.now();
+  const now = renderedAt;
 
   return (
     <OverviewCard
@@ -98,7 +99,7 @@ export function ClinicalTimeline({ patient }: { patient: any }) {
                 <div className="bg-gray-50 rounded-lg p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-gray-500">
-                      {new Date(e.date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                      {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(e.date))}
                     </span>
                     {e.status && (
                       <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${isFuture ? 'bg-sky-100 text-sky-800' : 'bg-gray-200 text-gray-700'}`}>

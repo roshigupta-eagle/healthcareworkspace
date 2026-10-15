@@ -18,17 +18,17 @@ import { RecentChartActivityCard } from '@/components/patient-overview/RecentCha
 import { CareGapsCard } from '@/components/patient-overview/CareGapsCard';
 import { CareTeamCard } from '@/components/patient-overview/CareTeamCard';
 
-export default async function PatientDetailPage({ params, searchParams }: { params: any; searchParams?: any }) {
+type SearchParams = Record<string, string | string[] | undefined>;
+
+export default async function PatientDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<SearchParams> }) {
   const resolvedParams = await params;
-  const id = resolvedParams?.id ?? (params && params.id);
+  const id = resolvedParams.id;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  let session: any = null;
+  let session: Awaited<ReturnType<typeof auth>> = null;
   try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
     session = await auth();
-  } catch (e) {
+  } catch {
     // allow dev preview
   }
   // Support dev override via ?asUser=USER_ID (only outside production)
@@ -40,10 +40,12 @@ export default async function PatientDetailPage({ params, searchParams }: { para
   }
   if (!session) redirect('/login');
 
-  const patient = getPatientById(String(id));
+  const patient = getPatientById(id);
   if (!patient) {
     redirect('/dashboard/records');
   }
+
+  const renderedAt = new Date().getTime();
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6">
@@ -72,7 +74,7 @@ export default async function PatientDetailPage({ params, searchParams }: { para
 
       {/* 3. Clinical Timeline */}
       <div className="mt-6">
-        <ClinicalTimeline patient={patient} />
+        <ClinicalTimeline patient={patient} renderedAt={renderedAt} />
       </div>
 
       {/* 4. Current Health Concerns, Upcoming Tasks, Upcoming Appointment */}

@@ -39,7 +39,6 @@ function previewQuery(searchParams: URLSearchParams) {
   const query = new URLSearchParams();
   const asUser = searchParams.get('asUser');
   if (asUser) query.set('asUser', asUser);
-  else if (searchParams.get('noauth') === '1' || searchParams.get('noauth') === 'true') query.set('noauth', '1');
   return query;
 }
 

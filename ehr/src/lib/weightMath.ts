@@ -15,8 +15,7 @@ export function toKg(value: number, unit?: WeightUnit): number {
   if (!Number.isFinite(value)) return value;
   const u = (unit || 'kg').toLowerCase();
   if (u === 'lb' || u === 'lbs' || u === 'pound' || u === 'pounds') return value / LB_PER_KG;
-  if (u === 'kg' || u === 'kgs' || u === 'kilogram' || u === 'kilograms') return value;
-  return NaN;
+  return value;
 }
 
 export function fromKg(valueKg: number, unit: 'kg' | 'lb' = 'kg'): number {
@@ -51,32 +50,6 @@ export interface GoalLike {
   owner?: string;
 }
 
-export type GoalDirection = 'reduction' | 'gain' | 'maintenance' | 'range' | 'unknown';
-
-/**
- * Infers the documented goal's direction from its explicit type, falling back to the
- * baseline/target relationship when no type was recorded. Never assumes "lower is better".
- */
-export function inferGoalDirection(goal: GoalLike | null | undefined): GoalDirection {
-  if (!goal) return 'unknown';
-  const type = (goal.goalType || '').toLowerCase();
-  if (type === 'maintain' || type === 'maintenance') return 'maintenance';
-  if (type === 'target-range' && (goal.targetWeightMin != null || goal.targetWeightMax != null)) return 'range';
-  if (type === 'weight-reduction' || type === 'percentage-loss') return 'reduction';
-  if (type === 'weight-gain') return 'gain';
-  // A numeric target without an explicit goal type is intentionally neutral.
-  // The record does not establish whether loss, gain, or maintenance is desired.
-  return 'unknown';
-}
-
-export interface GoalProgress {
-  direction: GoalDirection;
-  /** 0-100, clamped. Null when progress cannot be meaningfully computed (e.g. maintenance). */
-  percent: number | null;
-  /** Human-readable, direction-aware summary. Never implies clinical success/failure. */
-  label: string;
-}
-
 export interface GoalValidation {
   valid: boolean;
   errors: string[];
@@ -100,6 +73,37 @@ export function validateGoal(goal: GoalLike, now = new Date()): GoalValidation {
     else if (targetDate.getTime() < now.getTime()) errors.push('The target date must not be in the past.');
   }
   return { valid: errors.length === 0, errors };
+}
+
+export type GoalDirection = 'reduction' | 'gain' | 'maintenance' | 'range' | 'unknown';
+
+/**
+ * Infers the documented goal's direction from its explicit type, falling back to the
+ * baseline/target relationship when no type was recorded. Never assumes "lower is better".
+ */
+export function inferGoalDirection(goal: GoalLike | null | undefined): GoalDirection {
+  if (!goal) return 'unknown';
+  const type = (goal.goalType || '').toLowerCase();
+  if (type === 'maintain' || type === 'maintenance') return 'maintenance';
+  if (type === 'target-range' && (goal.targetWeightMin != null || goal.targetWeightMax != null)) return 'range';
+  if (type === 'weight-reduction' || type === 'percentage-loss') return 'reduction';
+  if (type === 'weight-gain') return 'gain';
+  // Fallback: infer from the documented baseline/target relationship only — this describes
+  // what was recorded, it does not judge whether loss or gain is clinically desirable.
+  if (goal.baselineWeight != null && goal.targetWeight != null) {
+    const delta = goal.targetWeight - goal.baselineWeight;
+    if (Math.abs(delta) < 0.5) return 'maintenance';
+    return delta < 0 ? 'reduction' : 'gain';
+  }
+  return 'unknown';
+}
+
+export interface GoalProgress {
+  direction: GoalDirection;
+  /** 0-100, clamped. Null when progress cannot be meaningfully computed (e.g. maintenance). */
+  percent: number | null;
+  /** Human-readable, direction-aware summary. Never implies clinical success/failure. */
+  label: string;
 }
 
 /** Computes goal progress respecting the documented goal type — never a single universal formula. */
@@ -163,48 +167,13 @@ export function canonicalMeasurements<T extends MeasurementLike>(measurements: T
     .sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
 }
 
-export interface WeightSummary<T extends MeasurementLike> {
-  items: Array<T & { weightKg: number }>;
-  first: (T & { weightKg: number }) | null;
-  last: (T & { weightKg: number }) | null;
-  totalChangeKg: number;
-  totalChangePct: number;
-  average: number | null;
-  lowest: (T & { weightKg: number }) | null;
-  highest: (T & { weightKg: number }) | null;
-  median: number | null;
-}
-
-export function summarizeWeightMeasurements<T extends MeasurementLike>(measurements: T[]): WeightSummary<T> {
-  const items = canonicalMeasurements(measurements);
-  const first = items[0] || null;
-  const last = items[items.length - 1] || null;
-  const values = items.map((item) => item.weightKg);
-  const sortedValues = values.slice().sort((a, b) => a - b);
-  const median = sortedValues.length ? Number((sortedValues.length % 2 ? sortedValues[Math.floor(sortedValues.length / 2)] : (sortedValues[sortedValues.length / 2 - 1] + sortedValues[sortedValues.length / 2]) / 2).toFixed(2)) : null;
-  const lowest = items.reduce<(T & { weightKg: number }) | null>((current, item) => !current || item.weightKg < current.weightKg ? item : current, null);
-  const highest = items.reduce<(T & { weightKg: number }) | null>((current, item) => !current || item.weightKg > current.weightKg ? item : current, null);
-  const totalChangeKg = first && last ? Number((last.weightKg - first.weightKg).toFixed(2)) : 0;
-  return {
-    items,
-    first,
-    last,
-    totalChangeKg,
-    totalChangePct: first && first.weightKg ? Number(((totalChangeKg / first.weightKg) * 100).toFixed(2)) : 0,
-    average: values.length ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2)) : null,
-    lowest,
-    highest,
-    median,
-  };
-}
-
 /**
  * Flags measurements that deviate sharply from their chronological neighbors. This is a
  * statistical data-quality signal ONLY — not a clinical threshold — and must never cause
  * a measurement to be hidden or removed.
  */
 export function detectOutlierIds(measurements: MeasurementLike[]): Set<string> {
-  const sorted = canonicalMeasurements(measurements);
+  const sorted = [...measurements].sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
   const kgValues = sorted.map((m) => toKg(m.value, m.unit));
   const flagged = new Set<string>();
   if (kgValues.length < 3) return flagged;

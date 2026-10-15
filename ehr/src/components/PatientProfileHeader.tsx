@@ -8,19 +8,37 @@ import Link from 'next/link';
 // MessageDrawer removed in favor of a full Messages page
 const MORE_ACTIONS = (patientId: string) => [
   { label: 'Add Clinical Note', href: `/dashboard/records/${patientId}/doctor-notes/new` },
-  { label: 'Upload Document', href: `/dashboard/records/${patientId}/documents/upload` },
-  { label: 'Create Task', href: `/dashboard/records/${patientId}/tasks/new` },
-  { label: 'Add Condition', href: `/dashboard/records/${patientId}/conditions/new` },
-  { label: 'Record Allergy', href: `/dashboard/records/${patientId}/allergies/new` },
+  { label: 'Upload Document', href: `/dashboard/records/${patientId}/documents?upload=1` },
+  { label: 'Create Task', href: `/dashboard/tasks?patientId=${encodeURIComponent(patientId)}&new=1` },
+  { label: 'Manage Conditions', href: `/dashboard/records/${patientId}/conditions` },
+  { label: 'Manage Allergies', href: `/dashboard/records/${patientId}/allergies` },
   { label: 'Add Immunization', href: `/dashboard/records/${patientId}/immunizations/new` },
-  { label: 'Add Medication', href: `/dashboard/records/${patientId}/medications/new` },
-  { label: 'Create Referral', href: `/dashboard/records/${patientId}/referrals/new` },
+  { label: 'Manage Medications', href: `/dashboard/records/${patientId}/medications` },
 ];
 
 export default function PatientProfileHeader({ patient, showActions = true }: { patient: Patient; showActions?: boolean }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [authoritativeAllergies, setAuthoritativeAllergies] = useState<string[] | null>(patient.allergies ?? null);
+  const [allergyStatus, setAllergyStatus] = useState<'known' | 'loading' | 'unavailable'>(patient.allergies ? 'known' : 'loading');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const query = new URLSearchParams(window.location.search);
+    const preview = query.get('asUser') ? `?asUser=${encodeURIComponent(query.get('asUser')!)}` : query.get('noauth') ? '?noauth=1&asUser=dev' : '';
+    fetch(`/api/patients/${encodeURIComponent(patient.id)}/allergies${preview}`, { cache: 'no-store', signal: controller.signal }).then(async (response) => {
+      if (!response.ok) throw new Error('Allergy records could not be loaded.');
+      return response.json() as Promise<{ items?: Array<{ substance?: { display?: string }; clinicalStatus?: string; verificationStatus?: string }> }>;
+    }).then((payload) => {
+      const names = (payload.items || []).filter((item) => item.clinicalStatus === 'active' && !['refuted', 'entered-in-error'].includes(item.verificationStatus || '')).map((item) => item.substance?.display).filter((name): name is string => Boolean(name));
+      setAuthoritativeAllergies(names);
+      setAllergyStatus('known');
+    }).catch((error: unknown) => {
+      if ((error as { name?: string }).name !== 'AbortError') setAllergyStatus('unavailable');
+    });
+    return () => controller.abort();
+  }, [patient.id]);
 
   useEffect(() => {
     function onScroll() {
@@ -55,7 +73,7 @@ export default function PatientProfileHeader({ patient, showActions = true }: { 
   const firstName = names[0] || '';
   const lastName = names.slice(1).join(' ') || '';
   const dob = patient.dob || '';
-  const age = patient.age || 0;
+  const age = ageFromBirthDate(patient.dob);
   const gender = patient.gender || 'Unknown';
   const sex = (gender === 'Male' || gender === 'Female' || gender === 'Other') ? gender : 'Unknown';
 
@@ -64,11 +82,11 @@ export default function PatientProfileHeader({ patient, showActions = true }: { 
   if (patient.contact?.email) identifiers.push({ label: 'Email', value: patient.contact.email, href: `/dashboard/records/${patient.id}/contact-preferences#email` });
   if (patient.preferredLanguage) identifiers.push({ label: 'Preferred Language', value: patient.preferredLanguage });
 
-  const allergies = patient.allergies || [];
+  const allergies = authoritativeAllergies || [];
 
   const isHighRisk = patient.riskLevel
     ? patient.riskLevel === 'High'
-    : (patient.conditions || []).some((c: string) => ['Hypertension', 'Type 2 Diabetes', 'Heart Failure', 'CAD'].includes(c)) || (patient.age || 0) >= 65;
+    : (patient.conditions || []).some((c: string) => ['Hypertension', 'Type 2 Diabetes', 'Heart Failure', 'CAD'].includes(c)) || age >= 65;
 
   const riskLabel = patient.riskLevel || (isHighRisk ? 'High' : 'Low');
   const moreActions = MORE_ACTIONS(patient.id);
@@ -79,7 +97,7 @@ export default function PatientProfileHeader({ patient, showActions = true }: { 
         <div className="flex items-center justify-between gap-3 bg-white rounded-lg p-3 shadow-sm border border-gray-100 h-12">
           <div className="text-sm font-medium">{patient.name}</div>
           <div className="text-xs text-slate-500">{patient.dob ? formatDateOnly(patient.dob) : ''} · MRN {patient.mrn}</div>
-          <div className="text-sm text-red-600 font-semibold">{patient.riskLevel || (patient.age >= 65 ? 'High' : '')}</div>
+          <div className="text-sm text-red-600 font-semibold">{patient.riskLevel || (age >= 65 ? 'High' : '')}</div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -91,6 +109,7 @@ export default function PatientProfileHeader({ patient, showActions = true }: { 
             age={age}
             sex={sex}
             allergies={allergies}
+            allergyStatus={allergyStatus}
             allergyHref={`/dashboard/records/${patient.id}/allergies`}
             identifiers={identifiers}
             verificationStatus="verified"
@@ -239,5 +258,16 @@ function formatDateOnly(value: string) {
     return new Date(year, month - 1, day).toLocaleDateString();
   }
   return new Date(value).toLocaleDateString();
+}
+
+function ageFromBirthDate(value?: string) {
+  if (!value) return 0;
+  const birthDate = new Date(`${value}T12:00:00Z`);
+  if (Number.isNaN(birthDate.getTime())) return 0;
+  const today = new Date();
+  let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
+  const monthDelta = today.getUTCMonth() - birthDate.getUTCMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && today.getUTCDate() < birthDate.getUTCDate())) age -= 1;
+  return Math.max(0, age);
 }
 

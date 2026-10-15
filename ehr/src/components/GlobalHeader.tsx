@@ -15,19 +15,21 @@ export default function GlobalHeader({ session, role }: { session?: HeaderSessio
   const tenant = session?.user?.tenant || 'Maple Health';
   const searchParams = useSearchParams();
   const noAuth = !!(searchParams && (searchParams.get('noauth') === '1' || searchParams.get('noauth') === 'true'));
-  const homeHref = noAuth ? '/doctor?noauth=1' : role === 'DOCTOR' || role === 'ADMIN' ? '/doctor' : '/dashboard';
+  const previewUser = searchParams?.get('asUser');
+  const homeHref = noAuth ? `/dashboard?noauth=1${searchParams.get('asUser') ? `&asUser=${encodeURIComponent(searchParams.get('asUser')!)}` : '&asUser=dev'}` : '/dashboard';
   const notificationsHref = noAuth ? '/dashboard/tasks?noauth=1' : '/dashboard/tasks';
 
   useEffect(() => {
     if (!noAuth && role !== 'DOCTOR' && role !== 'ADMIN' && role !== 'NURSE' && role !== 'CLINICIAN' && role !== 'PRACTITIONER') return;
     let active = true;
-    fetch('/api/doctor-work-summary', { cache: 'no-store' }).then(async (response) => {
+    const query = noAuth || previewUser ? `?noauth=1&asUser=${encodeURIComponent(previewUser || 'dev')}` : '';
+    fetch(`/api/doctor-work-summary${query}`, { cache: 'no-store' }).then(async (response) => {
       if (!response.ok) return;
       const data = await response.json() as { messages?: { unread?: number } };
       if (active) setUnread(data.messages?.unread || 0);
     }).catch(() => undefined);
     return () => { active = false; };
-  }, [noAuth, role]);
+  }, [noAuth, previewUser, role]);
 
   
 

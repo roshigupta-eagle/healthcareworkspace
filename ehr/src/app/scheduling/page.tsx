@@ -1,6 +1,7 @@
 ﻿import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getSchedulingSnapshot } from '@/lib/schedulingData';
+import { getCanonicalPatientDirectory, scopeSchedulingSnapshot } from '@/lib/patientDirectory';
 import AppointmentsWorkspace from '@/app/dashboard/appointments/AppointmentsWorkspace';
 
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,7 @@ export default async function SchedulingPage({ searchParams }: { searchParams?: 
   const role = String(session.user?.role || 'DOCTOR').toUpperCase();
   if (!['ADMIN', 'DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER', 'DEV'].includes(role)) redirect('/unauthorized');
   const query = typeof resolvedSearchParams.q === 'string' ? resolvedSearchParams.q : '';
-  const snapshot = await getSchedulingSnapshot(query);
-  return <AppointmentsWorkspace initialData={snapshot} includeMonth />;
+  const snapshot = await getSchedulingSnapshot(query, { preview });
+  const directory = await getCanonicalPatientDirectory({ preview });
+  return <AppointmentsWorkspace initialData={scopeSchedulingSnapshot(snapshot, directory, preview)} includeMonth />;
 }

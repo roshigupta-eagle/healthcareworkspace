@@ -7,7 +7,7 @@
  * judgment ("improving"/"healthy"/etc). That interpretation layer belongs to
  * the UI, and only when a documented goal explicitly supports it.
  */
-import { isIncludedInAnalytics, toKg } from './weightMath';
+import { toKg } from './weightMath';
 
 export interface InsightMeasurement {
   id: string;
@@ -25,7 +25,7 @@ export function weekdayLabel(i: number): string {
 }
 
 function usable(items: InsightMeasurement[]): InsightMeasurement[] {
-  return (items || []).filter(isIncludedInAnalytics);
+  return (items || []).filter((m) => !m.enteredInError && typeof m.value === 'number' && Number.isFinite(m.value));
 }
 
 function kgValues(items: InsightMeasurement[]): number[] {

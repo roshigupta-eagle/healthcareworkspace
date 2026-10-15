@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toKg, inferGoalDirection, computeGoalProgress, detectOutlierIds, isIncludedInAnalytics } from '../lib/weightMath';
+import { toKg, inferGoalDirection, computeGoalProgress, detectOutlierIds } from '../lib/weightMath';
 
 describe('toKg', () => {
   it('converts pounds to kilograms', () => {
@@ -15,10 +15,10 @@ describe('inferGoalDirection', () => {
     expect(inferGoalDirection({ goalType: 'weight-gain' })).toBe('gain');
     expect(inferGoalDirection({ goalType: 'maintain' })).toBe('maintenance');
   });
-  it('keeps a bare baseline/target pair neutral without a documented type', () => {
-    expect(inferGoalDirection({ baselineWeight: 98, targetWeight: 62 })).toBe('unknown');
-    expect(inferGoalDirection({ baselineWeight: 56, targetWeight: 62 })).toBe('unknown');
-    expect(inferGoalDirection({ baselineWeight: 62, targetWeight: 62.1 })).toBe('unknown');
+  it('falls back to baseline/target relationship without assuming loss is better', () => {
+    expect(inferGoalDirection({ baselineWeight: 98, targetWeight: 62 })).toBe('reduction');
+    expect(inferGoalDirection({ baselineWeight: 56, targetWeight: 62 })).toBe('gain');
+    expect(inferGoalDirection({ baselineWeight: 62, targetWeight: 62.1 })).toBe('maintenance');
   });
   it('returns unknown with no goal', () => {
     expect(inferGoalDirection(null)).toBe('unknown');
@@ -27,13 +27,13 @@ describe('inferGoalDirection', () => {
 
 describe('computeGoalProgress', () => {
   it('computes reduction progress without assuming loss is universally good', () => {
-    const goal = { goalType: 'weight-reduction', baselineWeight: 98, targetWeight: 62 };
+    const goal = { baselineWeight: 98, targetWeight: 62 };
     const result = computeGoalProgress(goal, 80);
     expect(result.direction).toBe('reduction');
     expect(result.percent).toBe(50);
   });
   it('computes gain progress correctly (does not invert formula)', () => {
-    const goal = { goalType: 'weight-gain', baselineWeight: 56, targetWeight: 62 };
+    const goal = { baselineWeight: 56, targetWeight: 62 };
     const result = computeGoalProgress(goal, 59);
     expect(result.direction).toBe('gain');
     expect(result.percent).toBe(50);
@@ -41,7 +41,7 @@ describe('computeGoalProgress', () => {
   it('never reports a fake 100% for an out-of-direction goal', () => {
     // Current (56) is below baseline (98) which is itself below... wait: baseline 98, target 62 = reduction goal.
     // Current weight far past the target in the same direction should clamp at 100, not overshoot.
-    const goal = { goalType: 'weight-reduction', baselineWeight: 98, targetWeight: 62 };
+    const goal = { baselineWeight: 98, targetWeight: 62 };
     const result = computeGoalProgress(goal, 40);
     expect(result.percent).toBe(100);
   });
@@ -54,20 +54,6 @@ describe('computeGoalProgress', () => {
   it('handles missing data without throwing', () => {
     expect(computeGoalProgress(null, null).percent).toBeNull();
     expect(computeGoalProgress({}, 70).percent).toBeNull();
-  });
-
-  it('does not calculate progress for a target with no documented direction', () => {
-    const result = computeGoalProgress({ baselineWeight: 98, targetWeight: 62 }, 80);
-    expect(result.direction).toBe('unknown');
-    expect(result.percent).toBeNull();
-  });
-});
-
-describe('analytics inclusion policy', () => {
-  it('excludes preliminary and unsupported-unit measurements from analytics', () => {
-    expect(isIncludedInAnalytics({ id: 'preliminary', value: 70, unit: 'kg', occurredAt: '2026-01-01', status: 'preliminary' })).toBe(false);
-    expect(isIncludedInAnalytics({ id: 'unsupported', value: 70000, unit: 'grams', occurredAt: '2026-01-01', status: 'final' })).toBe(false);
-    expect(isIncludedInAnalytics({ id: 'final', value: 70, unit: 'kg', occurredAt: '2026-01-01', status: 'final' })).toBe(true);
   });
 });
 

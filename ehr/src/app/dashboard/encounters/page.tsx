@@ -1,39 +1,42 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { mockVisits } from '@/cardiology/services/api.mock';
-import EncounterCard from '@/components/EncounterCard';
+import { CLINICAL_WORKSPACE_ROLES } from '@/lib/doctorWorkspaceAuth';
+import { getEncounterWorkspace } from '@/lib/encounterWorkspace';
+import EncounterCommandCenter from '@/components/encounters/EncounterCommandCenter';
 
-export default async function EncountersPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
+export const dynamic = 'force-dynamic';
+
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] || '' : value || '';
+}
+
+export default async function EncountersPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const preview = process.env.NODE_ENV !== 'production' && Boolean(resolvedSearchParams.noauth || resolvedSearchParams.asUser);
-  let session = await auth().catch(() => null);
-  if (!session && preview) session = { user: { id: 'dev-doctor', name: 'Doctor User', role: 'DOCTOR' } } as typeof session;
-  if (!session) redirect('/login');
-
-  const role = session.user.role;
-  if (role !== 'DOCTOR' && role !== 'ADMIN') redirect('/unauthorized');
-
-  // Use in-memory mock visits directly on the server to avoid relative fetch parsing issues
-  const visits = Array.isArray(mockVisits) ? mockVisits : [];
-
-  return (
-    <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-sky-600">Encounters</h1>
-          <p className="mt-1 text-sm text-gray-600">Recent clinical encounters and visit notes.</p>
-        </div>
-        <div>
-          <Link href="/dashboard/encounters/new" className="inline-flex items-center gap-2 rounded-md bg-sky-600 text-white px-4 py-2 text-sm font-semibold shadow-sm hover:bg-sky-500">New Encounter</Link>
-        </div>
-      </div>
-
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {visits.map((enc: any) => (
-          <EncounterCard key={enc.id} encounter={enc} />
-        ))}
-      </div>
-    </div>
+  const asUser = firstValue(resolvedSearchParams.asUser);
+  const noAuth = ['1', 'true'].includes(firstValue(resolvedSearchParams.noauth));
+  const preview = process.env.NODE_ENV !== 'production' && (
+    noAuth || ['dev', 'dev-doctor', 'user-admin-khan'].includes(asUser)
   );
+  const session = await auth().catch(() => null);
+  if (!session?.user && !preview) redirect('/login?returnTo=%2Fdashboard%2Fencounters');
+  const user = session?.user as { id?: string; name?: string; role?: string } | undefined;
+  const actor = preview && !session?.user
+    ? {
+        id: asUser || 'dev-doctor',
+        name: asUser === 'user-admin-khan' ? 'Admin Fatima Khan' : 'Doctor User',
+        role: asUser === 'user-admin-khan' ? 'ADMIN' : 'DEV',
+      }
+    : {
+        id: user?.id || 'dev-doctor',
+        name: user?.name || 'Doctor User',
+        role: String(user?.role || 'DOCTOR').toUpperCase(),
+      };
+  if (!CLINICAL_WORKSPACE_ROLES.has(actor.role)) redirect('/unauthorized');
+  const previewQuery = preview
+    ? `${noAuth ? 'noauth=1' : ''}${noAuth && asUser ? '&' : ''}${asUser ? `asUser=${encodeURIComponent(asUser)}` : noAuth ? 'asUser=dev' : ''}`
+    : '';
+
+  return <EncounterCommandCenter initialData={await getEncounterWorkspace(actor)} preview={previewQuery} />;
 }

@@ -1,0 +1,27 @@
+@startuml
+actor Clinician
+actor Patient
+actor Interpreter
+participant "Roshi API" as API
+participant "Authorization" as AZ
+participant "LiveKit" as LK
+Clinician -> API : create group call(conversationId)
+API -> AZ : validate clinician + patient + participant policy
+AZ --> API : allow
+API -> LK : create opaque room
+API --> Clinician : scoped token
+Patient -> API : join request
+API -> AZ : verify patient membership
+AZ --> API : allow
+API --> Patient : scoped token
+Interpreter -> API : join request
+API -> AZ : verify invite + interpreter role
+AZ --> API : allow
+API --> Interpreter : limited scoped token
+Clinician -> LK : join
+Patient -> LK : join
+Interpreter -> LK : join
+LK --> Clinician : participant events/media
+LK --> Patient : participant events/media
+LK --> Interpreter : participant events/media
+@enduml

@@ -14,13 +14,12 @@ import ClinicalThreadDrawer from './ClinicalThreadDrawer';
 import ShareReportModal from './ShareReportModal';
 import ViewAllMeasurementsModal from './ViewAllMeasurementsModal';
 import EventDetailPopover from './EventDetailPopover';
-import { computeGoalProgress, detectOutlierIds, formatSignedWeight, formatWeight, summarizeWeightMeasurements } from '@/lib/weightMath';
-import type { AchievementsModel } from '@/lib/weightAchievements';
-import type { WeightTrendEvent, WeightTrendGoal, WeightTrendMeasurement, WeightTrendPatient } from './weightTrendTypes';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { toKg, computeGoalProgress, detectOutlierIds } from '@/lib/weightMath';
+import { computeAchievements } from '@/lib/weightAchievements';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-type Props = { patientId: string; patientData: WeightTrendPatient; initialRange?: string };
+type Props = { patientId: string; patientData: any; initialRange?: string };
 
 function formatDateShort(iso?: string) {
   if (!iso) return '—';
@@ -34,64 +33,43 @@ const DEFAULT_CHART_OPTIONS = {
   showSources: false,
   connectPoints: true,
   showLabels: false,
-  showDataQualityFlags: true,
 };
-
-const VALID_RANGES = new Set(['1M', '3M', '6M', '1Y', '2Y', 'All']);
 
 export default function WeightTrendShell({ patientId, patientData, initialRange }: Props) {
   const searchParamsLocal = useSearchParams();
-  const pathname = usePathname() || '';
-  const router = useRouter();
-  const requestedTab = (searchParamsLocal?.get('tab') || 'overview').toLowerCase();
-  const activeTab = ['overview', 'insights', 'achievements', 'log'].includes(requestedTab) ? requestedTab : requestedTab === 'acheivments' ? 'achievements' : 'overview';
-  const [measurements, setMeasurements] = useState<WeightTrendMeasurement[] | null>(null);
-  const [goal, setGoal] = useState<WeightTrendGoal | null>(null);
-  const [clinicalEvents, setClinicalEvents] = useState<WeightTrendEvent[]>([]);
+  const activeTab = (searchParamsLocal?.get('tab') || 'overview').toLowerCase();
+  const [measurements, setMeasurements] = useState<any[] | null>(null);
+  const [goal, setGoal] = useState<any | null>(null);
+  const [clinicalEvents, setClinicalEvents] = useState<any[]>([]);
   const [eventsFailed, setEventsFailed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const requestedRangeValue = searchParamsLocal?.get('range') || initialRange || '1Y';
-  const requestedRange = VALID_RANGES.has(requestedRangeValue) ? requestedRangeValue : '1Y';
-  const requestedUnit = searchParamsLocal?.get('unit') === 'lb' ? 'lb' : 'kg';
-  const range = requestedRange;
-  const displayUnit = requestedUnit;
+  const [range, setRange] = useState(initialRange || '1Y');
   const [showAdd, setShowAdd] = useState(false);
   const [showManageGoal, setShowManageGoal] = useState(false);
-  const [selectedMeasurement, setSelectedMeasurement] = useState<WeightTrendMeasurement | null>(null);
+  const [selectedMeasurement, setSelectedMeasurement] = useState<any | null>(null);
   const [showWhatChanged, setShowWhatChanged] = useState(false);
   const [showThread, setShowThread] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showViewAll, setShowViewAll] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<WeightTrendEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [chartOptions, setChartOptions] = useState(DEFAULT_CHART_OPTIONS);
   const [chartOptionsOpen, setChartOptionsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [showMoreStats, setShowMoreStats] = useState(false);
   // Achievements must reflect the patient's ENTIRE tracking history, never the
   // Overview date-range selector, so they are fetched independently (all-time).
-  const [allTimeMeasurements, setAllTimeMeasurements] = useState<WeightTrendMeasurement[] | null>(null);
-  const [achievementsModel, setAchievementsModel] = useState<AchievementsModel | null>(null);
-  const [allTimeClinicalEvents, setAllTimeClinicalEvents] = useState<WeightTrendEvent[]>([]);
+  const [allTimeMeasurements, setAllTimeMeasurements] = useState<any[] | null>(null);
 
-  function updateViewParams(next: { range?: string; unit?: 'kg' | 'lb' }) {
-    const params = new URLSearchParams(searchParamsLocal?.toString() || '');
-    if (next.range) params.set('range', next.range);
-    if (next.unit) params.set('unit', next.unit);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }
-
-  useEffect(() => { void fetchData(); }, [patientId, range]);
-  useEffect(() => { void fetchAllTimeMeasurements(); }, [patientId]);
+  useEffect(() => { fetchData(); }, [patientId, range]);
+  useEffect(() => { fetchAllTimeMeasurements(); }, [patientId]);
 
   async function fetchAllTimeMeasurements() {
     try {
       const res = await fetch(`/api/patients/${encodeURIComponent(patientId)}/weight-trend`);
       if (!res.ok) throw new Error('request failed');
       const json = await res.json();
-      setAllTimeMeasurements(Array.isArray(json.items) ? json.items as WeightTrendMeasurement[] : []);
-      setAchievementsModel(json.achievements || null);
-      setAllTimeClinicalEvents(Array.isArray(json.clinicalEvents) ? json.clinicalEvents : []);
+      setAllTimeMeasurements(Array.isArray(json.items) ? json.items : []);
     } catch {
       setAllTimeMeasurements([]);
     }
@@ -113,17 +91,16 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
       const res = await fetch(url);
       if (!res.ok) throw new Error('request failed');
       const json = await res.json();
-      setMeasurements(Array.isArray(json.items) ? json.items as WeightTrendMeasurement[] : []);
-      setGoal((json.goal || null) as WeightTrendGoal | null);
-      setAchievementsModel(json.achievements || null);
+      setMeasurements(Array.isArray(json.items) ? json.items : []);
+      setGoal(json.goal || null);
       try {
-        setClinicalEvents(Array.isArray(json.clinicalEvents) ? json.clinicalEvents as WeightTrendEvent[] : []);
+        setClinicalEvents(Array.isArray(json.clinicalEvents) ? json.clinicalEvents : []);
         setEventsFailed(false);
       } catch {
         setClinicalEvents([]);
         setEventsFailed(true);
       }
-    } catch {
+    } catch (e) {
       setMeasurements(null);
       setGoal(null);
       setClinicalEvents([]);
@@ -135,47 +112,44 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
   }
 
   const stats = useMemo(() => {
-    const summary = summarizeWeightMeasurements(measurements || []);
-    return summary.items.length > 0 ? { ...summary, periodCount: summary.items.length } : null;
+    const items = (measurements || [])
+      .filter((m) => !m.enteredInError)
+      .map((m) => ({ ...m, weightKg: toKg(Number(m.value), m.unit) }))
+      .sort((a,b)=> Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
+    if (!items || items.length === 0) return null;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const totalChangeKg = +(last.weightKg - first.weightKg).toFixed(2);
+    const totalChangePct = +(first.weightKg ? ((totalChangeKg / first.weightKg) * 100) : 0).toFixed(2);
+    const periodCount = items.length;
+    const average = +(items.reduce((s:any,i:any)=>s + (Number(i.weightKg)||0),0) / items.length).toFixed(2);
+    const lowest = items.reduce((min:any,i:any)=> i.weightKg < min.weightKg ? i : min, items[0]);
+    const highest = items.reduce((max:any,i:any)=> i.weightKg > max.weightKg ? i : max, items[0]);
+    const median = (() => {
+      const vals = items.map(i=>i.weightKg).sort((a,b)=>a-b);
+      const mid = Math.floor(vals.length/2);
+      return +((vals.length % 2 === 0 ? ((vals[mid-1]+vals[mid])/2) : vals[mid])).toFixed(2);
+    })();
+    return { first, last, totalChangeKg, totalChangePct, periodCount, average, lowest, highest, median, items };
   }, [measurements]);
 
   const outlierIds = useMemo(() => detectOutlierIds((measurements || []).filter((m) => !m.enteredInError)), [measurements]);
 
   const goalProgress = useMemo(() => computeGoalProgress(goal, stats?.last?.weightKg ?? null), [goal, stats]);
 
-  const lastClinicalVisit = useMemo(() => {
-    const completedAppointments = (patientData.upcoming || []).filter((appointment) => appointment.status?.toLowerCase() === 'completed' && Date.parse(appointment.date) <= Date.now()).map((appointment) => appointment.date);
-    const historicalVisits = (patientData.history || []).filter((visit) => visit.status?.toLowerCase() !== 'cancelled' && Date.parse(visit.date) <= Date.now()).map((visit) => visit.date);
-    const dates = [...completedAppointments, ...historicalVisits].filter((date) => Number.isFinite(Date.parse(date))).sort((a, b) => Date.parse(a) - Date.parse(b));
-    return dates[dates.length - 1] || patientData.lastVisit;
-  }, [patientData]);
-
   const previousVisitMeasurement = useMemo(() => {
-    if (!stats || !lastClinicalVisit) return null;
-    const lastVisitT = Date.parse(lastClinicalVisit);
+    if (!stats || !patientData?.lastVisit) return null;
+    const lastVisitT = Date.parse(patientData.lastVisit);
     if (Number.isNaN(lastVisitT)) return null;
     // closest documented measurement at/before the last visit date
-    const allTimeItems = summarizeWeightMeasurements(allTimeMeasurements || []).items;
-    const candidates = allTimeItems.filter((m) => Date.parse(m.occurredAt) <= lastVisitT);
+    const candidates = stats.items.filter((m: any) => Date.parse(m.occurredAt) <= lastVisitT);
     return candidates.length ? candidates[candidates.length - 1] : stats.first;
-  }, [stats, allTimeMeasurements, lastClinicalVisit]);
-
-  const measurementsSinceLastVisit = useMemo(() => {
-    if (!lastClinicalVisit) return 0;
-    const cutoff = Date.parse(lastClinicalVisit);
-    return summarizeWeightMeasurements(allTimeMeasurements || []).items.filter((measurement) => Date.parse(measurement.occurredAt) > cutoff).length;
-  }, [allTimeMeasurements, lastClinicalVisit]);
-
-  const reviewCountSinceLastVisit = useMemo(() => {
-    if (!lastClinicalVisit) return 0;
-    const cutoff = Date.parse(lastClinicalVisit);
-    return (allTimeMeasurements || []).filter((measurement) => Date.parse(measurement.occurredAt) > cutoff && measurement.dataQuality?.state === 'review').length;
-  }, [allTimeMeasurements, lastClinicalVisit]);
+  }, [stats, patientData]);
 
   const eventsSinceLastVisit = useMemo(() => {
-    const cutoff = lastClinicalVisit ? Date.parse(lastClinicalVisit) : 0;
-    return (allTimeClinicalEvents || []).filter((e) => Date.parse(e.date) >= cutoff);
-  }, [allTimeClinicalEvents, lastClinicalVisit]);
+    const cutoff = patientData?.lastVisit ? Date.parse(patientData.lastVisit) : 0;
+    return (clinicalEvents || []).filter((e) => Date.parse(e.date) >= cutoff);
+  }, [clinicalEvents, patientData]);
 
   function directionLabel() {
     if (!stats) return 'Insufficient Data';
@@ -184,54 +158,16 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
     return delta < 0 ? 'Gradually decreasing' : 'Gradually increasing';
   }
 
-  const workspaceHeader = (
-    <>
-      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-[length:var(--wt-title-size)] font-extrabold text-slate-900 tracking-tight">Weight Trend</h1>
-          <div className="text-sm text-slate-500 mt-1 font-normal">Longitudinal weight, BMI, goals and relevant clinical events.</div>
-        </div>
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button onClick={() => setShowAdd(true)} className="px-4 py-2.5 bg-teal-700 text-white rounded-xl shadow-sm text-xs sm:text-sm font-bold hover:bg-teal-800 transition-colors flex items-center gap-1.5">+ Add Measurement</button>
-          <button onClick={() => setShowManageGoal(true)} className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">Manage Goal</button>
-          <button onClick={() => setShowShare(true)} disabled={!stats} title={!stats ? 'A report requires at least one valid measurement.' : undefined} className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50">Share Report</button>
-          <div className="relative">
-            <button onClick={() => setExportOpen((value) => !value)} aria-haspopup="menu" aria-expanded={exportOpen} className="px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">Export</button>
-            {exportOpen && (
-              <div role="menu" className="absolute right-0 mt-1 w-48 rounded-xl bg-white border border-slate-200 shadow-xl py-1 z-30">
-                <button role="menuitem" onClick={() => { setExportOpen(false); setShowViewAll(true); }} className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 font-medium">CSV Measurements</button>
-                <button role="menuitem" onClick={() => { setExportOpen(false); window.print(); }} className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 font-medium">Print</button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      <WeightTrendTabs achievementsCompleted={achievementsModel?.summary.completed} achievementsTotal={achievementsModel?.summary.total} />
-      <div className="weight-trend-context-bar flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm" aria-label="Weight Trend analysis context">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Analysis period</span>
-          <div className="flex max-w-full overflow-x-auto rounded-lg bg-slate-100 p-0.5" role="group" aria-label="Analysis period">
-            {['1M', '3M', '6M', '1Y', '2Y', 'All'].map((period) => (
-              <button key={period} type="button" onClick={() => updateViewParams({ range: period })} aria-pressed={range === period} className={`min-h-8 whitespace-nowrap rounded-md px-2.5 text-xs font-bold transition-colors ${range === period ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>{period}</button>
-            ))}
-          </div>
-        </div>
-        <label className="flex items-center gap-2 text-[11px] font-bold text-slate-500" htmlFor="weight-display-unit-global">
-          Display unit
-          <select id="weight-display-unit-global" value={displayUnit} onChange={(event) => updateViewParams({ unit: event.target.value as 'kg' | 'lb' })} className="weight-trend-control h-9 min-h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-700">
-            <option value="kg">kg</option>
-            <option value="lb">lb</option>
-          </select>
-        </label>
-      </div>
-    </>
-  );
 
+  // Authoritative, pure computation over ALL-TIME data — not the Overview date-range selector.
+  const achievementsModel = useMemo(() => {
+    if (!allTimeMeasurements) return null;
+    return computeAchievements(allTimeMeasurements, goal);
+  }, [allTimeMeasurements, goal]);
 
-  if (loading || (!measurements && !loadError) || (activeTab === 'log' && allTimeMeasurements === null)) {
+  if (loading || (!measurements && !loadError)) {
     return (
-      <div className="weight-trend-workspace" aria-busy="true" aria-live="polite">
-        {workspaceHeader}
+      <div className="max-w-7xl mx-auto" aria-busy="true" aria-live="polite">
         <div className="animate-pulse space-y-5">
           <div className="h-8 bg-slate-100 rounded w-1/3" />
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -249,10 +185,9 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
     );
   }
 
-  if (loadError && activeTab !== 'log') {
+  if (loadError) {
     return (
-      <div className="weight-trend-workspace text-center">
-        {workspaceHeader}
+      <div className="max-w-3xl mx-auto text-center py-16">
         <h2 className="text-xl font-semibold text-slate-900">We couldn&apos;t load weight history.</h2>
         <p className="text-sm text-slate-500 mt-2">Please try again, or return once the connection is restored.</p>
         <button onClick={fetchData} className="mt-5 px-4 py-2 bg-teal-700 text-white rounded-lg text-sm font-semibold hover:bg-teal-800">Try Again</button>
@@ -260,10 +195,9 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
     );
   }
 
-  if (!stats && activeTab === 'overview') {
+  if ((measurements || []).length === 0) {
     return (
-      <div className="weight-trend-workspace">
-        {workspaceHeader}
+      <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <h2 className="text-2xl font-semibold">Weight Trend</h2>
           <p className="text-sm text-gray-600 mt-2">No weight measurements yet. Weight measurements will appear here once recorded.</p>
@@ -285,15 +219,14 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
     );
   }
 
-  if (stats?.items.length === 1 && activeTab === 'overview') {
-    const only = stats.items[0];
+  if ((measurements || []).filter((m) => !m.enteredInError).length === 1) {
+    const only = measurements!.find((m) => !m.enteredInError);
     return (
-      <div className="weight-trend-workspace">
-        {workspaceHeader}
+      <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <h2 className="text-2xl font-semibold">Weight Trend</h2>
           <div className="mt-4 rounded-2xl border border-teal-100 bg-teal-50/40 p-5 text-center">
-            <div className="text-3xl font-black text-slate-900">{formatWeight(Number(only.value), only.unit, displayUnit)}</div>
+            <div className="text-3xl font-black text-slate-900">{only.value} {only.unit || 'kg'}</div>
             <div className="text-xs text-slate-500 mt-1">{formatDateShort(only.occurredAt)}</div>
           </div>
           <p className="text-sm text-gray-600 mt-4">More measurements are needed to display a longitudinal trend.</p>
@@ -311,48 +244,59 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
     );
   }
 
-  if (!stats) {
-    return (
-      <div className="weight-trend-workspace">
-        {workspaceHeader}
-        {activeTab === 'insights' ? <InsightsView measurements={measurements} range={range} unitOverride={displayUnit} patientId={patientId} goal={goal} patientData={patientData} onRefresh={fetchData} onAddMeasurement={() => setShowAdd(true)} /> : activeTab === 'achievements' ? <AchievementsView model={achievementsModel} onSetGoal={() => setShowManageGoal(true)} /> : <LogView measurements={allTimeMeasurements} displayUnit={displayUnit} analysisRange={range} patientId={patientId} onRefresh={fetchData} />}
-        {showAdd && <AddMeasurementDrawer patientId={patientId} existingMeasurements={measurements || []} onClose={() => setShowAdd(false)} onSaved={async () => { await fetchData(); setShowAdd(false); }} />}
-        {showManageGoal && <ManageGoalDrawer patientId={patientId} existingGoal={goal} onClose={() => setShowManageGoal(false)} onSaved={async () => { await fetchData(); setShowManageGoal(false); }} />}
-        {showViewAll && <ViewAllMeasurementsModal patientId={patientId} measurements={allTimeMeasurements || measurements || []} displayUnit={displayUnit} analysisRange={range} onClose={() => setShowViewAll(false)} onSelectMeasurement={() => setShowViewAll(false)} />}
-      </div>
-    );
-  }
+  if (!stats) return null;
 
   // Render page with data
   const current = stats.last;
+  const baseline = stats.first;
 
   return (
-    <div className="weight-trend-workspace">
-      {workspaceHeader}
+    <div className="max-w-7xl mx-auto">
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl md:text-[28px] font-bold text-slate-900">Weight Trend</h1>
+          <div className="text-sm text-slate-500 mt-1">Longitudinal weight, BMI, goals and relevant clinical events.</div>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <button onClick={()=>setShowAdd(true)} className="px-4 py-2.5 bg-teal-700 text-white rounded-lg shadow-sm text-sm font-semibold hover:bg-teal-800">+ Add Measurement</button>
+          <button onClick={()=>setShowManageGoal(true)} className="px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">Manage Goal</button>
+          <button onClick={()=>setShowShare(true)} className="px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">Share Report</button>
+          <div className="relative">
+            <button onClick={()=>setExportOpen((v)=>!v)} aria-haspopup="menu" aria-expanded={exportOpen} className="px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">Export</button>
+            {exportOpen && (
+              <div role="menu" className="absolute right-0 mt-1 w-48 rounded-lg bg-white border border-slate-200 shadow-lg py-1 z-30">
+                <button role="menuitem" onClick={() => { setExportOpen(false); setShowViewAll(true); }} className="w-full text-left px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50">CSV Measurements</button>
+                <button role="menuitem" onClick={() => { setExportOpen(false); window.print(); }} className="w-full text-left px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50">Print</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs: Overview / Insights / Achievements / Log */}
+      <WeightTrendTabs achievementsCompleted={achievementsModel?.summary.completed} achievementsTotal={achievementsModel?.summary.total} />
 
       {/* Main tab content */}
       {activeTab === 'insights' ? (
         <InsightsView
           measurements={measurements}
           range={range}
-          unitOverride={displayUnit}
+          unitOverride={undefined}
           patientId={patientId}
           goal={goal}
           patientData={patientData}
           onRefresh={fetchData}
-          onAddMeasurement={() => setShowAdd(true)}
         />
       ) : activeTab === 'achievements' ? (
         <AchievementsView model={achievementsModel} onSetGoal={() => setShowManageGoal(true)} />
       ) : activeTab === 'log' ? (
-        <LogView measurements={allTimeMeasurements} displayUnit={displayUnit} analysisRange={range} patientId={patientId} onRefresh={fetchData} />
+        <LogView measurements={allTimeMeasurements || []} patientId={patientId} onRefresh={fetchData} />
       ) : (
         /* Overview content */
-        <div id="weight-panel-overview" role="tabpanel" aria-labelledby="weight-tab-overview" className="weight-trend-view">
-          <h2 className="sr-only">Clinical Weight Snapshot</h2>
+        <>
           {/* Clinical Weight Snapshot — Current Weight is the dominant card */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-            <div className="weight-trend-surface md:col-span-2 bg-teal-50/70 p-6 border-teal-100">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div className="md:col-span-2 bg-teal-50/70 rounded-2xl p-6 border border-teal-100">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-teal-100 flex items-center justify-center ring-1 ring-teal-600/10">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -362,17 +306,17 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Current Weight</div>
-                  <div className="text-[38px] leading-none font-black text-slate-900 mt-1.5 tabular-nums">{formatWeight(Number(current.value), current.unit, displayUnit)}</div>
-                  <div className="text-sm text-slate-600 mt-2">{formatDateShort(current.occurredAt)} · <span className="capitalize">{(current.source || 'clinic').replace('-', ' ')}</span></div>
+                  <div className="text-[38px] leading-none font-black text-slate-900 mt-1.5 tabular-nums">{current.value}<span className="text-lg font-semibold text-slate-500"> {current.unit}</span></div>
+                  <div className="text-sm text-slate-600 mt-2">{formatDateShort(current.occurredAt)} · <span className="capitalize">{current.source?.replace('-', ' ')}</span></div>
                   {(() => {
-                    const idx = stats.items.findIndex((x) => x.id === current.id);
+                    const idx = stats.items.findIndex((x: any) => x.id === current.id);
                     if (idx > 0) {
                       const prev = stats.items[idx - 1];
                       const d = +(current.weightKg - prev.weightKg).toFixed(2);
                       return (
                         <div className="text-sm text-slate-700 mt-2">
-                          Previous: <span className="font-medium">{formatWeight(Number(prev.value), prev.unit, displayUnit)}</span>{' '}
-                          <span className="text-slate-500">({d === 0 ? 'no change' : formatSignedWeight(d, displayUnit)})</span>
+                          Previous: <span className="font-medium">{prev.value} {prev.unit}</span>{' '}
+                          <span className="text-slate-500">({d === 0 ? 'no change' : d > 0 ? `+${d} kg` : `${d} kg`})</span>
                         </div>
                       );
                     }
@@ -382,23 +326,22 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
               </div>
             </div>
 
-            <div className="weight-trend-surface bg-sky-50/70 p-5 border-sky-100">
+            <div className="bg-sky-50/70 p-4 rounded-2xl border border-sky-100">
               <div className="text-xs font-semibold text-sky-800 uppercase tracking-wide">Since Baseline</div>
-              <div className="text-xl font-bold text-slate-900 mt-1.5 tabular-nums">{formatSignedWeight(stats.totalChangeKg, displayUnit)}</div>
-              <div className="text-xs text-slate-500 mt-1">{stats.totalChangePct}% · Baseline {formatWeight(Number(stats.first.value), stats.first.unit, displayUnit)} · {formatDateShort(stats.first.occurredAt)}</div>
+              <div className="text-xl font-bold text-slate-900 mt-1.5 tabular-nums">{stats.totalChangeKg > 0 ? `+${stats.totalChangeKg} kg` : `${stats.totalChangeKg} kg`}</div>
+              <div className="text-xs text-slate-500 mt-1">{stats.totalChangePct}% · Baseline {stats.first.value} {stats.first.unit} · {formatDateShort(stats.first.occurredAt)}</div>
             </div>
 
-            <div className="weight-trend-surface bg-cyan-50/70 p-5 border-cyan-100">
+            <div className="bg-cyan-50/70 p-4 rounded-2xl border border-cyan-100">
               <div className="text-xs font-semibold text-cyan-800 uppercase tracking-wide">Since Last Visit</div>
               {previousVisitMeasurement ? (() => {
                 const d = +(current.weightKg - previousVisitMeasurement.weightKg).toFixed(2);
-                return <div className="text-xl font-bold text-slate-900 mt-1.5 tabular-nums">{d === 0 ? 'No change' : formatSignedWeight(d, displayUnit)}</div>;
+                return <div className="text-xl font-bold text-slate-900 mt-1.5 tabular-nums">{d === 0 ? 'No change' : d > 0 ? `+${d} kg` : `${d} kg`}</div>;
               })() : <div className="text-xl font-bold text-slate-400 mt-1.5">—</div>}
-              <div className="text-xs text-slate-500 mt-1">{lastClinicalVisit ? `Last clinical visit: ${formatDateShort(lastClinicalVisit)}` : 'No qualifying clinical visit'}</div>
-              {previousVisitMeasurement?.id === stats.first.id && <div className="text-[11px] text-slate-400 mt-1">No measurement was recorded at that visit; using the first valid record after it.</div>}
+              <div className="text-xs text-slate-500 mt-1">{patientData.lastVisit ? formatDateShort(patientData.lastVisit) : 'No visit data'}</div>
             </div>
 
-            <div className="weight-trend-surface bg-violet-50/70 p-5 border-violet-100">
+            <div className="bg-violet-50/70 p-4 rounded-2xl border border-violet-100">
               <div className="text-xs font-semibold text-violet-800 uppercase tracking-wide">BMI</div>
               <div className="text-xl font-bold text-slate-900 mt-1.5 tabular-nums">{(() => {
                 const heightRaw = patientData.height || '';
@@ -406,22 +349,25 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
                 if (m && current.weightKg) return (current.weightKg / (m * m)).toFixed(1) + ' kg/m²';
                 return '—';
               })()}</div>
-              <div className="text-xs text-slate-500 mt-1" title="Uses the latest valid weight and the patient's latest documented height.">Based on latest documented height &amp; weight</div>
+              <div className="text-xs text-slate-500 mt-1">Based on latest documented height &amp; weight</div>
             </div>
           </div>
 
           {/* Main region: chart + right rail */}
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.42fr)] 2xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.4fr)] gap-6">
-            <div className="weight-trend-surface bg-white p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-800">Weight Trend Over Time</h2>
+                  <div className="text-lg font-semibold text-slate-800">Weight Trend Over Time</div>
                   <div className="text-xs text-slate-500">Documented measurements with goals and relevant clinical events.</div>
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <button onClick={() => setShowWhatChanged(true)} className="weight-trend-control ml-1.5 inline-flex items-center px-3 text-xs font-semibold border border-cyan-200 bg-cyan-50 text-cyan-800 rounded-md hover:bg-cyan-100">What Changed?</button>
+                  {['1M','3M','6M','1Y','2Y','All'].map((r)=> (
+                    <button key={r} onClick={()=>setRange(r)} className={`px-2.5 py-1 text-xs font-semibold rounded-md ${range===r? 'bg-teal-100 text-teal-800': 'text-slate-500 hover:bg-slate-50'}`}>{r}</button>
+                  ))}
+                  <button onClick={() => setShowWhatChanged(true)} className="ml-1.5 px-2.5 py-1 text-xs font-semibold border border-cyan-200 bg-cyan-50 text-cyan-800 rounded-md hover:bg-cyan-100">What Changed?</button>
                   <div className="relative">
-                    <button onClick={() => setChartOptionsOpen((v) => !v)} aria-haspopup="menu" aria-expanded={chartOptionsOpen} className="weight-trend-control inline-flex items-center px-3 text-xs font-semibold border border-slate-200 rounded-md text-slate-600 hover:bg-slate-50">Chart Options</button>
+                    <button onClick={() => setChartOptionsOpen((v) => !v)} aria-haspopup="menu" aria-expanded={chartOptionsOpen} className="px-2.5 py-1 text-xs font-semibold border border-slate-200 rounded-md text-slate-600 hover:bg-slate-50">Chart Options</button>
                     {chartOptionsOpen && (
                       <div role="menu" className="absolute right-0 mt-1 w-56 rounded-lg bg-white border border-slate-200 shadow-lg py-2 px-3 z-30 space-y-1.5">
                         {([
@@ -429,14 +375,12 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
                           ['showBaseline', 'Show Baseline'],
                           ['showEvents', 'Show Clinical Events'],
                           ['showLabels', 'Show Labels'],
-                          ['showSources', 'Show Source'],
-                          ['showDataQualityFlags', 'Show Data Quality Flags'],
                           ['connectPoints', 'Connect Points'],
                         ] as const).map(([key, label]) => (
                           <label key={key} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
                             <input
                               type="checkbox"
-                              checked={chartOptions[key]}
+                              checked={(chartOptions as any)[key]}
                               onChange={(e) => setChartOptions((prev) => ({ ...prev, [key]: e.target.checked }))}
                               className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                             />
@@ -453,33 +397,32 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
                 <WeightTrendChart
                   measurements={stats.items}
                   goal={goal}
-                  displayUnit={displayUnit}
                   clinicalEvents={clinicalEvents}
-                  outlierIds={chartOptions.showDataQualityFlags ? outlierIds : undefined}
+                  outlierIds={outlierIds}
                   chartOptions={chartOptions}
                   onPointClick={(m) => setSelectedMeasurement(m)}
                   onEventClick={(e) => setSelectedEvent(e)}
                 />
                 <p className="sr-only" role="note">
-                  {stats.periodCount} valid weight measurements are available in the selected period. Values range from {formatWeight(stats.lowest.value, stats.lowest.unit, displayUnit)} to {formatWeight(stats.highest.value, stats.highest.unit, displayUnit)}. The latest measurement is {formatWeight(current.value, current.unit, displayUnit)} on {formatDateShort(current.occurredAt)}.
+                  {stats.periodCount} weight measurements are available in the selected period. Values range from {stats.lowest.value} {stats.lowest.unit} to {stats.highest.value} {stats.highest.unit}. The latest measurement is {current.value} {current.unit} on {formatDateShort(current.occurredAt)}.
                 </p>
                 {eventsFailed && <p className="mt-2 text-xs text-amber-700">Clinical event markers unavailable.</p>}
               </div>
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
                 <div>Trend: <span className="font-medium text-slate-800">{directionLabel()}</span></div>
-                <div>Goal: <span className="font-medium">{goal ? goal.targetWeight != null ? `${formatWeight(Number(goal.targetWeight), 'kg', displayUnit)}${goal.targetDate ? ` by ${formatDateShort(goal.targetDate)}` : ''}` : 'Documented range' : 'No active goal'}</span></div>
+                <div>Goal: <span className="font-medium">{goal ? `${goal.targetWeight} kg by ${formatDateShort(goal.targetDate)}` : 'No active goal'}</span></div>
                 <button onClick={() => setShowViewAll(true)} className="text-teal-700 font-medium hover:underline">View Data Table</button>
               </div>
 
               {/* Compact statistics row */}
               <div className="mt-6 border-t border-slate-100 pt-4">
                 <div className="flex flex-col md:flex-row gap-3 text-sm text-slate-700">
-                  <div className="flex-1 p-3 bg-slate-50 rounded-xl"><div className="text-xs text-slate-500">Starting</div><div className="font-semibold">{formatWeight(Number(stats.first.value), stats.first.unit, displayUnit)}</div><div className="text-xs text-slate-400">{formatDateShort(stats.first.occurredAt)}</div></div>
-                  <div className="flex-1 p-3 bg-slate-50 rounded-xl"><div className="text-xs text-slate-500">Lowest</div><div className="font-semibold">{formatWeight(Number(stats.lowest.value), stats.lowest.unit, displayUnit)}</div><div className="text-xs text-slate-400">{formatDateShort(stats.lowest.occurredAt)}</div></div>
-                  <div className="flex-1 p-3 bg-slate-50 rounded-xl"><div className="text-xs text-slate-500">Highest</div><div className="font-semibold">{formatWeight(Number(stats.highest.value), stats.highest.unit, displayUnit)}</div><div className="text-xs text-slate-400">{formatDateShort(stats.highest.occurredAt)}</div></div>
-                  <div className="flex-1 p-3 bg-slate-50 rounded-xl"><div className="text-xs text-slate-500">Average</div><div className="font-semibold">{formatWeight(Number(stats.average), 'kg', displayUnit)}</div><div className="text-xs text-slate-400">Selected range</div></div>
-                  <div className="flex-1 p-3 bg-slate-50 rounded-xl"><div className="text-xs text-slate-500">Measurements</div><div className="font-semibold">{stats.periodCount}</div><div className="text-xs text-slate-400">{stats.items.filter((measurement) => measurement.source === 'clinic').length} clinic</div></div>
+                  <div className="flex-1 p-3 bg-slate-50 rounded-xl"><div className="text-xs text-slate-500">Starting</div><div className="font-semibold">{stats.first.value} {stats.first.unit}</div><div className="text-xs text-slate-400">{formatDateShort(stats.first.occurredAt)}</div></div>
+                  <div className="flex-1 p-3 bg-slate-50 rounded-xl"><div className="text-xs text-slate-500">Lowest</div><div className="font-semibold">{stats.lowest.value} {stats.lowest.unit}</div><div className="text-xs text-slate-400">{formatDateShort(stats.lowest.occurredAt)}</div></div>
+                  <div className="flex-1 p-3 bg-slate-50 rounded-xl"><div className="text-xs text-slate-500">Highest</div><div className="font-semibold">{stats.highest.value} {stats.highest.unit}</div><div className="text-xs text-slate-400">{formatDateShort(stats.highest.occurredAt)}</div></div>
+                  <div className="flex-1 p-3 bg-slate-50 rounded-xl"><div className="text-xs text-slate-500">Average</div><div className="font-semibold">{stats.average} kg</div><div className="text-xs text-slate-400">Selected range</div></div>
+                  <div className="flex-1 p-3 bg-slate-50 rounded-xl"><div className="text-xs text-slate-500">Measurements</div><div className="font-semibold">{stats.periodCount}</div><div className="text-xs text-slate-400">{(measurements||[]).filter(m=>m.source==='clinic').length} clinic</div></div>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <button onClick={() => setShowMoreStats((v) => !v)} className="text-xs font-semibold text-teal-700 hover:underline">{showMoreStats ? '− Hide' : '+ More Statistics'}</button>
@@ -487,13 +430,13 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
                 </div>
                 {showMoreStats && (
                   <div className="mt-2 p-3 bg-slate-50 rounded-xl text-sm text-slate-700 flex items-center gap-6">
-                    <div><div className="text-xs text-slate-500">Median</div><div className="font-semibold">{formatWeight(Number(stats.median), 'kg', displayUnit)}</div></div>
+                    <div><div className="text-xs text-slate-500">Median</div><div className="font-semibold">{stats.median} kg</div></div>
                   </div>
                 )}
               </div>
             </div>
 
-            <aside className="weight-trend-surface bg-white p-6">
+            <aside className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Weight Insights</h3>
               <div className="mt-3 space-y-3 text-sm text-slate-700">
                 <div className="flex items-center gap-3">
@@ -518,7 +461,7 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
 
               <div className="mt-5 border-t border-slate-100 pt-4">
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">Measurement Sources</h4>
-                {renderSourceDistribution(stats.items)}
+                {renderSourceDistribution(measurements || [])}
               </div>
 
               <div className="mt-5 border-t border-slate-100 pt-4">
@@ -526,8 +469,8 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
                 <div className="mt-2 text-sm text-slate-700">
                   {goal ? (
                     <div className="space-y-1.5">
-                      <div className="font-semibold text-slate-900">{goal.targetWeight != null ? `Target: ${formatWeight(Number(goal.targetWeight), 'kg', displayUnit)}` : 'Documented target range'}</div>
-                      <div className="text-xs text-slate-500 capitalize">Goal type: {goalProgress.direction === 'reduction' ? 'Weight reduction' : goalProgress.direction === 'gain' ? 'Weight gain' : goalProgress.direction === 'maintenance' ? 'Maintenance' : goalProgress.direction === 'range' ? 'Target range' : 'Direction not documented'}</div>
+                      <div className="font-semibold text-slate-900">Target: {goal.targetWeight} kg</div>
+                      <div className="text-xs text-slate-500 capitalize">Goal type: {goalProgress.direction === 'reduction' ? 'Weight reduction' : goalProgress.direction === 'gain' ? 'Weight gain' : goalProgress.direction === 'maintenance' ? 'Maintenance' : goalProgress.direction === 'range' ? 'Target range' : 'Documented goal'}</div>
                       <div className="text-xs text-slate-500 capitalize">Status: {goal.status || 'active'}{goal.targetDate ? ` · Target date: ${formatDateShort(goal.targetDate)}` : ''}</div>
                       {goal.owner && <div className="text-xs text-slate-500 capitalize">Owner: {goal.owner.replace('-', ' ')}</div>}
                       {goalProgress.percent != null ? (
@@ -553,8 +496,8 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
               <div className="mt-5 border-t border-slate-100 pt-4">
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">Recent Measurements</h4>
                 <div className="mt-2 space-y-1">
-                  {stats.items.slice().reverse().slice(0, 5).map((m) => {
-                    const idx = stats.items.findIndex((x) => x.id === m.id);
+                  {stats.items.slice().reverse().slice(0, 5).map((m: any) => {
+                    const idx = stats.items.findIndex((x: any) => x.id === m.id);
                     const prev = idx > 0 ? stats.items[idx - 1] : null;
                     const d = prev ? +(m.weightKg - prev.weightKg).toFixed(2) : null;
                     const flagged = outlierIds.has(m.id);
@@ -562,12 +505,12 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
                       <div key={m.id} role="button" tabIndex={0} onClick={() => setSelectedMeasurement(m)} onKeyDown={(e) => { if (e.key === 'Enter') setSelectedMeasurement(m); }} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
                         <div>
                           <div className="font-medium text-slate-800 flex items-center gap-1.5">
-                            {formatWeight(Number(m.value), m.unit, displayUnit)}
+                            {m.value} {m.unit}
                             {flagged && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">Review</span>}
                           </div>
-                          <div className="text-xs text-slate-500 capitalize">{formatDateShort(m.occurredAt)} · {(m.source || 'clinic').replace('-', ' ')}</div>
+                          <div className="text-xs text-slate-500 capitalize">{formatDateShort(m.occurredAt)} · {m.source?.replace('-', ' ')}</div>
                         </div>
-                        <div className="text-sm text-slate-500">{d == null ? '—' : d === 0 ? 'no change' : formatSignedWeight(d, displayUnit)}</div>
+                        <div className="text-sm text-slate-500">{d == null ? '—' : d === 0 ? 'no change' : d > 0 ? `+${d} kg` : `${d} kg`}</div>
                       </div>
                     );
                   })}
@@ -577,7 +520,7 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
             </aside>
           </div>
 
-        </div>) }
+        </>) }
 
       {/* Add measurement drawer */}
       {showAdd && (
@@ -605,7 +548,7 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
         <MeasurementDetailDrawer
           patientId={patientId}
           measurement={selectedMeasurement}
-          needsReview={outlierIds.has(selectedMeasurement.id)}
+          isOutlier={outlierIds.has(selectedMeasurement.id)}
           onClose={() => setSelectedMeasurement(null)}
           onUpdated={async () => { await fetchData(); setSelectedMeasurement(null); }}
         />
@@ -618,10 +561,6 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
           currentMeasurement={stats.last}
           previousVisitMeasurement={previousVisitMeasurement}
           clinicalEvents={eventsSinceLastVisit}
-          displayUnit={displayUnit}
-          lastClinicalVisit={lastClinicalVisit}
-          measurementsSinceLastVisit={measurementsSinceLastVisit}
-          reviewCountSinceLastVisit={reviewCountSinceLastVisit}
           onClose={() => setShowWhatChanged(false)}
           onOpenThread={() => setShowThread(true)}
         />
@@ -633,7 +572,6 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
           patient={patientData}
           clinicalEvents={clinicalEvents}
           measurements={stats?.items || []}
-          displayUnit={displayUnit}
           onClose={() => setShowThread(false)}
         />
       )}
@@ -645,7 +583,6 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
           currentWeight={stats.last}
           stats={stats}
           goal={goal}
-          displayUnit={displayUnit}
           onClose={() => setShowShare(false)}
         />
       )}
@@ -654,9 +591,7 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
       {showViewAll && (
         <ViewAllMeasurementsModal
           patientId={patientId}
-          measurements={allTimeMeasurements || measurements || []}
-          displayUnit={displayUnit}
-          analysisRange={range}
+          measurements={measurements || []}
           onClose={() => setShowViewAll(false)}
           onSelectMeasurement={(m) => { setShowViewAll(false); setSelectedMeasurement(m); }}
         />
@@ -675,12 +610,11 @@ export default function WeightTrendShell({ patientId, patientData, initialRange 
   );
 }
 
-function renderSourceDistribution(items: WeightTrendMeasurement[]) {
-  const counts = items.reduce<Record<string, number>>((acc, item) => { const source = item.source || 'clinic'; acc[source] = (acc[source] || 0) + 1; return acc; }, {});
+function renderSourceDistribution(items: any[]) {
+  const counts = items.reduce((acc:any,i:any)=>{ acc[i.source] = (acc[i.source]||0)+1; return acc; }, {});
   const total = items.length || 1;
   const sources = ['clinic','patient-reported','device','imported'];
-  const colors: Record<string, string> = { clinic: '#0F766E', 'patient-reported': '#0891B2', device: '#7C3AED', imported: '#64748B' };
-  const labels: Record<string, string> = { clinic: 'Clinic', 'patient-reported': 'Patient Reported', device: 'Connected Device', imported: 'Imported' };
+  const colors: Record<string, string> = { clinic: '#06B6D4', 'patient-reported': '#60A5FA', device: '#C084FC', imported: '#94A3B8' };
   return (
     <div className="mt-2 space-y-2">
       {sources.map((s)=> {
@@ -688,7 +622,7 @@ function renderSourceDistribution(items: WeightTrendMeasurement[]) {
         return (
           <div key={s} className="text-sm">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full" style={{ background: colors[s] }} /> <span className="text-slate-600">{labels[s]}</span></div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full" style={{ background: colors[s] }} /> <span className="capitalize text-slate-600">{s.replace('-',' ')}</span></div>
               <span className="font-medium text-slate-800">{count}</span>
             </div>
             <div className="mt-1 h-1 w-full rounded-full bg-slate-100 overflow-hidden">

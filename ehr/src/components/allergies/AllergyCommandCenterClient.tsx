@@ -33,6 +33,7 @@ import HistoryDrawer from './HistoryDrawer';
 import SourceRecordDrawer from './SourceRecordDrawer';
 import MessagePatientDrawer from './MessagePatientDrawer';
 import DataQualityDrawer from './DataQualityDrawer';
+import { withAllergyApiPreview } from './apiPreview';
 
 import {
   IconPlus,
@@ -102,7 +103,7 @@ export default function AllergyCommandCenterClient({
   // Refresh data from backend APIs
   async function refreshData() {
     try {
-      const res = await fetch(`/api/patients/${encodeURIComponent(patient.id)}/allergies`);
+      const res = await fetch(withAllergyApiPreview(`/api/patients/${encodeURIComponent(patient.id)}/allergies`));
       if (res.ok) {
         const json = await res.json();
         if (json.items) setAllergies(json.items);
@@ -177,7 +178,7 @@ export default function AllergyCommandCenterClient({
     detail?: string
   ) {
     try {
-      const res = await fetch(`/api/patients/${encodeURIComponent(patient.id)}/allergies/${allergyId}`, {
+      const res = await fetch(withAllergyApiPreview(`/api/patients/${encodeURIComponent(patient.id)}/allergies/${allergyId}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...patch, action, detail }),
@@ -223,7 +224,7 @@ export default function AllergyCommandCenterClient({
 
   async function handleRetrySafety() {
     try {
-      const res = await fetch(`/api/patients/${encodeURIComponent(patient.id)}/allergy-safety-retry`, {
+      const res = await fetch(withAllergyApiPreview(`/api/patients/${encodeURIComponent(patient.id)}/allergy-safety-retry`), {
         method: 'POST',
       });
       if (res.ok) {

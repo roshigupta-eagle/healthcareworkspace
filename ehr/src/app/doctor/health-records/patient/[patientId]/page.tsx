@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { getSchedulingSnapshot, readSchedulingResource } from '@/lib/schedulingData';
+import { getLocalPatient } from '@/lib/patientDirectory';
 
 function text(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -9,6 +10,7 @@ function text(value: unknown) {
 
 function nameOf(patient: Record<string, unknown>) {
   const name = Array.isArray(patient.name) ? patient.name[0] as Record<string, unknown> | undefined : undefined;
+  if (text(name?.text)) return text(name?.text) as string;
   const given = Array.isArray(name?.given) ? name.given.filter((value): value is string => typeof value === 'string') : [];
   return [...given, text(name?.family)].filter((value): value is string => Boolean(value)).join(' ') || 'Patient name unavailable';
 }
@@ -28,9 +30,12 @@ export default async function FhirPatientRecordPage({ params, searchParams }: { 
   const role = String(session?.user?.role || 'DEV').toUpperCase();
   if (session?.user && !['ADMIN', 'DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER', 'DEV'].includes(role)) redirect('/unauthorized');
   const { patientId } = await params;
-  const patient = await readSchedulingResource('Patient', patientId);
+  const localPatient = preview ? getLocalPatient(patientId) : null;
+  const patient = localPatient
+    ? { resourceType: 'Patient', id: localPatient.id, name: [{ text: localPatient.name }], birthDate: localPatient.birthDate, gender: localPatient.gender, active: localPatient.status !== 'Inactive' }
+    : await readSchedulingResource('Patient', patientId);
   if (!patient) redirect(`/dashboard/appointments${previewQuery(values)}`);
-  const snapshot = await getSchedulingSnapshot();
+  const snapshot = await getSchedulingSnapshot('', { preview });
   const appointments = snapshot.appointments.filter((appointment) => appointment.patientId === patientId).sort((left, right) => Date.parse(right.start) - Date.parse(left.start));
   const name = nameOf(patient);
   const dob = text(patient.birthDate) || 'Not documented';

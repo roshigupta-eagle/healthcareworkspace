@@ -1,10 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { resolveDataPath } from './dataPath';
 
-function getDataPath(): string {
-  return resolveDataPath('allergy_safety.json');
-}
+const DATA_PATH = path.join(process.cwd(), 'ehr', 'data', 'allergy_safety.json');
 
 export type SafetyCheckStatus = 'completed' | 'unavailable';
 
@@ -28,21 +25,10 @@ export interface PatientAllergySafetyResult {
 
 async function readRaw(): Promise<{ items: PatientAllergySafetyResult[] }> {
   try {
-    const dataPath = getDataPath();
-    const raw = await fs.promises.readFile(dataPath, 'utf-8');
+    const raw = await fs.promises.readFile(DATA_PATH, 'utf-8');
     return JSON.parse(raw || '{}');
   } catch {
     return { items: [] };
-  }
-}
-
-async function writeAll(data: { items: PatientAllergySafetyResult[] }) {
-  try {
-    const dataPath = getDataPath();
-    await fs.promises.mkdir(path.dirname(dataPath), { recursive: true });
-    await fs.promises.writeFile(dataPath, JSON.stringify(data, null, 2), 'utf-8');
-  } catch {
-    /* best-effort persistence in mock environment */
   }
 }
 
@@ -53,24 +39,6 @@ export async function getAllergySafetyResult(patientId: string): Promise<Patient
 }
 
 export async function retrySafetyCheck(patientId: string): Promise<PatientAllergySafetyResult> {
-  const data = await readRaw();
-  const items = data.items || [];
-  const now = new Date().toISOString();
-  const idx = items.findIndex((r) => String(r.patientId) === String(patientId));
-
-  const result: PatientAllergySafetyResult = {
-    patientId,
-    status: 'completed',
-    checkedAt: now,
-    conflicts: idx >= 0 ? items[idx].conflicts || [] : [],
-  };
-
-  if (idx >= 0) {
-    items[idx] = result;
-  } else {
-    items.push(result);
-  }
-  data.items = items;
-  await writeAll(data);
-  return result;
+  const existing = await getAllergySafetyResult(patientId);
+  return existing || { patientId, status: 'unavailable', conflicts: [] };
 }

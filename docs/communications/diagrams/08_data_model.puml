@@ -1,0 +1,76 @@
+@startuml
+hide methods
+class Conversation {
+  +id: UUID
+  +tenantId: UUID
+  +organizationId: UUID
+  +patientId: FHIR Reference
+  +topic: string
+  +status: enum
+  +version: bigint
+}
+class ConversationParticipant {
+  +conversationId: UUID
+  +participantType: enum
+  +participantId: UUID
+  +role: enum
+  +status: enum
+}
+class Message {
+  +id: UUID
+  +conversationId: UUID
+  +patientId: FHIR Reference
+  +senderParticipantId: UUID
+  +type: TEXT|AUDIO|FILE|SYSTEM
+  +bodyRef: string
+  +createdAt: timestamp
+}
+class MessageRecipientState {
+  +messageId: UUID
+  +participantId: UUID
+  +state: UNREAD|READ|ACK|RESPONDED
+}
+class CallSession {
+  +id: UUID
+  +conversationId: UUID
+  +patientId: FHIR Reference
+  +mediaRoomId: opaque string
+  +state: enum
+  +startedAt: timestamp
+  +endedAt: timestamp
+}
+class CallParticipant {
+  +callSessionId: UUID
+  +participantId: UUID
+  +mediaIdentity: opaque string
+  +joinState: enum
+}
+class Attachment {
+  +id: UUID
+  +patientId: FHIR Reference
+  +objectKey: string
+  +mimeType: string
+  +scanState: enum
+}
+class ClinicalLink {
+  +conversationId: UUID
+  +resourceType: string
+  +resourceId: string
+  +relationship: string
+}
+class OutboxEvent {
+  +id: UUID
+  +aggregateType: string
+  +aggregateId: UUID
+  +eventType: string
+  +state: enum
+}
+Conversation "1" -- "*" ConversationParticipant
+Conversation "1" -- "*" Message
+Message "1" -- "*" MessageRecipientState
+Conversation "1" -- "*" CallSession
+CallSession "1" -- "*" CallParticipant
+Message "*" -- "*" Attachment
+Conversation "1" -- "*" ClinicalLink
+Conversation "1" -- "*" OutboxEvent
+@enduml

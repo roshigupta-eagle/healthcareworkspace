@@ -11,13 +11,8 @@
  *  - Change-from-previous uses unit-normalized (kg) values and is described
  *    with clinically neutral color/language (never "decrease = good").
  */
-import { isIncludedInAnalytics, toKg } from './weightMath';
-
-export interface MeasurementDataQuality {
-  readonly state: 'review';
-  readonly reason: string;
-  readonly source?: string;
-}
+import { toKg } from './weightMath';
+import { detectOutlierIds } from './weightMath';
 
 export type MeasurementStatus = 'preliminary' | 'final' | 'corrected' | 'entered-in-error';
 
@@ -33,12 +28,7 @@ export interface LogMeasurement {
   recorder?: { id?: string; name?: string };
   encounterId?: string;
   method?: string;
-  correction?: { correctedAt?: string; previousValue?: number; previousUnit?: string; reason?: string; correctedBy?: string; replacedByMeasurementId?: string };
-  replacesMeasurementId?: string;
-  replacedByMeasurementId?: string;
-  enteredInErrorReason?: string;
-  dataQuality?: MeasurementDataQuality;
-  provenance?: { createdAt?: string; updatedAt?: string; sourceSystem?: string; version?: string };
+  correction?: { correctedAt?: string; previousValue?: number; previousUnit?: string };
 }
 
 export type RowAction = 'view' | 'correct' | 'history' | 'view-encounter' | 'mark-entered-in-error';
@@ -60,10 +50,6 @@ export function availableActions(m: LogMeasurement): RowAction[] {
     actions.push('history');
     return actions;
   }
-  if (m.replacedByMeasurementId) {
-    actions.push('history');
-    return actions;
-  }
   actions.push('correct', 'history');
   if (m.encounterId) actions.push('view-encounter');
   actions.push('mark-entered-in-error');
@@ -71,7 +57,7 @@ export function availableActions(m: LogMeasurement): RowAction[] {
 }
 
 export function isValidForAnalytics(m: LogMeasurement): boolean {
-  return normalizeMeasurementStatus(m) !== 'entered-in-error' && isIncludedInAnalytics(m);
+  return normalizeMeasurementStatus(m) !== 'entered-in-error';
 }
 
 export interface ChangeResult {
@@ -92,7 +78,6 @@ export function computeChangeFromPrevious(sortedValidAsc: LogMeasurement[], inde
 export interface LogSummary {
   latest: LogMeasurement | null;
   totalEntries: number;
-  validEntries: number;
   lowest: LogMeasurement | null;
   highest: LogMeasurement | null;
   statusCounts: { final: number; corrected: number; enteredInError: number; preliminary: number };
@@ -123,9 +108,9 @@ export function computeLogSummary(all: LogMeasurement[]): LogSummary {
     else if (status === 'preliminary') statusCounts.preliminary += 1;
   }
 
-  const reviewIds = new Set(valid.filter((m) => m.dataQuality?.state === 'review').map((m) => m.id));
+  const reviewIds = detectOutlierIds(valid.map((m) => ({ id: m.id, value: m.value, unit: m.unit, occurredAt: m.occurredAt })));
 
-  return { latest, totalEntries: all.length, validEntries: valid.length, lowest, highest, statusCounts, reviewIds };
+  return { latest, totalEntries: all.length, lowest, highest, statusCounts, reviewIds };
 }
 
 export type RowFlag = 'latest' | 'highest' | 'lowest' | 'corrected' | 'review';

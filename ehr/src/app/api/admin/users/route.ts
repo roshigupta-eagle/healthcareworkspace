@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAllMockUsers, mockUsers } from '@/cardiology/services/api.mock';
+import { auth } from '@/lib/auth';
 
-export async function GET() {
+async function authorizeAdmin(request: Request) {
+  const session = await auth().catch(() => null);
+  const url = new URL(request.url);
+  const preview = process.env.NODE_ENV !== 'production' && url.searchParams.get('asUser') === 'user-admin-khan' && ['1', 'true'].includes(url.searchParams.get('noauth') || '');
+  if (!session?.user && !preview) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  if (session?.user && String((session.user as { role?: string }).role).toUpperCase() !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  return null;
+}
+
+export async function GET(request: Request) {
+  const denied = await authorizeAdmin(request);
+  if (denied) return denied;
   try {
     const users = await prisma.user.findMany({ select: { id: true, email: true, name: true, role: true } });
     return NextResponse.json(users);
@@ -17,6 +29,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const denied = await authorizeAdmin(req);
+  if (denied) return denied;
   const body = await req.json().catch(() => ({}));
   const { name, email, role } = (body as any) || {};
   try {

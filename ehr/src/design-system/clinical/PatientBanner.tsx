@@ -40,6 +40,8 @@ export type PatientVerificationStatus =
   | 'unverified'  // identity not yet confirmed — warn clinician
   | 'none';       // verification not applicable / not tracked
 
+export type PatientAllergyStatus = 'known' | 'loading' | 'unavailable';
+
 export interface PatientBannerProps {
   mrn: string;
   firstName: string;
@@ -48,6 +50,7 @@ export interface PatientBannerProps {
   age: number;
   sex: 'Male' | 'Female' | 'Other' | 'Unknown';
   allergies?: string[];
+  allergyStatus?: PatientAllergyStatus;
   isolationPrecautions?: IsolationPrecaution[];
   /** Optional additional identifiers (e.g. Health Card No., provincial ID)
    * Each identifier may include an optional `href` which will render the
@@ -91,6 +94,7 @@ export const PatientBanner: React.FC<PatientBannerProps> = ({
   age,
   sex,
   allergies = [],
+  allergyStatus = 'known',
   isolationPrecautions = [],
   identifiers = [],
   verificationStatus = 'none',
@@ -137,10 +141,13 @@ export const PatientBanner: React.FC<PatientBannerProps> = ({
       {/* ── 1. ALLERGY FLAGS (highest priority — leftmost) ── */}
       <div
         className="flex items-center gap-2 flex-shrink-0"
-        aria-label={allergies.length > 0 ? `Allergies: ${allergies.join(', ')}` : 'No known allergies'}
+        aria-label={allergyStatus === 'loading' ? 'Allergy status loading' : allergyStatus === 'unavailable' ? 'Allergy status unavailable' : allergies.length > 0 ? `Allergies: ${allergies.join(', ')}` : 'No known allergies'}
       >
-        {allergies.length > 0 ? (
-          <>
+        {allergyStatus !== 'known' ? (
+          <Badge variant="warning" dot>{allergyStatus === 'loading' ? 'Allergy Status Loading' : 'Allergy Status Unavailable'}</Badge>
+        ) : allergies.length > 0 ? (
+          allergyHref ? (
+            <Link href={allergyHref} title="Open allergy safety details" aria-label={`Open allergy safety details for ${firstName} ${lastName}`} className="inline-flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-300">
             <svg
               className="h-4 w-4 text-critical-600 flex-shrink-0"
               viewBox="0 0 20 20"
@@ -156,7 +163,13 @@ export const PatientBanner: React.FC<PatientBannerProps> = ({
                 </span>
               ))}
             </div>
-          </>
+            </Link>
+          ) : (
+            <>
+              <svg className="h-4 w-4 text-critical-600 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+              <div className="flex flex-wrap gap-1" role="list" aria-label="Allergy list">{allergies.map((allergen) => <span key={allergen} role="listitem"><Badge variant="critical" dot>{allergen}</Badge></span>)}</div>
+            </>
+          )
         ) : (
           allergyHref ? (
             <Link

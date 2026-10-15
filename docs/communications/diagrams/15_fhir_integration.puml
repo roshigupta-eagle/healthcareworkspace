@@ -1,0 +1,39 @@
+@startuml
+rectangle "Roshi Communication Domain" {
+  [Conversation]
+  [Message]
+  [CallSession]
+  [ClinicalLink]
+}
+rectangle "FHIR / Clinical Domain" {
+  [Patient]
+  [Encounter]
+  [Appointment]
+  [Task]
+  [ServiceRequest]
+  [Observation]
+  [DiagnosticReport]
+  [MedicationRequest]
+  [MedicationDispense]
+  [DocumentReference]
+  [CareTeam]
+  [PractitionerRole]
+  [AuditEvent]
+  [Provenance]
+}
+[Conversation] --> [Patient] : canonical subject
+[ClinicalLink] --> [Encounter]
+[ClinicalLink] --> [Appointment]
+[ClinicalLink] --> [Task]
+[ClinicalLink] --> [ServiceRequest]
+[ClinicalLink] --> [Observation]
+[ClinicalLink] --> [DiagnosticReport]
+[ClinicalLink] --> [MedicationRequest]
+[ClinicalLink] --> [MedicationDispense]
+[Message] --> [DocumentReference] : attachments when governed
+[Conversation] --> [CareTeam]
+[Conversation] --> [PractitionerRole]
+[Message] --> [AuditEvent]
+[CallSession] --> [AuditEvent]
+[Message] --> [Provenance] : when clinical record generated
+@enduml

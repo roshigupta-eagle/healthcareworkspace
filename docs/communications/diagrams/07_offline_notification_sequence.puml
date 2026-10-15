@@ -1,0 +1,19 @@
+@startuml
+participant "Message Service" as MSG
+database PostgreSQL as DB
+queue "Event Backbone" as BUS
+participant "Realtime Gateway" as RT
+participant "Notification Service" as NS
+participant "Push Provider" as PUSH
+actor Patient
+MSG -> DB : persist Message + NotificationIntent + Outbox
+MSG -> BUS : publish after commit
+BUS -> RT : deliver realtime
+RT --> BUS : no active session
+BUS -> NS : NotificationRequested
+NS -> DB : load active subscriptions for PortalUser.id
+NS -> PUSH : privacy-safe notification
+PUSH -> Patient : "You have a new Roshi message"
+Patient -> NS : open notification
+NS --> Patient : authenticated deep link to conversation
+@enduml

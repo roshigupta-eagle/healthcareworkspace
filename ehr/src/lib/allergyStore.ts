@@ -2,9 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { resolveDataPath } from './dataPath';
 
-function getDataPath(): string {
-  return resolveDataPath('allergies.json');
-}
+const DATA_PATH = resolveDataPath('allergies.json');
+
 export type AllergyCategory = 'medication' | 'food' | 'environmental' | 'latex' | 'other';
 export type ClinicalStatus = 'active' | 'inactive' | 'resolved' | 'entered-in-error';
 export type VerificationStatus = 'confirmed' | 'unconfirmed' | 'provisional' | 'refuted' | 'entered-in-error';
@@ -54,19 +53,27 @@ export interface AllergyRecord {
 
 export async function readAllergiesRaw(): Promise<{ items: AllergyRecord[] }> {
   try {
-    const dataPath = getDataPath();
-    const raw = await fs.promises.readFile(dataPath, 'utf-8');
+    const raw = await fs.promises.readFile(DATA_PATH, 'utf-8');
     return JSON.parse(raw || '{}');
   } catch {
     return { items: [] };
   }
 }
 
+export function readActiveAllergyNamesSync(patientId: string): string[] | null {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(DATA_PATH, 'utf8')) as { items?: AllergyRecord[] };
+    if (!Array.isArray(parsed.items)) return null;
+    return parsed.items.filter((item) => String(item.patientId) === String(patientId) && item.clinicalStatus === 'active' && !['refuted', 'entered-in-error'].includes(item.verificationStatus || '')).map((item) => item.substance?.display).filter((name): name is string => Boolean(name));
+  } catch {
+    return null;
+  }
+}
+
 async function writeAll(data: { items: AllergyRecord[] }) {
   try {
-    const dataPath = getDataPath();
-    await fs.promises.mkdir(path.dirname(dataPath), { recursive: true });
-    await fs.promises.writeFile(dataPath, JSON.stringify(data, null, 2), 'utf-8');
+    await fs.promises.mkdir(path.dirname(DATA_PATH), { recursive: true });
+    await fs.promises.writeFile(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
   } catch {
     /* best-effort persistence */
   }
@@ -173,12 +180,12 @@ export async function listAllergies(patientId: string, opts: ListOpts = {}) {
   return { summary, items: sliced };
 }
 
-export async function saveAllergy(record: any) {
+export async function saveAllergy(record: Partial<AllergyRecord>) {
   const patientId = record.patientId || 'patient-001';
   return createAllergy(patientId, record, record.recorder?.display || 'Clinician');
 }
 
-export async function updateAllergy(id: string, patch: any) {
+export async function updateAllergy(id: string, patch: Partial<AllergyRecord> & { actor?: string; action?: string }) {
   const patientId = patch.patientId || 'patient-001';
   return updateAllergyRecord(patientId, id, patch, patch.actor || 'Clinician', patch.action || 'updated');
 }

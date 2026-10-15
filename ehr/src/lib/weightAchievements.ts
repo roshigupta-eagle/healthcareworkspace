@@ -12,7 +12,7 @@
  *    repeatedly (page refresh, retries) always yields the same result, so "unlocking" is
  *    naturally idempotent: there is no separate mutable "awarded" ledger to duplicate.
  */
-import { canonicalMeasurements, computeGoalProgress, type GoalLike } from './weightMath';
+import { toKg, computeGoalProgress, type GoalLike } from './weightMath';
 
 export type AchievementCategory = 'tracking' | 'consistency' | 'goal' | 'long-term';
 export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary';
@@ -87,7 +87,10 @@ function goalCompletionSignal(goal: GoalLike | null | undefined, currentWeightKg
 }
 
 export function computeAchievements(rawMeasurements: AchievementMeasurement[], goal: GoalLike | null | undefined): AchievementsModel {
-  const items = canonicalMeasurements(rawMeasurements);
+  const items = (rawMeasurements || [])
+    .filter((m) => !m.enteredInError && typeof m.value === 'number' && Number.isFinite(m.value))
+    .map((m) => ({ ...m, weightKg: toKg(m.value, m.unit) }))
+    .sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
 
   const first = items[0];
   const last = items[items.length - 1];

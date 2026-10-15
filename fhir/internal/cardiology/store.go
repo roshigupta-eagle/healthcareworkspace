@@ -3,6 +3,7 @@ package cardiology
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,6 +12,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"healthcareworkspace/fhir/internal/tenant"
+)
+
+var (
+	ErrTransitionConflict = errors.New("encounter changed since it was opened; refresh and retry")
+	ErrRoomUnavailable    = errors.New("selected room is unavailable or at capacity")
 )
 
 // Store handles all DB operations for cardiology tables.
@@ -154,6 +160,14 @@ func (s *Store) ApplyTransition(
 		actorID = &req.ActorID
 	}
 	actorRole := req.ActorRole
+	var expectedUpdatedAt *time.Time
+	if req.ExpectedUpdatedAt != "" {
+		parsed, err := time.Parse(time.RFC3339Nano, req.ExpectedUpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("invalid expectedUpdatedAt: %w", err)
+		}
+		expectedUpdatedAt = &parsed
+	}
 
 	payloadBytes, _ := json.Marshal(req.Payload)
 
@@ -162,6 +176,12 @@ func (s *Store) ApplyTransition(
 		return nil, fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
+
+	if roomID != nil {
+		if err := s.validateRoomAssignment(ctx, tx, tid, encounterID, *roomID, t.Event); err != nil {
+			return nil, err
+		}
+	}
 
 	// Set arrived_at on first physical arrival
 	arrivedUpdate := ""
@@ -174,27 +194,20 @@ func (s *Store) ApplyTransition(
 		dischargedUpdate = ", discharged_at = now()"
 	}
 
-	// Physician / nurse assignment carried in payload
-	physicianUpdate := ""
-	nurseUpdate := ""
-	if t.Event == EvtPhysicianAssigned || t.Event == EvtPhysicianEntered {
-		physicianUpdate = ", assigned_physician_id = $6"
-	}
-	if t.Event == EvtNursingStarted || t.Event == EvtPatientRoomed {
-		nurseUpdate = ", assigned_nurse_id = $6"
-	}
-	_ = physicianUpdate
-	_ = nurseUpdate
-
 	updSQL := fmt.Sprintf(`
 		UPDATE cardiology_visit_state
 		SET    previous_state    = current_state,
 		       current_state     = $1,
 		       current_room_id   = COALESCE($2, current_room_id),
+		       assigned_physician_id = CASE WHEN $7 <> '' THEN $7 ELSE assigned_physician_id END,
+		       assigned_nurse_id = CASE WHEN $8 <> '' THEN $8 ELSE assigned_nurse_id END,
 		       state_entered_at  = now(),
 		       updated_at        = now()
 		       %s %s
-		WHERE  tenant_id = $3 AND encounter_id = $4
+		WHERE  tenant_id = $3
+		  AND  encounter_id = $4
+		  AND  current_state = $5
+		  AND  ($6::timestamptz IS NULL OR updated_at = $6::timestamptz)
 		RETURNING id, tenant_id, encounter_id, patient_id, appointment_id, referral_id,
 		          current_state, previous_state, visit_type, priority,
 		          assigned_physician_id, assigned_nurse_id, current_room_id, chief_complaint,
@@ -202,7 +215,7 @@ func (s *Store) ApplyTransition(
 		arrivedUpdate, dischargedUpdate)
 
 	row := &VisitStateRow{}
-	err = tx.QueryRow(ctx, updSQL, string(t.To), roomID, tid, encounterID).Scan(
+	err = tx.QueryRow(ctx, updSQL, string(t.To), roomID, tid, encounterID, string(t.From), expectedUpdatedAt, req.AssignedPhysicianID, req.AssignedNurseID).Scan(
 		&row.ID, &row.TenantID, &row.EncounterID, &row.PatientID,
 		&row.AppointmentID, &row.ReferralID,
 		&row.CurrentState, &row.PreviousState, &row.VisitType, &row.Priority,
@@ -211,6 +224,9 @@ func (s *Store) ApplyTransition(
 		&row.Metadata, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrTransitionConflict
+		}
 		return nil, fmt.Errorf("update visit state: %w", err)
 	}
 
@@ -248,6 +264,54 @@ func (s *Store) ApplyTransition(
 		return nil, fmt.Errorf("commit transition: %w", err)
 	}
 	return row, nil
+}
+
+func (s *Store) validateRoomAssignment(
+	ctx context.Context,
+	tx pgx.Tx,
+	tenantID string,
+	encounterID string,
+	roomID string,
+	event EventType,
+) error {
+	var roomType string
+	var capacity int
+	var active bool
+	err := tx.QueryRow(ctx, `
+		SELECT room_type, capacity, is_active
+		FROM cardiology_rooms
+		WHERE tenant_id=$1 AND id=$2
+		FOR UPDATE`, tenantID, roomID).Scan(&roomType, &capacity, &active)
+	if err != nil || !active || capacity < 1 || !roomTypeSupportsEvent(roomType, event) {
+		return ErrRoomUnavailable
+	}
+	var occupants int
+	if err := tx.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM cardiology_visit_state
+		WHERE tenant_id=$1
+		  AND current_room_id=$2
+		  AND discharged_at IS NULL
+		  AND encounter_id<>$3`, tenantID, roomID, encounterID).Scan(&occupants); err != nil {
+		return fmt.Errorf("check room occupancy: %w", err)
+	}
+	if occupants >= capacity {
+		return ErrRoomUnavailable
+	}
+	return nil
+}
+
+func roomTypeSupportsEvent(roomType string, event EventType) bool {
+	switch event {
+	case EvtMovedToWaitingRoom:
+		return roomType == RoomTypeWaiting
+	case EvtPatientRoomed:
+		return roomType == RoomTypeExam || roomType == RoomTypeConsult
+	case EvtProcedureStarted:
+		return roomType == RoomTypeECG || roomType == RoomTypeEcho || roomType == RoomTypeStressTest || roomType == RoomTypeHolter || roomType == RoomTypeLab
+	default:
+		return true
+	}
 }
 
 // ─── Events ───────────────────────────────────────────────────────────────────

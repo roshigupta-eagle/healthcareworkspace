@@ -46,6 +46,8 @@ function patientInput(body: Record<string, unknown>): CreatePatientInput {
     mrn: text(body.mrn, 80),
     phone: text(body.phone, 80) || undefined,
     email: text(body.email, 160) || undefined,
+    address: text(body.address, 240) || undefined,
+    emergencyContact: text(body.emergencyContact, 240) || undefined,
     preferredLanguage: text(body.preferredLanguage, 80) || undefined,
     preferredContactMethod: text(body.preferredContactMethod, 80) || undefined,
     primaryPhysician: text(body.primaryPhysician, 160) || undefined,

@@ -1,0 +1,45 @@
+.telehealth-device-page { display: grid; min-height: 100vh; place-items: center; padding: 1rem; color: #304a51; background: #f2f8f7; }
+.telehealth-device-card { width: min(760px, 100%); border: 1px solid #d5e4e2; border-radius: 13px; padding: clamp(1.1rem, 4vw, 2rem); background: #fff; box-shadow: 0 14px 42px rgba(22, 72, 71, .1); }
+.telehealth-device-eyebrow { color: #2f7a72; font-size: .7rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.telehealth-device-card h1 { margin: .25rem 0; color: #1e4246; font-size: clamp(1.35rem, 4vw, 1.8rem); }
+.telehealth-device-subtitle { margin: 0; color: #526a70; font-size: .75rem; }
+.telehealth-device-subtitle code { color: #3f5e64; word-break: break-all; }
+.telehealth-device-warning { display: grid; gap: .25rem; margin: 1rem 0; border: 1px solid #e9c579; border-radius: 8px; padding: .75rem; color: #755819; background: #fff9e9; font-size: .7rem; line-height: 1.45; }
+.telehealth-device-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.telehealth-device-grid article { display: flex; align-items: center; justify-content: space-between; gap: .6rem; border: 1px solid #d8e7e5; border-radius: 8px; padding: .75rem; }
+.telehealth-device-grid strong, .telehealth-device-grid span { display: block; }
+.telehealth-device-grid strong { font-size: .75rem; }
+.telehealth-device-grid div > span { margin-top: .12rem; color: #526a70; font-size: .65rem; line-height: 1.35; }
+.telehealth-device-status { flex: 0 0 auto; border-radius: 99px; padding: .2rem .42rem; color: #5a7075; background: #edf2f2; font-size: .625rem; font-weight: 850; }
+.telehealth-device-status.ready { color: #247451; background: #e6f6ed; }
+.telehealth-device-status.blocked, .telehealth-device-status.unsupported { color: #923f41; background: #fcebea; }
+.telehealth-device-status.checking { color: #80601d; background: #fff5db; }
+.telehealth-device-message { min-height: 2.8rem; margin: .9rem 0; color: #466168; font-size: .72rem; line-height: 1.45; }
+.telehealth-device-button { width: 100%; min-height: 2.5rem; border: 1px solid #087169; border-radius: 8px; color: #fff; background: #087169; font: inherit; font-size: .72rem; font-weight: 850; cursor: pointer; }
+.telehealth-device-button:hover:not(:disabled) { background: #075b55; }
+.telehealth-device-button:focus-visible, .telehealth-device-back:focus-visible { outline: 3px solid rgba(44, 137, 128, .3); outline-offset: 3px; }
+.telehealth-device-button:disabled { opacity: .65; cursor: wait; }
+.telehealth-device-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; margin-top: .9rem; }
+.telehealth-device-select { display: grid; gap: .28rem; color: #456167; font-size: .66rem; font-weight: 800; }
+.telehealth-device-select select { width: 100%; min-height: 2.2rem; border: 1px solid #b9d6d2; border-radius: 6px; padding: .38rem .45rem; color: #344f55; background: #fbfdfd; font: inherit; font-size: .67rem; }
+.telehealth-device-select select:focus-visible, .telehealth-device-preview button:focus-visible, .telehealth-device-speaker-button:focus-visible { outline: 3px solid rgba(44, 137, 128, .3); outline-offset: 2px; }
+.telehealth-device-meter { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .55fr) auto; align-items: center; gap: .7rem; margin-top: .9rem; border: 1px solid #d8e7e5; border-radius: 8px; padding: .75rem; }
+.telehealth-device-meter strong, .telehealth-device-meter span { display: block; }
+.telehealth-device-meter strong { color: #3d5960; font-size: .69rem; }
+.telehealth-device-meter span { margin-top: .13rem; color: #526a70; font-size: .63rem; line-height: 1.35; }
+.telehealth-device-meter meter { width: 100%; height: .8rem; accent-color: #188476; }
+.telehealth-device-meter output { color: #3f6264; font-size: .68rem; font-weight: 850; }
+.telehealth-device-preview, .telehealth-device-diagnostics { margin-top: .9rem; border-top: 1px solid #dfebea; padding-top: .85rem; }
+.telehealth-device-preview h2, .telehealth-device-diagnostics h2 { margin: 0; color: #3d5960; font-size: .76rem; }
+.telehealth-device-preview p, .telehealth-device-diagnostics p { margin: .28rem 0 0; color: #526a70; font-size: .66rem; line-height: 1.45; }
+.telehealth-device-preview-frame { display: grid; min-height: 135px; place-items: center; margin-top: .6rem; overflow: hidden; border: 1px dashed #b8d8d4; border-radius: 8px; color: #526a70; background: #f8fbfb; font-size: .66rem; }
+.telehealth-device-preview-frame video { display: block; width: 100%; max-height: 260px; background: #172d31; object-fit: contain; }
+.telehealth-device-preview-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .6rem; }
+.telehealth-device-preview-actions button, .telehealth-device-speaker-button { min-height: 2.15rem; border: 1px solid #087169; border-radius: 7px; padding: .42rem .62rem; color: #fff; background: #087169; font: inherit; font-size: .67rem; font-weight: 800; cursor: pointer; }
+.telehealth-device-preview-actions button:hover:not(:disabled), .telehealth-device-speaker-button:hover:not(:disabled) { background: #075b55; }
+.telehealth-device-preview-actions button.secondary { color: #1d615b; background: #fff; border-color: #93c8c1; }
+.telehealth-device-preview-actions button:disabled, .telehealth-device-speaker-button:disabled { opacity: .65; cursor: wait; }
+.telehealth-device-speaker-button { margin-top: .9rem; }
+.telehealth-device-diagnostics p + p { margin-top: .38rem; }
+.telehealth-device-back { display: inline-block; margin-top: .8rem; color: #246d66; font-size: .67rem; font-weight: 800; }
+@media (max-width: 600px) { .telehealth-device-grid, .telehealth-device-controls { grid-template-columns: 1fr; } .telehealth-device-meter { grid-template-columns: 1fr; } }

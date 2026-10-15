@@ -6,7 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 
 type SidebarSession = { user?: { name?: string; role?: string } } | null;
 type WorkCounts = { counts?: { open?: number; urgent?: number }; messages?: { unread?: number }; documents?: { needsReview?: number } };
-type IconName = 'dashboard' | 'calendar' | 'stethoscope' | 'patients' | 'appointments' | 'encounters' | 'tasks' | 'messages' | 'communication' | 'records' | 'documents' | 'orders' | 'users' | 'audit';
+type IconName = 'dashboard' | 'calendar' | 'stethoscope' | 'patients' | 'appointments' | 'encounters' | 'referrals' | 'tasks' | 'messages' | 'communication' | 'records' | 'documents' | 'orders' | 'laboratory' | 'medications' | 'users' | 'audit';
 
 const STAFF_ROLES = new Set(['DOCTOR', 'ADMIN', 'NURSE', 'CLINICIAN', 'PRACTITIONER']);
 
@@ -28,6 +28,9 @@ function SidebarIcon({ name }: { name: IconName }) {
     records: <><path d="M5 3h10l4 4v14H5z" /><path d="M14 3v5h5M8 13h8M8 17h6" /></>,
     documents: <><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h5" /></>,
     orders: <><path d="M6 3h12v18H6z" /><path d="M9 7h6M9 11h6M9 15h4" /></>,
+    laboratory: <><path d="M12 2c1.1 0 2 .9 2 2v6.1a4 4 0 11-4 0V4c0-1.1.9-2 2-2z" /><path d="M6 20h12" /></>,
+    medications: <><path d="M3 12h18" /><rect x="3" y="5" width="18" height="6" rx="2" /></>,
+    referrals: <><path d="M21 12v6a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v6z" /><path d="M7 12h10M11 8l4 4-4 4" /></>,
     users: <><circle cx="12" cy="8" r="3" /><path d="M5 21a7 7 0 0114 0" /></>,
     audit: <><path d="M4 4h16v16H4z" /><path d="M8 9h8M8 13h5M8 17h8" /></>,
   };
@@ -46,7 +49,7 @@ export default function Sidebar({ session, role = 'PATIENT' }: { session?: Sideb
   const searchParams = useSearchParams();
   const asUser = searchParams.get('asUser');
   const noAuth = searchParams.get('noauth') === '1' || searchParams.get('noauth') === 'true';
-  const explicitPreview = process.env.NODE_ENV !== 'production' && (noAuth || asUser === 'dev' || asUser === 'dev-doctor');
+  const explicitPreview = process.env.NODE_ENV !== 'production' && (noAuth || ['dev', 'dev-doctor', 'user-admin-khan'].includes(asUser || ''));
   const preview = explicitPreview;
   const effectiveRole = STAFF_ROLES.has(role.toUpperCase()) || explicitPreview ? 'DOCTOR' : role.toUpperCase();
   const [counts, setCounts] = useState<WorkCounts>({});
@@ -78,8 +81,8 @@ export default function Sidebar({ session, role = 'PATIENT' }: { session?: Sideb
   return <nav aria-label="Main navigation" className="doctor-sidebar">
     <div className="doctor-sidebar-brand"><div className="doctor-sidebar-brand-mark">R</div><div><h2>Roshi EHR</h2><p>{session?.user?.name || 'Clinical workspace'} · {staff ? 'Doctor' : effectiveRole}</p></div></div>
     <div className="doctor-sidebar-group"><div className="doctor-sidebar-group-label">Overview</div><ul role="list">{item('/dashboard', 'Dashboard', 'dashboard', undefined, 'dashboard')}{staff && item('/schedule/today', "Today's Schedule", 'calendar', undefined, 'todaysSchedule')}{staff && item('/doctor', 'Doctor View', 'stethoscope', undefined, 'doctorView')}</ul></div>
-    {staff && <div className="doctor-sidebar-group"><div className="doctor-sidebar-group-label">Clinical Work</div><ul role="list">{item('/dashboard/patients', 'Patients', 'patients', undefined, 'patientList')}{item('/dashboard/appointments', 'Appointments', 'appointments', undefined, 'appointments')}{item('/dashboard/encounters', 'Encounters', 'encounters', undefined, 'encounters')}{item('/dashboard/tasks', 'Tasks & Inbox', 'tasks', { value: counts.counts?.open, kind: 'tasks' })}{item('/communication', 'Communication', 'communication', { value: counts.messages?.unread, kind: 'messages' })}</ul></div>}
-    {staff && <div className="doctor-sidebar-group"><div className="doctor-sidebar-group-label">Records</div><ul role="list">{item('/dashboard/records', 'Health Records', 'records', undefined, 'healthRecords')}{item('/dashboard/documents', 'Documents', 'documents', { value: counts.documents?.needsReview, kind: 'documents' })}{item('/dashboard/orders', 'Orders', 'orders', undefined, 'orders')}</ul></div>}
+    {staff && <div className="doctor-sidebar-group"><div className="doctor-sidebar-group-label">Clinical Work</div><ul role="list">{item('/dashboard/patients', 'Patients', 'patients', undefined, 'patientList')}{item('/dashboard/appointments', 'Appointments', 'appointments', undefined, 'appointments')}{item('/dashboard/encounters', 'Encounters', 'encounters', undefined, 'encounters')}{item('/dashboard/referrals', 'Referrals', 'referrals', undefined, 'referrals')}{item('/dashboard/tasks', 'Tasks & Inbox', 'tasks', { value: counts.counts?.open, kind: 'tasks' })}{item('/communication', 'Communication', 'communication', { value: counts.messages?.unread, kind: 'messages' })}</ul></div>}
+    {staff && <div className="doctor-sidebar-group"><div className="doctor-sidebar-group-label">Records</div><ul role="list">{item('/dashboard/records', 'Health Records', 'records', undefined, 'healthRecords')}{item('/dashboard/laboratory', 'Laboratory', 'laboratory', { value: counts.counts?.results, kind: 'tasks' })}{item('/dashboard/medications', 'Medications', 'medications', undefined, 'medications')}{item('/dashboard/documents', 'Documents', 'documents', { value: counts.documents?.needsReview, kind: 'documents' })}{item('/dashboard/orders', 'Orders', 'orders', undefined, 'orders')}</ul></div>}
     {effectiveRole === 'ADMIN' && <div className="doctor-sidebar-group doctor-sidebar-admin"><div className="doctor-sidebar-group-label">Administration</div><ul role="list">{item('/admin/users', 'User Management', 'users', undefined, 'userManagement')}{item('/admin/audit', 'Audit Log', 'audit', undefined, 'auditLog')}</ul></div>}
   </nav>;
 }

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { IconX, IconSearch, IconAlertTriangle, IconPlus, IconCheck } from './AllergyIcons';
 import type { AllergyRecord } from '@/lib/allergyStore';
+import { withAllergyApiPreview } from './apiPreview';
 
 interface Props {
   patientId: string;
@@ -112,7 +113,7 @@ export default function AddAllergyDrawer({
     };
 
     try {
-      const res = await fetch(`/api/patients/${encodeURIComponent(patientId)}/allergies`, {
+      const res = await fetch(withAllergyApiPreview(`/api/patients/${encodeURIComponent(patientId)}/allergies`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

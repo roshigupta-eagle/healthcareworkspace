@@ -48,7 +48,7 @@ export default function TopHeader({ search = '', onSearch, onNew, onFilterChange
 
             {filterOpen && (
               <div className="absolute right-0 mt-2">
-                <FilterPopover value={filters ?? { priorities: [], statuses: [], assignedTo: undefined }} onChange={(v) => { onFilterChange?.(v); }} />
+                <FilterPopover value={filters ?? { priorities: [], statuses: [], assignedTo: undefined }} onChange={(v) => { onFilterChange?.(v); }} onApply={() => setFilterOpen(false)} />
               </div>
             )}
           </div>

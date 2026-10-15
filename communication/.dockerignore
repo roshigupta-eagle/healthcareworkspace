@@ -1,0 +1,17 @@
+# Keep credentials and local tooling out of the Docker build context.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# The service image is built from source and Go modules only.
+.git/
+bin/
+coverage/
+tmp/
+*.log

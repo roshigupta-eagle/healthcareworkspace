@@ -6,7 +6,7 @@ import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 export async function GET(req: Request, { params }: { params: { patientId: string } }) {
   const access = await resolveDoctorWorkspaceActor(req);
   if (access.response) return access.response;
-  const { patientId } = params;
+  const { patientId } = await params;
   const patient = getPatientById(String(patientId));
   if (!patient) return NextResponse.json({ error: 'patient not found' }, { status: 404 });
   if (!canAccessTaskPatient(String(patientId), access.actor!)) return NextResponse.json({ error: 'You do not have access to this patient.' }, { status: 403 });

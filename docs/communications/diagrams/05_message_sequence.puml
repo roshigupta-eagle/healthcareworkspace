@@ -1,0 +1,25 @@
+@startuml
+actor Clinician
+participant "Roshi Web" as UI
+participant "Communication API" as API
+participant "Authorization" as AZ
+database PostgreSQL as DB
+participant "Outbox Worker" as W
+queue "Event Backbone" as BUS
+participant "Realtime Gateway" as RT
+participant "Notification Service" as NS
+actor Patient
+Clinician -> UI : Send message
+UI -> API : POST /conversations/{id}/messages\nIdempotency-Key
+API -> AZ : authorize(user, patient, conversation)
+AZ --> API : allow
+API -> DB : BEGIN\ninsert Message + OutboxEvent\nCOMMIT
+API --> UI : 202 Accepted + messageId
+W -> DB : claim pending outbox
+W -> BUS : MessageCreated
+W -> DB : mark outbox processed
+BUS -> RT : MessageCreated
+RT -> Patient : realtime event if online
+BUS -> NS : NotificationRequested
+NS -> Patient : privacy-safe push if offline
+@enduml

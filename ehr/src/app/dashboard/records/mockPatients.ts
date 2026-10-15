@@ -1,4 +1,5 @@
 import { readPersistedPatientsSync } from '@/lib/patientRecordStore';
+import { readActiveAllergyNamesSync } from '@/lib/allergyStore';
 
 export type AgendaItem = {
   id: string;
@@ -99,6 +100,7 @@ export type Patient = {
   allergyDetails?: { id?: string; date?: string; reaction?: string; severity?: string }[];
   photoUrl?: string;
   contact?: { phone?: string; email?: string; address?: string };
+  emergencyContact?: string;
   insurance?: { provider?: string; plan?: string; policyNumber?: string };
   currentConcerns?: (string | { title: string; status?: string; priority?: string; firstNoted?: string; lastReviewed?: string; context?: string })[];
   labResults?: { id: string; name: string; date: string; result: string; unit?: string; normalRange?: string; referenceRange?: string; interpretation?: string; status?: string; reviewed?: boolean; code?: string; codeSystem?: string; provider?: string; laboratory?: string; specimen?: string; method?: string; dataQuality?: { state: 'review'; reason: string; source?: string } }[];
@@ -458,7 +460,22 @@ export const mockPatients: Patient[] = [
 ];
 
 export function getMockPatients(): Patient[] {
-  return [...mockPatients, ...readPersistedPatientsSync()];
+  // Merge mockPatients with persisted patients, preferring persisted records
+  const persisted = readPersistedPatientsSync();
+  const map = new Map<string, Patient>();
+
+  for (const p of mockPatients) {
+    if (!p || !p.id) continue;
+    map.set(String(p.id), p);
+  }
+
+  for (const p of persisted) {
+    if (!p || !p.id) continue;
+    // persisted overrides mock
+    map.set(String(p.id), p);
+  }
+
+  return Array.from(map.values());
 }
 
 export function getPatientById(id: string): Patient | undefined {
@@ -471,12 +488,15 @@ export function getPatientById(id: string): Patient | undefined {
     const cleaned = decoded.replace(/\/.*/, '');
     const normalized = cleaned.toLowerCase();
 
-    return getMockPatients().find((p) => {
+    const patient = getMockPatients().find((p) => {
       const pid = String(p.id || '').toLowerCase();
       const pmrn = String(p.mrn || '').toLowerCase();
 
       return pid === normalized || pmrn === normalized || p.id === cleaned || p.mrn === cleaned;
     });
+    if (!patient) return undefined;
+    const allergyNames = readActiveAllergyNamesSync(patient.id);
+    return allergyNames ? { ...patient, allergies: allergyNames } : patient;
   } catch {
     return null;
   }

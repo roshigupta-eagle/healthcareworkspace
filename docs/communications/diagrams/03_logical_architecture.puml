@@ -1,0 +1,59 @@
+@startuml
+skinparam componentStyle rectangle
+package "Experience" {
+  [Clinician Web App] as CWA
+  [Patient Portal] as PP
+  [Mobile Apps - future] as MA
+}
+package "Roshi Communication Domain" {
+  [Communication API / BFF] as API
+  [Conversation Service] as CONV
+  [Message Service] as MSG
+  [Call Orchestrator] as CALL
+  [Participant & Authorization Service] as AUTHZ
+  [Notification Service] as NOTIF
+  [Attachment / Voice Note Service] as ATT
+  [AI Context Service] as AI
+  [Audit / Provenance Service] as AUD
+  [Realtime Gateway] as RT
+}
+database "PostgreSQL HA" as PG
+queue "Event Backbone\n(existing bus preferred; NATS JetStream reference)" as BUS
+rectangle "Redis HA\nPresence / ephemeral state" as REDIS
+cloud "S3-compatible Object Storage" as OBJ
+rectangle "Self-hosted LiveKit" as LK
+rectangle "TURN\nLiveKit TURN or Coturn" as TURN
+component "FHIR / Clinical Services" as FHIR
+cloud "Web Push / APNs / FCM" as PUSH
+component "Optional Matrix / external messaging adapter" as MATRIX
+
+CWA --> API
+PP --> API
+MA --> API
+CWA --> RT
+PP --> RT
+API --> AUTHZ
+API --> CONV
+API --> MSG
+API --> CALL
+API --> ATT
+CONV --> PG
+MSG --> PG
+CALL --> PG
+ATT --> OBJ
+MSG --> BUS
+CALL --> BUS
+BUS --> RT
+BUS --> NOTIF
+NOTIF --> PUSH
+RT --> REDIS
+CALL --> LK
+LK --> TURN
+API --> FHIR
+AI --> PG
+AI --> FHIR
+AI --> AUTHZ
+AUD --> PG
+BUS --> AUD
+API --> MATRIX : optional future
+@enduml

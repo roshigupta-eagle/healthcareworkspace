@@ -14,19 +14,17 @@ export default function AchievementDetailsDrawer({
   achievement,
   onClose,
   onSetGoal,
-  onViewMeasurements,
 }: {
   achievement: WeightAchievement;
   onClose: () => void;
   onSetGoal?: () => void;
-  onViewMeasurements?: () => void;
 }) {
   const rarity = RARITY_STYLES[achievement.rarity] || RARITY_STYLES.common;
   const pct = achievement.progress ? Math.min(100, Math.round((achievement.progress.current / (achievement.progress.target || 1)) * 100)) : achievement.status === 'completed' ? 100 : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
-      <div className="weight-trend-drawer flex h-full flex-col bg-white shadow-2xl">
+      <div className="flex h-full w-full max-w-lg flex-col bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100/80 text-violet-700 ring-1 ring-violet-600/20">
@@ -83,12 +81,6 @@ export default function AchievementDetailsDrawer({
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">How Progress Is Calculated</div>
             <p className="text-slate-600 mt-1 leading-relaxed">{achievement.ruleDescription}</p>
           </div>
-
-          {onViewMeasurements && (
-            <button type="button" onClick={onViewMeasurements} className="w-full rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-left text-xs font-semibold text-violet-800 hover:bg-violet-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500">
-              View qualifying measurements in Log
-            </button>
-          )}
 
           <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Reward</span>

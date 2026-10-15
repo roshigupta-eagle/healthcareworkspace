@@ -1,0 +1,35 @@
+# Project Integrity Fix Log
+
+No PHI is recorded in this log. Patient IDs below are logical test identifiers only.
+
+| ID | Area | Affected route or source | Root cause | Fix | FHIR or security impact | Validation | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| FI-001 | Dashboard | `/dashboard`, `/api/dashboard/summary` | Static cardiology dashboard and fabricated counts were used as the home workspace. | Added role-aware aggregate read model and linked metrics, work items, schedule, orders, communications, and documentation. | Dashboard links now point to source-specific Patient/Appointment/Task/ServiceRequest/DocumentReference workflows. | Dashboard browser checks, aggregate API response, unit suite. | Fixed |
+| FI-002 | Orders | `/dashboard/orders` and `/api/orders/*` | Placeholder rows did not model FHIR status separately from operational and result states. | Added canonical order read model, lifecycle actions, idempotency, version checks, event ingestion, and ServiceRequest projection. | ServiceRequest status is kept separate from result status and review state. | Order unit tests and browser lifecycle checks. | Fixed |
+| FI-003 | Order identity | Order baseline records | ECG and blood-work examples referenced deleted legacy patient identities. | Reconciled records to canonical local patient IDs based on their documented test context. | `ServiceRequest.subject` now resolves in preview. | `referenceIntegrity.test.ts`. | Fixed |
+| FI-004 | Scheduling identity | `/dashboard/appointments`, `/scheduling`, booking APIs | Local picker patients could not be read by the unrelated FHIR tenant, creating invalid booking references. | Added development-only persistent scheduling adapter with canonical local patients and generated future slots. | Preview never mutates unrelated FHIR resources; production remains FHIR-backed. | Workspace, booking, Patient reference, occupancy, cancellation, and detail smoke tests. | Fixed |
+| FI-005 | Scheduling state | Preview slot occupancy | Cancelled preview appointments continued to mark their slot busy because all historical records were counted. | Slot occupancy now considers only active appointment statuses. | Historical appointments remain visible while availability is correct. | Booking then cancellation verified slot changes from busy to free. | Fixed |
+| FI-006 | Scheduling detail | `/doctor/health-records/patient/{patientId}` | FHIR-shaped patient detail could not resolve canonical local preview patients. | Added preview local patient fallback and `name.text` formatting support. | Preview patient deep links remain within the canonical local identity boundary. | HTTP 200 and canonical patient ID smoke test. | Fixed |
+| FI-007 | Documents picker | `/dashboard/documents` and patient document routes | Preview actor and patient options were not consistently carried through upload/review links. | Shared patient directory is supplied server-side and preview query state is preserved through document actions. | Patient-scoped document APIs retain authorization and subject binding. | Picker exposes the three canonical local development patients; route smoke tests. | Fixed |
+| FI-008 | Document FHIR linkage | Document POST/detail APIs | Persisted local documents had no common FHIR-shaped representation. | Added `toFhirDocumentReference` with Patient subject, attachment metadata, and guarded content URL. | Content is private/no-store and served only after patient/document lookup and auth checks. | Type diagnostics, focused lint, API review. | Fixed |
+| FI-009 | Allergy status | Patient banner and chart header | Empty allergy fixture was rendered as NKA before the source had been verified. | Added known/loading/unavailable states and active allergy overlay. | Prevents a false safety claim; AllergyIntolerance mapping remains patient-scoped. | Chart browser check and focused lint. | Fixed |
+| FI-010 | Hydration | Patient chart timeline | `Date.now()` was called during render in server/client output. | Stable render timestamp is supplied to timeline. | No FHIR impact; prevents inconsistent clinical event presentation. | Browser check, focused route validation, unit suite. | Fixed |
+| FI-011 | Condition detail | Patient condition detail | Component displayed fabricated fallback condition data and a dead care-plan action. | Reads recorded condition data and removes the dead route/action. | Condition source remains tied to Patient. | Focused lint and browser review. | Fixed |
+| FI-012 | Weight trend | Patient weight trend | Empty patients received synthetic measurements and Insights was a no-op. | Removed synthetic fallback and connected the real insight workflow. | Prevents false Observation-like clinical data. | Weight tests and focused lint. | Fixed |
+| FI-013 | Patient actions | `PatientProfileHeader` More Actions | Several links targeted nonexistent `/new` or `/upload` routes. | Repointed to existing note, document query, task, condition, allergy, medication, and immunization workflows. | Patient ID is retained in every destination. | Route scan and focused lint. | Fixed |
+| FI-014 | Reference integrity | Canonical patient-linked modules | No regression test protected Patient subject/reference consistency across local orders and documents. | Added unit test for directory-resolvable order IDs and DocumentReference subjects. | Protects Patient references before FHIR export or integration. | 26 files and 171 tests passed. | Fixed |
+| FI-015 | Legacy surface boundary | Cardiology/demo routes and older scheduling clients | Prototype pages and mock APIs remain in the repository. | Documented them as non-canonical residual scope and routed primary navigation to canonical workspaces. | Avoids a false production completeness claim. | Route inventory and mock/placeholder scan. | Open, contained |
+| FI-016 | Release quality | Repository-wide lint and production validation | Legacy modules still produce approximately 891 lint errors and 346 warnings. | Canonical touched slices are linted; broad cleanup is tracked separately. | Release gate remains blocked for a clean repository-wide lint claim. | `npm --prefix ehr run lint` recorded failure; final full build pending. | Open |
+
+## Validation Commands
+
+- `npm --prefix ehr run test:unit`
+- `npm --prefix ehr run lint -- <touched files>`
+- `npm --prefix ehr run build`
+- `scripts/manage-services.ps1 -Action status`
+- Preview HTTP/API smoke checks against `http://localhost:3000`
+- FHIR R4 searchset smoke check against `http://localhost:8081/fhir/R4`
+
+## Sign-Off Conditions
+
+The project should not be described as fully production-ready until the remaining multi-tenant authorization probes, repository lint cleanup, final production build after the newest changes, external DocumentReference persistence decision, and legacy demo route disposition are complete.

@@ -187,6 +187,50 @@ body.landing-no-sidebar main#main-content > .bg-white {
   min-height: 100vh;
 }
 
+/* The administrative workspace owns its own shell and must not inherit the clinical chrome. */
+body.admin-console-active > .min-h-screen {
+  display: block;
+}
+
+body.admin-console-active > .min-h-screen > aside,
+body.admin-console-active .global-header,
+body.admin-console-active .mobile-doctor-nav,
+body.admin-console-active .floating-actions {
+  display: none;
+}
+
+body.admin-console-active > .min-h-screen > main#main-content {
+  max-width: none;
+  padding: 0;
+}
+
+body.admin-console-active > .min-h-screen > main#main-content > div {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+/* The patient portal owns its own shell and must not inherit the clinical chrome. */
+body.patient-portal-active > .min-h-screen > aside,
+body.patient-portal-active .global-header,
+body.patient-portal-active .doctor-mobile-nav,
+body.patient-portal-active .floating-actions {
+  display: none;
+}
+
+body.patient-portal-active > .min-h-screen > main#main-content {
+  max-width: none;
+  padding: 0;
+}
+
+body.patient-portal-active > .min-h-screen > main#main-content > div {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+
 
 /* ── Base reset & defaults ──────────────────────────────────────────────────── */
 *, *::before, *::after {
@@ -492,6 +536,17 @@ body.dark .bg-white\/95 {
   --color-neutral-900: #ffffff;
 
   color-scheme: dark;
+}
+
+/* Command Center additions: high-tech organ/imaging accent tokens (light + dark). */
+:root {
+  --organ-highlight: #0891b2;
+  --imaging-overlay: #2563eb;
+}
+
+:root.dark {
+  --organ-highlight: #22d3ee;
+  --imaging-overlay: #60a5fa;
 }
 
 /* Ensure the page background, sidebar, and main content go navy, and text is white */

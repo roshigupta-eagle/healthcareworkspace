@@ -45,7 +45,7 @@ export default function UserApprovalClient({ users, mode }: { users: User[]; mod
           <div className="flex-1 min-w-0">
             <p className="font-medium text-neutral-900 truncate">{u.name}</p>
             <p className="text-xs text-neutral-500 truncate">{u.email}</p>
-            <p className="text-xs text-neutral-400">{new Date(u.createdAt).toLocaleDateString()}</p>
+            <p className="text-xs text-neutral-400">{new Date(u.createdAt).toISOString().slice(0, 10)}</p>
           </div>
           <span className={`px-2 py-0.5 rounded text-xs font-medium ${ROLE_COLORS[u.role] ?? "bg-neutral-100 text-neutral-700"}`}>{u.role}</span>
           {mode === "pending" && (

@@ -378,12 +378,13 @@ func (s *Simulator) fastForward(ctx context.Context, encounterID string, target 
 		}
 
 		_, err = s.store.ApplyTransition(ctx, encounterID, t, TransitionRequest{
-			Event:     evt,
-			ActorID:   "system",
-			ActorRole: RoleSystem,
-			RoomID:    roomID,
-			Notes:     "Simulation fast-forward",
-			Payload:   payload,
+			Event:               evt,
+			ActorID:             "system",
+			ActorRole:           RoleSystem,
+			RoomID:              roomID,
+			AssignedPhysicianID: physicianID,
+			Notes:               "Simulation fast-forward",
+			Payload:             payload,
 		})
 		if err != nil {
 			return err

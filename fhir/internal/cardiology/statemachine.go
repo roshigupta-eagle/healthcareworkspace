@@ -63,6 +63,8 @@ var transitions = []Transition{
 	// ── Physician consult ─────────────────────────────────────────────────────
 	{StateInExamRoom, EvtPhysicianAssigned, StatePhysicianPending,
 		[]ActorRole{RoleNurse, RoleCardiologist, RoleSystem}, ""},
+	{StatePhysicianPending, EvtPhysicianAssigned, StatePhysicianPending,
+		[]ActorRole{RoleNurse, RoleCardiologist, RoleSystem}, ""},
 	{StatePhysicianPending, EvtPhysicianEntered, StatePhysicianWithPatient,
 		[]ActorRole{RoleCardiologist}, ""},
 	// MD places procedure/lab orders

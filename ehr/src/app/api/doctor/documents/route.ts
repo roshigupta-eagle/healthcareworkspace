@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { NextResponse } from 'next/server';
 import { getPatientById } from '@/app/dashboard/records/mockPatients';
-import { createDocument, documentStoragePath, listDocuments, normalizeDocumentSource, normalizeDocumentStatus, type DocumentInput, type DocumentStatus } from '@/lib/documentStore';
+import { createDocument, documentStoragePath, listDocuments, normalizeDocumentSource, normalizeDocumentStatus, toFhirDocumentReference, type DocumentInput, type DocumentStatus } from '@/lib/documentStore';
 import { getDoctorWorkSnapshot } from '@/lib/doctorWorkStore';
 import { logAuditEvent } from '@/lib/audit';
 import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
@@ -65,5 +65,5 @@ export async function POST(request: Request) {
   const input: DocumentInput = { title, type, clinicalDate, author: formValue(form.get('author')) || actor.name, organization: formValue(form.get('organization')) || undefined, source: normalizeDocumentSource(formValue(form.get('source')) || (file instanceof File ? 'clinician-uploaded' : 'roshi')), status: normalizeDocumentStatus(formValue(form.get('status')) || (file instanceof File ? 'needs-review' : 'draft')) as DocumentStatus, content: file instanceof File ? undefined : formValue(form.get('content')) || undefined, mimeType: file instanceof File ? file.type : undefined, sizeBytes: file instanceof File ? file.size : undefined, storageKey, checksum };
   const document = await createDocument(patientId, input, actor.name);
   await logAuditEvent({ agentId: actor.id, entityType: 'DocumentReference', entityId: document.id, action: 'C', outcome: 'success', description: 'Uploaded global doctor workspace document', detail: { patientId, type: document.type, source: document.source } });
-  return NextResponse.json({ data: document }, { status: 201 });
+  return NextResponse.json({ data: document, fhir: toFhirDocumentReference(document, patient) }, { status: 201 });
 }

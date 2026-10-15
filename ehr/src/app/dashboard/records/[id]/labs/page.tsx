@@ -1,4 +1,4 @@
-import LabResultsIntelligenceClient from '@/components/LabResultsIntelligenceClient';
+import PatientLaboratoryWorkspace from '@/components/PatientLaboratoryWorkspace';
 import { getPatientById } from '../../mockPatients';
 import { redirect } from 'next/navigation';
 
@@ -32,7 +32,7 @@ export default async function LabsIndexPage({ params, searchParams }: { params: 
 
   return (
     <div className="min-h-screen">
-      <LabResultsIntelligenceClient patient={patient} initialSelectedLabId={selected} />
+      <PatientLaboratoryWorkspace patient={patient} initialSelectedLabId={selected} />
     </div>
   );
 }

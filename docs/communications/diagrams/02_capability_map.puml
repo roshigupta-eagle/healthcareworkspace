@@ -1,0 +1,37 @@
+@startuml
+mindmap
+* Roshi Communication Platform
+** Messaging
+*** 1:1 / group chat
+*** threads/topics
+*** voice notes
+*** files/attachments
+*** read/ack states
+*** offline delivery
+** Realtime Media
+*** 1:1 audio/video
+*** group audio/video
+*** screen share
+*** waiting room
+*** reconnect / network adaptation
+*** SIP/PSTN later
+** Clinical Context
+*** Patient.id
+*** Encounter / Appointment
+*** Lab / Medication
+*** Referral / Document
+*** Task / Follow-up
+** Safety / Security
+*** RBAC / ABAC
+*** tenant isolation
+*** patient isolation
+*** consent/preferences
+*** audit / provenance
+*** PHI-safe notifications
+** AI
+*** summarize
+*** draft
+*** transcription review
+*** source grounding
+*** patient/topic isolation
+@enduml

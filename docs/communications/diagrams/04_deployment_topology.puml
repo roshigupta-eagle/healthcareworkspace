@@ -1,0 +1,48 @@
+@startuml
+node "Canadian Region / Approved Data Residency" {
+  node "Edge" {
+    [WAF / API LB]
+    [Media LB / DNS]
+  }
+  node "Application Kubernetes Cluster" {
+    [Communication API xN]
+    [Realtime Gateway xN]
+    [Workers xN]
+    [Notification Service xN]
+    [AI Context Service xN]
+  }
+  node "Dedicated Media Node Pool" {
+    [LiveKit Node A]
+    [LiveKit Node B]
+    [LiveKit Node C]
+  }
+  node "TURN Failure Domain A" { [TURN A] }
+  node "TURN Failure Domain B" { [TURN B] }
+  database "PostgreSQL HA" as PG
+  database "Redis HA" as REDIS
+  queue "Event Backbone HA" as BUS
+  cloud "Object Storage" as OBJ
+  node "Observability" {
+    [Metrics]
+    [Logs]
+    [Tracing]
+    [Synthetic Call Tests]
+  }
+}
+[WAF / API LB] --> [Communication API xN]
+[WAF / API LB] --> [Realtime Gateway xN]
+[Communication API xN] --> PG
+[Communication API xN] --> BUS
+[Realtime Gateway xN] --> REDIS
+[Workers xN] --> BUS
+[Workers xN] --> PG
+[Workers xN] --> OBJ
+[Media LB / DNS] --> [LiveKit Node A]
+[Media LB / DNS] --> [LiveKit Node B]
+[Media LB / DNS] --> [LiveKit Node C]
+[LiveKit Node A] --> REDIS
+[LiveKit Node B] --> REDIS
+[LiveKit Node C] --> REDIS
+[LiveKit Node A] --> [TURN A]
+[LiveKit Node B] --> [TURN B]
+@enduml

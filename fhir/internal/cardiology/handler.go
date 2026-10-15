@@ -2,6 +2,7 @@ package cardiology
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -108,6 +109,10 @@ func (h *Handler) transitionVisit(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "event is required")
 		return
 	}
+	if req.ExpectedUpdatedAt == "" {
+		writeErr(w, http.StatusBadRequest, "expectedUpdatedAt is required")
+		return
+	}
 	if req.ActorRole == "" {
 		req.ActorRole = RoleSystem
 	}
@@ -129,13 +134,33 @@ func (h *Handler) transitionVisit(w http.ResponseWriter, r *http.Request) {
 				req.ActorRole, req.Event, visit.CurrentState))
 		return
 	}
+	if t.Event == EvtPhysicianAssigned && req.AssignedPhysicianID == "" {
+		writeErr(w, http.StatusBadRequest, "assignedPhysicianId is required")
+		return
+	}
+	if t.Event == EvtPhysicianEntered && visit.AssignedPhysicianID == nil {
+		writeErr(w, http.StatusConflict, "assign a practitioner before starting the encounter")
+		return
+	}
+	if transitionRequiresRoom(t.Event) && req.RoomID == "" {
+		writeErr(w, http.StatusBadRequest, "roomId is required for this transition")
+		return
+	}
 
 	updated, err := h.store.ApplyTransition(r.Context(), enc, t, req)
 	if err != nil {
+		if errors.Is(err, ErrTransitionConflict) || errors.Is(err, ErrRoomUnavailable) {
+			writeErr(w, http.StatusConflict, err.Error())
+			return
+		}
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, updated)
+}
+
+func transitionRequiresRoom(event EventType) bool {
+	return event == EvtMovedToWaitingRoom || event == EvtPatientRoomed || event == EvtProcedureStarted
 }
 
 // GET /cardiology/visits/{encounterId}/events

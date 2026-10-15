@@ -278,12 +278,15 @@ type CreateVisitRequest struct {
 
 // TransitionRequest is the body for POST /cardiology/visits/{id}/transition.
 type TransitionRequest struct {
-	Event     EventType              `json:"event"`
-	ActorID   string                 `json:"actorId"`
-	ActorRole ActorRole              `json:"actorRole"`
-	RoomID    string                 `json:"roomId,omitempty"`
-	Notes     string                 `json:"notes,omitempty"`
-	Payload   map[string]interface{} `json:"payload,omitempty"`
+	Event               EventType              `json:"event"`
+	ActorID             string                 `json:"actorId"`
+	ActorRole           ActorRole              `json:"actorRole"`
+	ExpectedUpdatedAt   string                 `json:"expectedUpdatedAt,omitempty"`
+	RoomID              string                 `json:"roomId,omitempty"`
+	AssignedPhysicianID string                 `json:"assignedPhysicianId,omitempty"`
+	AssignedNurseID     string                 `json:"assignedNurseId,omitempty"`
+	Notes               string                 `json:"notes,omitempty"`
+	Payload             map[string]interface{} `json:"payload,omitempty"`
 }
 
 // ClaimRequest is the body for POST /cardiology/queues/{q}/items/{id}/claim.

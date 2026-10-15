@@ -189,3 +189,19 @@ export function normalizeDocumentStatus(value?: string) { return normalizeStatus
 export function normalizeDocumentSource(value?: string) { return normalizeSource(value); }
 export function documentDataPath() { return DOCUMENTS_FILE; }
 export function documentStoragePath(storageKey: string) { return path.join(path.dirname(DOCUMENTS_FILE), 'document-files', storageKey); }
+
+export function toFhirDocumentReference(document: PatientDocument, patient: Patient) {
+  const status = document.status === 'entered-in-error' ? 'entered-in-error' : document.status === 'superseded' ? 'superseded' : 'current';
+  return {
+    resourceType: 'DocumentReference',
+    id: document.id,
+    status,
+    type: { text: document.type },
+    subject: { reference: `Patient/${patient.id}`, display: patient.name },
+    date: document.clinicalDate || document.uploadedAt || document.createdAt,
+    author: document.author ? [{ display: document.author }] : undefined,
+    custodian: document.organization ? { display: document.organization } : undefined,
+    content: [{ attachment: { contentType: document.mimeType || 'application/octet-stream', size: document.sizeBytes, url: document.storageKey ? `/api/patients/${encodeURIComponent(patient.id)}/documents/${encodeURIComponent(document.id)}/content` : undefined, title: document.title } }],
+    meta: { tag: [{ system: 'https://roshi.health/document', code: document.status }] },
+  };
+}

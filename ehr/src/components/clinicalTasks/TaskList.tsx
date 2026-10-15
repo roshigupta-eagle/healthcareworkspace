@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import type { Task, TabKey } from '../../lib/clinicalTypes';
 import { smallDateLabel } from '@/lib/formatDate';
 
@@ -148,7 +149,7 @@ export default function TaskList({
         </div>
       ))}
       <div className="mt-3 text-sm">
-        <a href="#" className="text-sky-600">View all tasks →</a>
+        <Link href="/dashboard/tasks" className="text-sky-600">View all tasks →</Link>
       </div>
     </div>
   );

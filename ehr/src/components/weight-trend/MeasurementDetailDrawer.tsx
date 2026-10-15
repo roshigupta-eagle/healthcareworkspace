@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { normalizeMeasurementStatus, type LogMeasurement } from '@/lib/weightLog';
-import MarkEnteredInErrorDialog from './MarkEnteredInErrorDialog';
+import { normalizeMeasurementStatus } from '@/lib/weightLog';
 
 type Props = {
   patientId: string;
-  measurement: LogMeasurement;
-  needsReview?: boolean;
+  measurement: any;
+  isOutlier?: boolean;
   initialMode?: 'view' | 'correcting';
   onClose: () => void;
   onUpdated: () => void;
@@ -21,45 +20,44 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   'entered-in-error': { label: 'Entered in Error', className: 'bg-rose-50 text-rose-700 border-rose-200' },
 };
 
-export default function MeasurementDetailDrawer({ patientId, measurement, needsReview, initialMode, onClose, onUpdated }: Props) {
+export default function MeasurementDetailDrawer({ patientId, measurement, isOutlier, initialMode, onClose, onUpdated }: Props) {
   const [updating, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [correcting, setCorrecting] = useState(initialMode === 'correcting');
   const [correctedValue, setCorrectedValue] = useState<string>(measurement ? String(measurement.value) : '');
   const [correctedUnit, setCorrectedUnit] = useState<string>(measurement?.unit || 'kg');
   const [correctedAt, setCorrectedAt] = useState<string>(measurement?.occurredAt ? measurement.occurredAt.slice(0, 16) : '');
-  const [correctionReason, setCorrectionReason] = useState('');
-  const [markErrorOpen, setMarkErrorOpen] = useState(false);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    closeRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-      if (event.key !== 'Tab' || !dialogRef.current) return;
-      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button, input, select, textarea, a[href]')).filter((element) => !element.hasAttribute('disabled'));
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      previouslyFocused?.focus();
-    };
-  }, [onClose]);
 
   if (!measurement) return null;
 
+  async function handleMarkEnteredInError() {
+    if (!confirm('Are you sure you want to mark this weight observation as entered in error? It will be removed from trend calculations.')) {
+      return;
+    }
+
+    setSaving(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch(
+        `/api/patients/${encodeURIComponent(patientId)}/measurements/weight/${encodeURIComponent(measurement.id)}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enteredInError: true, status: 'entered-in-error' }),
+        }
+      );
+
+      if (!res.ok) throw new Error('Failed to update measurement status');
+
+      setSaving(false);
+      onUpdated();
+      onClose();
+    } catch (err: any) {
+      setSaving(false);
+      setErrorMsg(err?.message || 'Failed to update measurement');
+    }
+  }
 
   async function handleSaveCorrection() {
     const valNum = parseFloat(correctedValue);
@@ -79,7 +77,7 @@ export default function MeasurementDetailDrawer({ patientId, measurement, needsR
             value: valNum,
             unit: correctedUnit,
             occurredAt: correctedAt ? new Date(correctedAt).toISOString() : measurement.occurredAt,
-            correction: { correctedAt: new Date().toISOString(), previousValue: measurement.value, previousUnit: measurement.unit, reason: correctionReason.trim() || undefined },
+            correction: { correctedAt: new Date().toISOString(), previousValue: measurement.value, previousUnit: measurement.unit },
           }),
         }
       );
@@ -87,9 +85,9 @@ export default function MeasurementDetailDrawer({ patientId, measurement, needsR
       setSaving(false);
       onUpdated();
       onClose();
-    } catch (err: unknown) {
+    } catch (err: any) {
       setSaving(false);
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to save correction');
+      setErrorMsg(err?.message || 'Failed to save correction');
     }
   }
 
@@ -107,8 +105,8 @@ export default function MeasurementDetailDrawer({ patientId, measurement, needsR
   const isEnteredInError = status === 'entered-in-error';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="weight-measurement-title" className="weight-trend-drawer flex h-full flex-col bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
+      <div className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -118,14 +116,11 @@ export default function MeasurementDetailDrawer({ patientId, measurement, needsR
               </svg>
             </div>
             <div>
-              <h2 id="weight-measurement-title" className="text-lg font-bold text-slate-900">Measurement Details</h2>
+              <h2 className="text-lg font-bold text-slate-900">Measurement Detail</h2>
               <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border ${statusBadge.className}`}>{statusBadge.label}</span>
             </div>
           </div>
           <button
-            ref={closeRef}
-            type="button"
-            aria-label="Close measurement details"
             onClick={onClose}
             className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none"
           >
@@ -143,14 +138,14 @@ export default function MeasurementDetailDrawer({ patientId, measurement, needsR
             </div>
           )}
 
-          {needsReview && (
+          {isOutlier && (
             <div className="rounded-xl bg-amber-50 p-4 text-xs font-medium text-amber-900 ring-1 ring-amber-200 flex items-start gap-2">
               <svg className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <div>
                 <div className="font-semibold">Possible Data Issue</div>
-                <p className="mt-0.5 text-amber-800">{measurement.dataQuality?.reason || 'The data-quality service requested a review of this measurement.'}</p>
+                <p className="mt-0.5 text-amber-800">This value differs substantially from nearby measurements. Confirm the value and unit, or use Correct below.</p>
               </div>
             </div>
           )}
@@ -174,10 +169,6 @@ export default function MeasurementDetailDrawer({ patientId, measurement, needsR
                 </select>
               </div>
               <input type="datetime-local" value={correctedAt} onChange={(e) => setCorrectedAt(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-              <div>
-                <label htmlFor="correction-reason" className="mb-1 block text-xs font-semibold text-slate-600">Correction reason</label>
-                <textarea id="correction-reason" value={correctionReason} onChange={(e) => setCorrectionReason(e.target.value)} rows={2} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Describe what was corrected and why" />
-              </div>
               <p className="text-[11px] text-slate-500">The original value and timestamp are preserved in provenance history — this does not delete the finalized observation.</p>
             </div>
           )}
@@ -194,9 +185,6 @@ export default function MeasurementDetailDrawer({ patientId, measurement, needsR
                   <span className="text-slate-600">Corrected</span>
                   <span className="font-semibold text-slate-900">{new Date(measurement.correction.correctedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })}</span>
                 </div>
-              )}
-              {measurement.correction.reason && (
-                <div className="text-slate-600">Reason: <span className="font-semibold text-slate-900">{measurement.correction.reason}</span></div>
               )}
             </div>
           )}
@@ -222,31 +210,15 @@ export default function MeasurementDetailDrawer({ patientId, measurement, needsR
 
             {measurement.encounterId && (
               <div className="flex items-center justify-between py-2">
-                <span className="font-medium text-slate-500">Related encounter</span>
-                <Link href={`/dashboard/encounters/${encodeURIComponent(measurement.encounterId)}`} className="font-semibold text-teal-700 hover:underline">View encounter</Link>
+                <span className="font-medium text-slate-500">Associated Encounter</span>
+                <Link href={`/dashboard/encounters/${encodeURIComponent(measurement.encounterId)}`} className="font-mono font-semibold text-teal-700 hover:underline">{measurement.encounterId}</Link>
               </div>
             )}
 
-            {measurement.provenance?.sourceSystem && (
-              <div className="flex items-center justify-between py-2">
-                <span className="font-medium text-slate-500">Source system</span>
-                <span className="font-semibold text-slate-900">{measurement.provenance.sourceSystem}</span>
-              </div>
-            )}
-
-            {measurement.provenance?.createdAt && (
-              <div className="flex items-center justify-between py-2">
-                <span className="font-medium text-slate-500">Recorded</span>
-                <span className="font-semibold text-slate-900">{new Date(measurement.provenance.createdAt).toLocaleDateString()}</span>
-              </div>
-            )}
-
-            {measurement.enteredInErrorReason && (
-              <div className="pt-2">
-                <span className="block font-medium text-slate-500 mb-1">Entered-in-error reason</span>
-                <p className="text-slate-800 bg-white p-2.5 rounded-lg border border-rose-100">{measurement.enteredInErrorReason}</p>
-              </div>
-            )}
+            <div className="flex items-center justify-between py-2">
+              <span className="font-medium text-slate-500">FHIR Resource ID</span>
+              <span className="font-mono text-slate-600">{measurement.id}</span>
+            </div>
 
             {measurement.note && (
               <div className="pt-2">
@@ -274,7 +246,7 @@ export default function MeasurementDetailDrawer({ patientId, measurement, needsR
                     </button>
                     <button
                       type="button"
-                      onClick={() => setMarkErrorOpen(true)}
+                      onClick={handleMarkEnteredInError}
                       disabled={updating}
                       className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 focus:outline-none disabled:opacity-50"
                     >
@@ -313,14 +285,6 @@ export default function MeasurementDetailDrawer({ patientId, measurement, needsR
           )}
         </div>
       </div>
-      {markErrorOpen && (
-        <MarkEnteredInErrorDialog
-          patientId={patientId}
-          measurement={measurement}
-          onClose={() => setMarkErrorOpen(false)}
-          onConfirmed={async () => { await onUpdated(); setMarkErrorOpen(false); }}
-        />
-      )}
     </div>
   );
 }

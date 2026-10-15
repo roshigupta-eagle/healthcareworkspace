@@ -1,0 +1,21 @@
+@startuml
+actor Clinician
+participant "Roshi AI UI" as UI
+participant "AI Context Service" as AI
+participant "Authorization" as AZ
+database "Communication DB" as DB
+participant "FHIR Services" as FHIR
+participant "Retrieval Index" as IDX
+participant "LLM Provider / Model" as LLM
+Clinician -> UI : Summarize Sarah / Surgery
+UI -> AI : request(userId, tenantId, patientId, conversationId)
+AI -> AZ : authorize all scopes
+AZ --> AI : allowedResourceIds
+AI -> DB : load authorized conversation/messages
+AI -> FHIR : load explicit authorized clinical links
+AI -> IDX : query WITH tenant/patient/conversation filters
+IDX --> AI : authorized chunks only
+AI -> LLM : minimum necessary grounded context
+LLM --> AI : draft summary
+AI --> UI : AI-generated + sources + review required
+@enduml

@@ -10,7 +10,7 @@ type Filters = {
   assignedTo?: string | null;
 };
 
-export default function FilterPopover({ value, onChange }: { value: Filters; onChange: (v: Filters) => void }) {
+export default function FilterPopover({ value, onChange, onApply }: { value: Filters; onChange: (v: Filters) => void; onApply?: (v: Filters) => void }) {
   function togglePriority(p: Priority) {
     const exists = value.priorities.includes(p);
     onChange({ ...value, priorities: exists ? value.priorities.filter((x) => x !== p) : [...value.priorities, p] });
@@ -53,7 +53,7 @@ export default function FilterPopover({ value, onChange }: { value: Filters; onC
 
       <div className="mt-3 flex items-center justify-end gap-2">
         <button onClick={() => onChange({ priorities: [], statuses: [], assignedTo: undefined })} className="px-3 py-1 text-sm">Clear</button>
-        <button onClick={() => {}} className="px-3 py-1 bg-sky-600 text-white rounded text-sm">Apply</button>
+        <button type="button" onClick={() => onApply?.(value)} className="px-3 py-1 bg-sky-600 text-white rounded text-sm">Apply</button>
       </div>
     </div>
   );

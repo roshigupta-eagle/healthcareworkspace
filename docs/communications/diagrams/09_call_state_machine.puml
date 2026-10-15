@@ -1,0 +1,20 @@
+@startuml
+[*] --> CREATED
+CREATED --> CONNECTING : create media session
+CONNECTING --> RINGING : incoming event delivered
+RINGING --> ACTIVE : recipient accepts + media joins
+RINGING --> DECLINED : recipient declines
+RINGING --> MISSED : ring timeout
+CONNECTING --> FAILED : setup timeout/fatal error
+ACTIVE --> ON_HOLD : hold (if supported)
+ON_HOLD --> ACTIVE : resume
+ACTIVE --> RECONNECTING : network/media disconnect
+RECONNECTING --> ACTIVE : recovered
+RECONNECTING --> FAILED : recovery timeout
+ACTIVE --> COMPLETED : end call
+ACTIVE --> FAILED : unrecoverable failure
+DECLINED --> [*]
+MISSED --> [*]
+FAILED --> [*]
+COMPLETED --> [*]
+@enduml

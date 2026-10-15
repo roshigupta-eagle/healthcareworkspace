@@ -1,5 +1,5 @@
 ﻿import { NextResponse } from 'next/server';
-import { getSchedulingSnapshot } from '@/lib/schedulingData';
+import { getSchedulingSnapshot, isPreviewSchedulingParams } from '@/lib/schedulingData';
 import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 
 export async function GET(req: Request) {
@@ -8,7 +8,7 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const q = url.searchParams;
-    const snapshot = await getSchedulingSnapshot();
+    const snapshot = await getSchedulingSnapshot('', { preview: isPreviewSchedulingParams(q) });
     const practitionerId = q.get('practitionerId');
     const locationId = q.get('locationId');
     const serviceType = q.get('serviceType');

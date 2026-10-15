@@ -1,14 +1,12 @@
 "use client";
 
 import React, { useState } from 'react';
-import { formatWeight, toKg } from '@/lib/weightMath';
-import type { WeightTrendEvent, WeightTrendGoal, WeightTrendMeasurement } from './weightTrendTypes';
+import { toKg } from '@/lib/weightMath';
 
 type Props = {
-  measurements: WeightTrendMeasurement[];
-  goal?: WeightTrendGoal | null;
-  displayUnit: 'kg' | 'lb';
-  clinicalEvents?: WeightTrendEvent[];
+  measurements: any[];
+  goal?: any;
+  clinicalEvents?: any[];
   outlierIds?: Set<string>;
   chartOptions: {
     showGoal: boolean;
@@ -17,26 +15,22 @@ type Props = {
     showSources: boolean;
     connectPoints: boolean;
     showLabels: boolean;
-    showDataQualityFlags: boolean;
   };
-  onPointClick: (m: WeightTrendMeasurement) => void;
-  onEventClick: (e: WeightTrendEvent) => void;
+  onPointClick: (m: any) => void;
+  onEventClick: (e: any) => void;
 };
-
-type ChartPoint = { x: number; y: number; raw: WeightTrendMeasurement; index: number };
 
 export default function WeightTrendChart({
   measurements = [],
   goal,
-  displayUnit = 'kg',
   clinicalEvents = [],
   outlierIds,
   chartOptions,
   onPointClick,
   onEventClick,
 }: Props) {
-  const [hoverPoint, setHoverPoint] = useState<ChartPoint | null>(null);
-  const [hoverEvent, setHoverEvent] = useState<WeightTrendEvent | null>(null);
+  const [hoverPoint, setHoverPoint] = useState<any | null>(null);
+  const [hoverEvent, setHoverEvent] = useState<any | null>(null);
 
   const points = [...measurements].sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());
 
@@ -85,11 +79,10 @@ export default function WeightTrendChart({
   }
 
   // Generate SVG Path (y-position always uses the unit-normalized kg value; display text uses the original recorded value/unit)
-  const coords = points.map((p, index) => ({
+  const coords = points.map((p) => ({
     x: getX(p.occurredAt),
     y: getY(toKg(Number(p.value), p.unit)),
     raw: p,
-    index,
   }));
 
   let pathD = '';
@@ -117,13 +110,10 @@ export default function WeightTrendChart({
   const gridValues = Array.from({ length: gridSteps + 1 }, (_, i) => minY + (i * (maxY - minY)) / gridSteps);
 
   const baselinePoint = points[0];
-  const visibleEvents = clinicalEvents.filter((event) => {
-    const eventTime = Date.parse(event.date);
-    return Number.isFinite(eventTime) && eventTime >= minX && eventTime <= maxX;
-  });
+  const latestPoint = points[points.length - 1];
 
   return (
-    <div className="weight-trend-chart relative w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs">
+    <div className="relative w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs">
       <div className="overflow-x-auto">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
@@ -163,7 +153,7 @@ export default function WeightTrendChart({
                   fontSize="11"
                   className="fill-slate-400 font-medium tabular-nums"
                 >
-                  {formatWeight(val, 'kg', displayUnit, 0)}
+                  {val.toFixed(0)} kg
                 </text>
               </g>
             );
@@ -190,7 +180,7 @@ export default function WeightTrendChart({
           })}
 
           {/* Target Goal Line */}
-          {chartOptions.showGoal && goal?.targetWeight != null && (
+          {chartOptions.showGoal && goal?.targetWeight && (
             <g key="goal-line">
               <line
                 x1={padX}
@@ -219,7 +209,7 @@ export default function WeightTrendChart({
                 fontWeight="700"
                 fill="#047857"
               >
-                Goal · {formatWeight(Number(goal.targetWeight), 'kg', displayUnit)}
+                Goal · {goal.targetWeight} kg
               </text>
             </g>
           )}
@@ -254,7 +244,7 @@ export default function WeightTrendChart({
                 fontWeight="700"
                 fill="#0369A1"
               >
-                Baseline · {formatWeight(Number(baselinePoint.value), baselinePoint.unit, displayUnit)}
+                Baseline · {baselinePoint.value} {baselinePoint.unit || 'kg'}
               </text>
             </g>
           )}
@@ -277,7 +267,7 @@ export default function WeightTrendChart({
 
           {/* Clinical Event Markers along the Bottom */}
           {chartOptions.showEvents &&
-            visibleEvents.map((evt, idx) => {
+            clinicalEvents.map((evt, idx) => {
               const ex = getX(evt.date);
               const ey = svgHeight - padY - 12;
               return (
@@ -290,7 +280,9 @@ export default function WeightTrendChart({
                 >
                   <circle cx={ex} cy={ey} r="10" fill="#7C3AED" className="opacity-90 group-hover:scale-125 transition-transform" />
                   <circle cx={ex} cy={ey} r="12" fill="none" stroke="#C4B5FD" strokeWidth="1.5" />
-                  <path d={`M ${ex - 4} ${ey} h 8 M ${ex} ${ey - 4} v 8`} stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+                  <text x={ex} y={ey + 3.5} textAnchor="middle" fontSize="10" fill="#FFFFFF" fontWeight="800">
+                    ★
+                  </text>
                 </g>
               );
             })}
@@ -344,7 +336,7 @@ export default function WeightTrendChart({
                       fontWeight="800"
                       fill="#FFFFFF"
                     >
-                      Latest · {formatWeight(Number(c.raw.value), c.raw.unit, displayUnit)}
+                      Latest · {c.raw.value} {c.raw.unit || 'kg'}
                     </text>
                   </g>
                 )}
@@ -359,12 +351,7 @@ export default function WeightTrendChart({
                     fontWeight="700"
                     className="fill-slate-700"
                   >
-                    {formatWeight(Number(c.raw.value), c.raw.unit, displayUnit)}
-                  </text>
-                )}
-                {chartOptions.showSources && (
-                  <text x={c.x} y={c.y + 22} textAnchor="middle" fontSize="9" className="fill-slate-500 font-medium">
-                    {(c.raw.source || 'clinic').replace('-', ' ')}
+                    {c.raw.value} {c.raw.unit || 'kg'}
                   </text>
                 )}
               </g>
@@ -383,7 +370,7 @@ export default function WeightTrendChart({
           }}
         >
           <div className="font-bold text-teal-300 text-sm">
-            {formatWeight(Number(hoverPoint.raw.value), hoverPoint.raw.unit, displayUnit)}
+            {hoverPoint.raw.value} {hoverPoint.raw.unit || 'kg'}
           </div>
           <div className="text-[10px] text-slate-300">
             {new Date(hoverPoint.raw.occurredAt).toLocaleDateString(undefined, {
@@ -393,8 +380,6 @@ export default function WeightTrendChart({
             })}{' '}
             · <span className="capitalize">{hoverPoint.raw.source || 'clinic'}</span>
           </div>
-          <div className="text-[10px] text-slate-300">Status: {hoverPoint.raw.status || (hoverPoint.raw.enteredInError ? 'Entered in Error' : 'Final')}</div>
-          {hoverPoint.index > 0 && <div className="text-[10px] text-slate-300">Change: {formatWeight(toKg(Number(hoverPoint.raw.value), hoverPoint.raw.unit) - toKg(Number(points[hoverPoint.index - 1].value), points[hoverPoint.index - 1].unit), 'kg', displayUnit)} vs previous</div>}
           <div className="text-[10px] text-slate-400">Recorded by: {hoverPoint.raw.recorder?.name || 'Dr. Aris Thorne'}</div>
           <div className="text-[10px] text-teal-400 font-semibold pt-0.5">Click to view full observation details</div>
         </div>

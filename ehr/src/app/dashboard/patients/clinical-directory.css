@@ -1,0 +1,538 @@
+.clinical-directory {
+  --directory-ink: #193746;
+  --directory-body: #5f7480;
+  --directory-muted: #81939b;
+  --directory-border: #dbe6e9;
+  --directory-line: #edf2f3;
+  --directory-teal: #0f766e;
+  width: 100%;
+  min-height: calc(100vh - 7rem);
+  margin: -1.5rem;
+  padding: 2.25rem clamp(1rem, 4vw, 4rem) 4rem;
+  overflow-x: hidden;
+  background: #f7fafb;
+  color: var(--directory-ink);
+}
+
+.directory-header,
+.directory-toolbar,
+.directory-surface,
+.directory-error {
+  width: min(100%, 1180px);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.directory-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 1.75rem;
+}
+
+.directory-heading {
+  min-width: 0;
+}
+
+.directory-eyebrow {
+  display: inline-block;
+  color: var(--directory-teal);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.directory-heading h1 {
+  margin: 0.35rem 0 0;
+  color: #173545;
+  font-size: clamp(1.9rem, 4vw, 2.55rem);
+  font-weight: 780;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+}
+
+.directory-heading p {
+  max-width: 40rem;
+  margin: 0.55rem 0 0;
+  color: var(--directory-body);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.directory-context {
+  display: block;
+  margin-top: 0.7rem;
+  color: var(--directory-muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.directory-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.directory-primary-button,
+.directory-secondary-button,
+.directory-open {
+  display: inline-flex;
+  min-height: 2.35rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 0.5rem;
+  padding: 0.52rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.directory-primary-button {
+  border: 1px solid var(--directory-teal);
+  background: var(--directory-teal);
+  color: #ffffff;
+  box-shadow: 0 2px 5px rgba(15, 118, 110, 0.12);
+}
+
+.directory-primary-button:hover {
+  background: #115e59;
+  box-shadow: 0 4px 10px rgba(15, 118, 110, 0.16);
+  transform: translateY(-1px);
+}
+
+.directory-primary-button:disabled,
+.directory-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+.directory-secondary-button {
+  border: 1px solid #cad9dc;
+  background: #ffffff;
+  color: #41616d;
+}
+
+.directory-secondary-button:hover {
+  border-color: #8bcfc8;
+  background: #f0fdfa;
+  color: #115e59;
+}
+
+.directory-primary-button:focus-visible,
+.directory-secondary-button:focus-visible,
+.directory-open:focus-visible,
+.directory-search input:focus-visible,
+.directory-close:focus-visible,
+.directory-patient-main:focus-visible,
+.directory-empty button:focus-visible {
+  outline: 3px solid rgba(20, 184, 166, 0.24);
+  outline-offset: 2px;
+}
+
+.directory-toolbar {
+  margin-bottom: 0.8rem;
+}
+
+.directory-search {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  min-height: 3.25rem;
+  border: 1px solid var(--directory-border);
+  border-radius: 0.65rem;
+  background: #ffffff;
+  padding: 0.48rem 0.65rem 0.48rem 0.9rem;
+  box-shadow: 0 2px 5px rgba(15, 37, 52, 0.025);
+}
+
+.directory-search-icon {
+  flex: 0 0 auto;
+  color: #78909a;
+  font-size: 1.25rem;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.directory-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #244758;
+  font-size: 0.82rem;
+  outline: 0;
+}
+
+.directory-search input::placeholder {
+  color: #91a1a8;
+}
+
+.directory-matching {
+  flex: 0 0 auto;
+  border-left: 1px solid var(--directory-line);
+  padding-left: 0.8rem;
+  color: #7b8e98;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.directory-surface {
+  overflow: hidden;
+  border: 1px solid var(--directory-border);
+  border-radius: 0.72rem;
+  background: #ffffff;
+  box-shadow: 0 5px 18px rgba(15, 37, 52, 0.045);
+}
+
+.directory-list {
+  display: grid;
+}
+
+.directory-patient-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 4.55rem;
+  border-bottom: 1px solid var(--directory-line);
+  padding: 0.85rem 1.05rem;
+}
+
+.directory-patient-row:last-child {
+  border-bottom: 0;
+}
+
+.directory-patient-row:hover {
+  background: #fbfdfd;
+}
+
+.directory-patient-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 0.8rem;
+  border-radius: 0.45rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.directory-avatar {
+  display: grid;
+  width: 2.15rem;
+  height: 2.15rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.directory-avatar.is-sky { background: #e4f1fb; color: #28638d; }
+.directory-avatar.is-teal { background: #e1f5f1; color: #176c65; }
+.directory-avatar.is-violet { background: #eeeafb; color: #675a9b; }
+.directory-avatar.is-mint { background: #e9f6ed; color: #35734d; }
+.directory-avatar.is-blue { background: #e7edf9; color: #4a6291; }
+
+.directory-patient-identity {
+  display: grid;
+  min-width: 0;
+  gap: 0.23rem;
+}
+
+.directory-patient-identity strong {
+  overflow: hidden;
+  color: #244758;
+  font-size: 0.88rem;
+  font-weight: 750;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.directory-patient-identity small {
+  overflow: hidden;
+  color: #7b8e98;
+  font-size: 0.69rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.directory-patient-status {
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.27rem 0.55rem;
+  font-size: 0.64rem;
+  font-weight: 750;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.directory-patient-status.is-active { border-color: #cfe9d7; background: #effaf2; color: #28734a; }
+.directory-patient-status.is-inactive { border-color: #e5e7eb; background: #f8fafc; color: #687780; }
+.directory-patient-status.is-unknown { border-color: #e5e7eb; background: #f8fafc; color: #687780; }
+
+.directory-open {
+  flex: 0 0 auto;
+  min-height: 2rem;
+  padding: 0.4rem 0.1rem 0.4rem 0.45rem;
+  color: var(--directory-teal);
+  font-size: 0.73rem;
+}
+
+.directory-open:hover {
+  color: #115e59;
+  text-decoration: underline;
+}
+
+.directory-open:hover span {
+  transform: translateX(2px);
+}
+
+.directory-open span {
+  display: inline-block;
+  transition: transform 160ms ease;
+}
+
+.directory-empty {
+  display: grid;
+  min-height: 18rem;
+  place-items: center;
+  align-content: center;
+  gap: 0.45rem;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.directory-empty-icon {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #eef6f7;
+  color: var(--directory-teal);
+  font-size: 1.5rem;
+}
+
+.directory-empty strong {
+  margin-top: 0.2rem;
+  color: #315365;
+  font-size: 0.92rem;
+}
+
+.directory-empty p {
+  margin: 0;
+  color: #7d9099;
+  font-size: 0.75rem;
+}
+
+.directory-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+  border: 1px solid #efc5be;
+  border-left: 3px solid #c76b58;
+  border-radius: 0.6rem;
+  background: #fff7f5;
+  padding: 0.8rem 0.9rem;
+  color: #873e35;
+  font-size: 0.75rem;
+}
+
+.directory-error > div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.directory-error strong {
+  font-size: 0.78rem;
+}
+
+.directory-error span {
+  color: #9d645c;
+}
+
+.directory-fallback {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(100%, 1180px);
+  margin: 0 auto 0.8rem;
+  border: 1px solid #ead9b6;
+  border-left: 3px solid #c48a31;
+  border-radius: 0.6rem;
+  background: #fffaf0;
+  padding: 0.75rem 0.9rem;
+  color: #765520;
+  font-size: 0.73rem;
+}
+
+.directory-fallback strong {
+  flex: 0 0 auto;
+  font-size: 0.76rem;
+}
+
+.directory-fallback span {
+  color: #927342;
+}
+
+.directory-error button {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: #9d4339;
+  cursor: pointer;
+  font-size: 0.73rem;
+  font-weight: 750;
+  text-decoration: underline;
+}
+
+.directory-skeleton-list {
+  display: grid;
+}
+
+.directory-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 4.55rem;
+  border-bottom: 1px solid var(--directory-line);
+  padding: 0.85rem 1.05rem;
+}
+
+.directory-skeleton-row:last-child { border-bottom: 0; }
+.directory-skeleton-row > span { width: 2.15rem; height: 2.15rem; border-radius: 50%; background: #edf2f3; }
+.directory-skeleton-row > div { display: grid; flex: 1; gap: 0.4rem; }
+.directory-skeleton-row > div span { width: min(16rem, 55%); height: 0.65rem; border-radius: 999px; background: #edf2f3; }
+.directory-skeleton-row > div small { width: min(11rem, 38%); height: 0.5rem; border-radius: 999px; background: #f1f4f5; }
+.directory-skeleton-row > i { width: 4.3rem; height: 1.1rem; border-radius: 999px; background: #edf2f3; }
+.directory-skeleton-row > b { width: 4.8rem; height: 1rem; border-radius: 999px; background: #f1f4f5; }
+
+.directory-overlay {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  background: rgba(15, 37, 52, 0.28);
+}
+
+.directory-drawer {
+  display: flex;
+  width: min(100%, 35rem);
+  height: 100%;
+  margin-left: auto;
+  flex-direction: column;
+  background: #ffffff;
+  box-shadow: -12px 0 32px rgba(15, 37, 52, 0.14);
+  animation: directory-slide-in 180ms ease-out;
+}
+
+.directory-drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--directory-line);
+  padding: 1.2rem 1.35rem;
+}
+
+.directory-drawer-header h2 {
+  margin: 0.35rem 0 0;
+  color: #193746;
+  font-size: 1.15rem;
+  font-weight: 760;
+}
+
+.directory-close {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: #78909a;
+  cursor: pointer;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.directory-close:hover { background: #f1f5f6; color: #335563; }
+.directory-drawer-body { min-height: 0; flex: 1; overflow-y: auto; padding: 1.2rem 1.35rem; }
+.directory-drawer-copy { margin: 0 0 1rem; color: var(--directory-body); font-size: 0.78rem; line-height: 1.55; }
+.directory-drawer-footer { display: flex; justify-content: flex-end; gap: 0.55rem; border-top: 1px solid var(--directory-line); padding: 0.9rem 1.35rem; }
+
+.directory-create-form { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+.directory-create-form > .directory-drawer-copy,
+.directory-create-form > .directory-form-error,
+.directory-create-form > fieldset { margin-right: 1.35rem; margin-left: 1.35rem; }
+.directory-create-form > .directory-drawer-copy { margin-top: 1.2rem; }
+.directory-create-form > fieldset { margin-bottom: 0; border: 0; padding: 0; }
+.directory-create-form > fieldset + fieldset { margin-top: 1.2rem; }
+.directory-create-form legend { margin-bottom: 0.7rem; color: #47636e; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.directory-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.directory-form-field { display: grid; gap: 0.3rem; min-width: 0; color: #59717c; font-size: 0.7rem; font-weight: 700; }
+.directory-form-field span { line-height: 1.2; }
+.directory-form-field input,
+.directory-form-field select { width: 100%; min-height: 2.35rem; border: 1px solid #d6e2e5; border-radius: 0.45rem; background: #ffffff; padding: 0.45rem 0.6rem; color: #274b5a; font: inherit; font-size: 0.78rem; outline: 0; }
+.directory-form-field input:focus,
+.directory-form-field select:focus { border-color: #58bcb3; box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1); }
+.directory-form-error { display: grid; gap: 0.2rem; margin-bottom: 1rem; border: 1px solid #efc5be; border-radius: 0.55rem; background: #fff7f5; padding: 0.7rem 0.75rem; color: #873e35; font-size: 0.73rem; }
+.directory-form-error span { color: #9d645c; }
+.directory-duplicate-list { display: grid; gap: 0.65rem; }
+.directory-duplicate { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; border: 1px solid #e2ebed; border-radius: 0.55rem; padding: 0.75rem; }
+.directory-duplicate > div { display: grid; min-width: 0; gap: 0.25rem; }
+.directory-duplicate strong { overflow: hidden; color: #254958; font-size: 0.8rem; text-overflow: ellipsis; white-space: nowrap; }
+.directory-duplicate span,
+.directory-duplicate small { color: #78909a; font-size: 0.68rem; }
+
+@keyframes directory-slide-in {
+  from { opacity: 0; transform: translateX(1.25rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 700px) {
+  .clinical-directory { margin: -1rem -0.5rem; padding: 1.5rem 0.75rem 3rem; }
+  .directory-header { flex-direction: column; gap: 1rem; margin-bottom: 1.25rem; }
+  .directory-header-actions { width: 100%; justify-content: flex-start; }
+  .directory-toolbar { margin-bottom: 0.65rem; }
+  .directory-fallback { align-items: flex-start; flex-direction: column; gap: 0.2rem; }
+  .directory-search { align-items: flex-start; flex-wrap: wrap; padding: 0.65rem 0.7rem; }
+  .directory-search input { min-height: 1.5rem; }
+  .directory-matching { width: 100%; border-top: 1px solid var(--directory-line); border-left: 0; padding: 0.45rem 0 0; }
+  .directory-patient-row { align-items: flex-start; flex-wrap: wrap; padding: 0.85rem 0.8rem; }
+  .directory-patient-main { width: calc(100% - 5rem); }
+  .directory-patient-status { margin-left: 3rem; }
+  .directory-open { width: 100%; justify-content: flex-start; padding-left: 3rem; }
+  .directory-form-grid { grid-template-columns: 1fr; }
+  .directory-drawer-header,
+  .directory-drawer-body,
+  .directory-drawer-footer { padding-right: 1rem; padding-left: 1rem; }
+  .directory-create-form > .directory-drawer-copy,
+  .directory-create-form > .directory-form-error,
+  .directory-create-form > fieldset { margin-right: 1rem; margin-left: 1rem; }
+  .directory-duplicate { align-items: flex-start; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clinical-directory *,
+  .directory-drawer { animation: none !important; transition: none !important; }
+}

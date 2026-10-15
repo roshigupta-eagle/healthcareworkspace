@@ -19,6 +19,8 @@ export type CreatePatientInput = {
   mrn: string;
   phone?: string;
   email?: string;
+  address?: string;
+  emergencyContact?: string;
   preferredLanguage?: string;
   preferredContactMethod?: string;
   primaryPhysician?: string;
@@ -99,7 +101,8 @@ export async function createPatientRecord(input: CreatePatientInput, actorName: 
     preferredName,
     preferredLanguage: input.preferredLanguage?.trim() || 'English',
     preferredContactMethod: input.preferredContactMethod?.trim() || undefined,
-    contact: { phone: input.phone?.trim() || undefined, email: input.email?.trim() || undefined },
+    contact: { phone: input.phone?.trim() || undefined, email: input.email?.trim() || undefined, address: input.address?.trim() || undefined },
+    emergencyContact: input.emergencyContact?.trim() || undefined,
     insurance: { provider: input.insuranceProvider?.trim() || undefined, plan: input.insurancePlan?.trim() || undefined },
     lastAttendingDoctor: input.primaryPhysician?.trim() || actorName,
     organization: input.organization?.trim() || undefined,
@@ -120,6 +123,17 @@ export async function createPatientRecord(input: CreatePatientInput, actorName: 
   };
   await writeFile([...items, patient]);
   return patient;
+}
+
+export async function upsertPatientRecord(patient: Patient): Promise<void> {
+  const items = await readFile();
+  const idx = items.findIndex((p) => String(p.id) === String(patient.id) || String(p.mrn) === String(patient.mrn));
+  if (idx >= 0) {
+    items[idx] = patient;
+  } else {
+    items.push(patient);
+  }
+  await writeFile(items);
 }
 
 export function patientRecordDataPath() {

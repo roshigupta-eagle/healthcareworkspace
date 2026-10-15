@@ -1,15 +1,13 @@
 "use client";
 
-import type { WeightTrendMeasurement } from './weightTrendTypes';
 import React from 'react';
-import { formatSignedWeight, formatWeight, toKg } from '@/lib/weightMath';
 
 type Props = {
   weekday: string;
-  unit: 'kg' | 'lb';
-  measurements: WeightTrendMeasurement[];
+  measurements: any[];
+  unit: string;
   onClose: () => void;
-  onSelectMeasurement: (m: WeightTrendMeasurement) => void;
+  onSelectMeasurement: (m: any) => void;
 };
 
 /** Drill-down list of a single weekday's measurements within the active period. */
@@ -18,7 +16,7 @@ export default function WeekdayMeasurementsDrawer({ weekday, measurements, unit,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
-      <div className="weight-trend-drawer flex h-full flex-col bg-white shadow-2xl">
+      <div className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Measurements — {weekday}</h2>
@@ -38,7 +36,7 @@ export default function WeekdayMeasurementsDrawer({ weekday, measurements, unit,
             <div className="space-y-2">
               {sorted.map((m, idx) => {
                 const prev = sorted[idx + 1];
-                const delta = prev ? +(toKg(Number(m.value), m.unit) - toKg(Number(prev.value), prev.unit)).toFixed(2) : null;
+                const delta = prev ? +(Number(m.value) - Number(prev.value)).toFixed(2) : null;
                 return (
                   <button
                     key={m.id}
@@ -46,10 +44,10 @@ export default function WeekdayMeasurementsDrawer({ weekday, measurements, unit,
                     className="w-full text-left rounded-xl border border-slate-100 bg-slate-50/60 p-3 hover:border-teal-200 hover:bg-teal-50/40 transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900">{formatWeight(Number(m.value), m.unit, unit as 'kg' | 'lb')}</span>
-                    <div className="text-xs text-slate-500 mt-1 capitalize">{m.source?.replace('-', ' ') || 'clinic'}{delta != null ? ` · ${delta === 0 ? 'no change' : formatSignedWeight(delta, unit)}` : ''}</div>
+                      <span className="font-bold text-slate-900">{m.value} {m.unit || unit}</span>
+                      <span className="text-xs text-slate-400">{new Date(m.occurredAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })}</span>
                     </div>
-                    <div className="text-xs text-slate-500 mt-1 capitalize">{m.source?.replace('-', ' ') || 'clinic'}{delta != null ? ` · ${delta === 0 ? 'no change' : formatSignedWeight(delta, unit as 'kg' | 'lb')}` : ''}</div>
+                    <div className="text-xs text-slate-500 mt-1 capitalize">{m.source?.replace('-', ' ') || 'clinic'}{delta != null ? ` · ${delta === 0 ? 'no change' : delta > 0 ? `+${delta} kg` : `${delta} kg`}` : ''}</div>
                   </button>
                 );
               })}

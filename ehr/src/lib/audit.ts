@@ -32,10 +32,18 @@ export interface AuditPayload {
  * This is fire-and-forget — failures are logged but never thrown to callers.
  */
 export async function logAuditEvent(payload: AuditPayload): Promise<void> {
+  // In local/dev environments avoid noisy Prisma initialization errors
+  // unless explicitly enabled by env ENABLE_AUDIT=true. Production will always attempt DB writes.
+  if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_AUDIT !== 'true') {
+    // eslint-disable-next-line no-console
+    console.debug('[audit] (dev) skipping DB write for AuditEvent:', payload);
+    return;
+  }
+
   try {
     await prisma.auditEvent.create({
       data: {
-        type: "rest",
+        type: 'rest',
         action: payload.action,
         outcome: payload.outcome,
         agentId: payload.agentId,
@@ -51,7 +59,7 @@ export async function logAuditEvent(payload: AuditPayload): Promise<void> {
   } catch (err) {
     // Never block the caller — audit failure is logged to stderr
     // eslint-disable-next-line no-console
-    console.error("[audit] Failed to write AuditEvent:", err);
+    console.error('[audit] Failed to write AuditEvent:', err);
   }
 }
 

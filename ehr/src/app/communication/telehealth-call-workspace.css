@@ -1,0 +1,91 @@
+.telehealth-calls { display: grid; gap: 1rem; min-height: 100%; padding: 1.1rem; color: #31474f; background: linear-gradient(180deg, #fbfdfd 0%, #f4f9f8 100%); }
+.telehealth-calls-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: .9rem; border-bottom: 1px solid #dce8e7; }
+.telehealth-calls-eyebrow { display: block; color: #397a74; font-size: .64rem; font-weight: 850; letter-spacing: .075em; text-transform: uppercase; }
+.telehealth-calls-header h2 { margin: .2rem 0; color: #1f4242; font-size: 1.1rem; }
+.telehealth-calls-header p { max-width: 43rem; margin: 0; color: #526a70; font-size: .75rem; line-height: 1.5; }
+.telehealth-calls-button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.1rem; border: 1px solid #0b766e; border-radius: 7px; padding: .45rem .72rem; color: #fff; background: #0b766e; font: inherit; font-size: .68rem; font-weight: 800; text-decoration: none; cursor: pointer; }
+.telehealth-calls-button:hover:not(:disabled) { background: #075c56; }
+.telehealth-calls-button:focus-visible, .telehealth-calls-row:focus-visible, .telehealth-calls-search input:focus-visible { outline: 3px solid rgba(39, 137, 128, .32); outline-offset: 2px; }
+.telehealth-calls-button:disabled { cursor: wait; opacity: .65; }
+.telehealth-calls-button.secondary { color: #165d58; background: #fff; border-color: #93c8c1; }
+.telehealth-calls-safety { display: flex; align-items: flex-start; gap: .45rem; border: 1px solid #e6c379; border-radius: 8px; padding: .65rem .75rem; color: #755819; background: #fff9e9; font-size: .68rem; line-height: 1.45; }
+.telehealth-calls-safety strong { flex: 0 0 auto; }
+.telehealth-calls-readiness { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+.telehealth-calls-readiness article { display: grid; grid-template-columns: auto 1fr; column-gap: .5rem; align-items: center; min-width: 0; border: 1px solid #d7e7e5; border-radius: 9px; padding: .7rem; background: #fff; }
+.telehealth-calls-readiness strong, .telehealth-calls-readiness span { display: block; }
+.telehealth-calls-readiness strong { color: #34535a; font-size: .67rem; }
+.telehealth-calls-readiness div span { margin-top: .08rem; color: #526a70; font-size: .65rem; }
+.telehealth-calls-readiness small { grid-column: 2; margin-top: .34rem; color: #526a70; font-size: .625rem; line-height: 1.4; }
+.telehealth-calls-indicator { grid-row: span 2; width: .55rem; height: .55rem; border-radius: 99px; }
+.telehealth-calls-indicator.unavailable { background: #c25556; box-shadow: 0 0 0 4px #fae8e7; }
+.telehealth-calls-indicator.ready { background: #419b76; box-shadow: 0 0 0 4px #e5f5ed; }
+.telehealth-calls-indicator.neutral { background: #84969b; box-shadow: 0 0 0 4px #eef2f2; }
+.telehealth-calls-alert { border: 1px solid #e6b2ad; border-radius: 8px; padding: .65rem .75rem; color: #843c3d; background: #fff5f4; font-size: .66rem; line-height: 1.45; }
+.telehealth-calls-metrics { display: flex; flex-wrap: wrap; gap: .45rem; }
+.telehealth-calls-metrics span { border-radius: 99px; padding: .3rem .55rem; color: #456167; background: #e8f2f1; font-size: .625rem; }
+.telehealth-calls-metrics strong { color: #235f5b; }
+.telehealth-calls-content { display: grid; grid-template-columns: minmax(205px, .72fr) minmax(0, 1.55fr); align-items: start; gap: .85rem; min-height: 370px; }
+.telehealth-calls-list, .telehealth-calls-detail { min-width: 0; border: 1px solid #d7e5e4; border-radius: 10px; background: #fff; }
+.telehealth-calls-list { max-height: min(680px, 70vh); overflow: auto; }
+.telehealth-calls-search { display: grid; gap: .3rem; padding: .7rem; border-bottom: 1px solid #e4eeee; color: #526a70; font-size: .625rem; font-weight: 800; }
+.telehealth-calls-search input { width: 100%; border: 1px solid #cbdedd; border-radius: 6px; padding: .45rem .5rem; color: #344f55; background: #fbfdfd; font: inherit; font-size: .66rem; }
+.telehealth-calls-load-more { display: block; width: calc(100% - 1.4rem); margin: .7rem; border: 1px solid #93c8c1; border-radius: 6px; padding: .48rem .55rem; color: #165d58; background: #fff; font: inherit; font-size: .64rem; font-weight: 800; cursor: pointer; }
+.telehealth-calls-load-more:hover:not(:disabled) { background: #eef9f7; }
+.telehealth-calls-load-more:focus-visible { outline: 3px solid rgba(39, 137, 128, .32); outline-offset: 2px; }
+.telehealth-calls-load-more:disabled { cursor: wait; opacity: .65; }
+.telehealth-calls-row { display: grid; gap: .28rem; width: 100%; border: 0; border-bottom: 1px solid #edf2f2; padding: .7rem; color: #375158; background: #fff; text-align: left; cursor: pointer; }
+.telehealth-calls-row:hover, .telehealth-calls-row.is-selected { background: #eef9f7; }
+.telehealth-calls-row.is-selected { box-shadow: inset 3px 0 0 #167c72; }
+.telehealth-calls-row strong { overflow: hidden; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.telehealth-calls-row small { color: #526a70; font-size: .625rem; }
+.telehealth-calls-row em { overflow: hidden; color: #8b4142; font-size: .625rem; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+.telehealth-calls-state { display: inline-flex; align-items: center; justify-content: center; width: fit-content; border-radius: 99px; padding: .16rem .37rem; color: #5a7075; background: #edf2f2; font-size: .625rem; font-weight: 850; letter-spacing: .015em; }
+.telehealth-calls-state.problem { color: #914344; background: #fcedeb; }
+.telehealth-calls-state.complete { color: #257252; background: #e6f5ed; }
+.telehealth-calls-state.pending { color: #86641b; background: #fff5d9; }
+.telehealth-calls-detail { padding: .9rem; }
+.telehealth-calls-detail > header { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; padding-bottom: .75rem; border-bottom: 1px solid #e0ebea; }
+.telehealth-calls-detail h3 { margin: .16rem 0; color: #25464c; font-size: .92rem; }
+.telehealth-calls-id { overflow: hidden; max-width: 25rem; margin: 0; color: #526a70; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .625rem; text-overflow: ellipsis; white-space: nowrap; }
+.telehealth-calls-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; margin: .8rem 0; }
+.telehealth-calls-facts div { border-left: 2px solid #c4e4df; padding-left: .45rem; }
+.telehealth-calls-facts dt { color: #526a70; font-size: .625rem; font-weight: 800; text-transform: uppercase; }
+.telehealth-calls-facts dd { margin: .15rem 0 0; color: #3c5860; font-size: .66rem; line-height: 1.35; }
+.telehealth-calls-operational { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin: .75rem 0; }
+.telehealth-calls-operational > div { display: grid; gap: .16rem; border: 1px solid #dce9e7; border-radius: 7px; padding: .55rem; background: #fbfdfd; }
+.telehealth-calls-operational span { color: #526a70; font-size: .625rem; font-weight: 800; text-transform: uppercase; }
+.telehealth-calls-operational strong { color: #466168; font-size: .62rem; }
+.telehealth-calls-operational small { color: #526a70; font-size: .625rem; line-height: 1.35; }
+.telehealth-calls-problem { margin: .7rem 0; border: 1px solid #efc2be; border-radius: 7px; padding: .6rem .65rem; color: #7f4041; background: #fff6f5; }
+.telehealth-calls-problem strong { font-size: .64rem; }
+.telehealth-calls-problem p { margin: .2rem 0 0; font-size: .62rem; line-height: 1.45; }
+.telehealth-calls-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .6rem; margin: .8rem 0; padding: .7rem; border: 1px solid #cfe4e0; border-radius: 8px; background: #f3fbf9; }
+.telehealth-calls-actions span { color: #456167; font-size: .625rem; line-height: 1.45; }
+.telehealth-calls-participants, .telehealth-calls-notes { margin: .75rem 0; padding: .75rem 0; border-top: 1px solid #e0ebea; }
+.telehealth-calls-participants h4, .telehealth-calls-notes h4 { margin: 0 0 .5rem; color: #47636a; font-size: .68rem; }
+.telehealth-calls-participants ul, .telehealth-calls-notes ul { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.telehealth-calls-participants li { display: flex; align-items: flex-start; justify-content: space-between; gap: .65rem; border-radius: 6px; padding: .45rem .5rem; background: #f5f9f9; }
+.telehealth-calls-participants li > span { display: grid; gap: .1rem; color: #526a70; font-size: .625rem; text-align: right; line-height: 1.35; }
+.telehealth-calls-participants li > span:first-child { text-align: left; }
+.telehealth-calls-participants strong { color: #445f66; font-size: .62rem; }
+.telehealth-calls-participants small { color: #526a70; font-size: .625rem; }
+.telehealth-calls-notes li { border-left: 2px solid #b9dcd7; padding: .25rem .45rem; color: #4b666c; font-size: .625rem; line-height: 1.4; }
+.telehealth-calls-history { padding-top: .75rem; border-top: 1px solid #e0ebea; }
+.telehealth-calls-history h4 { margin: 0 0 .6rem; color: #47636a; font-size: .68rem; }
+.telehealth-calls-history ol { display: grid; gap: .55rem; margin: 0; padding: 0; list-style: none; }
+.telehealth-calls-history li { display: grid; grid-template-columns: auto 1fr; gap: .5rem; align-items: flex-start; }
+.telehealth-calls-history-dot { width: .52rem; height: .52rem; margin-top: .18rem; border-radius: 99px; background: #8a9aa0; }
+.telehealth-calls-history-dot.problem { background: #bd5857; }
+.telehealth-calls-history-dot.complete { background: #439b76; }
+.telehealth-calls-history-dot.pending { background: #c39125; }
+.telehealth-calls-history li strong, .telehealth-calls-history li span, .telehealth-calls-history li small { display: block; }
+.telehealth-calls-history li strong { color: #415e65; font-size: .64rem; }
+.telehealth-calls-history li span, .telehealth-calls-history li small { margin-top: .1rem; color: #526a70; font-size: .625rem; }
+.telehealth-calls-history li p { margin: .18rem 0 0; color: #4b666c; font-size: .625rem; line-height: 1.4; }
+.telehealth-calls-empty { margin: 0; padding: 1rem; color: #526a70; font-size: .68rem; line-height: 1.5; }
+.telehealth-calls-empty.detail { display: grid; place-items: center; min-height: 250px; text-align: center; }
+.telehealth-calls-empty.detail strong { color: #526d72; font-size: .72rem; }
+.telehealth-calls-empty.detail p { max-width: 19rem; margin: .35rem 0 0; }
+.telehealth-calls-selection-status { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 850px) { .telehealth-calls-readiness { grid-template-columns: 1fr; } .telehealth-calls-content { grid-template-columns: 1fr; } .telehealth-calls-list { max-height: 300px; } .telehealth-calls-operational { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .telehealth-calls { padding: .75rem; } .telehealth-calls-header { flex-direction: column; } .telehealth-calls-header .telehealth-calls-button { width: 100%; } .telehealth-calls-facts { grid-template-columns: 1fr; } .telehealth-calls-actions { grid-template-columns: 1fr; } }

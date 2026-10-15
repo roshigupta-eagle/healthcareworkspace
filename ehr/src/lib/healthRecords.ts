@@ -177,7 +177,7 @@ function patientSummary(patient: Patient, now: Date): HealthRecordPatientSummary
     preferredName: patient.preferredName,
     mrn: patient.mrn,
     birthDate: patient.dob,
-    age: patient.age ?? ageFromBirthDate(patient.dob, now),
+    age: ageFromBirthDate(patient.dob, now),
     gender: patient.gender,
     status: patient.status || 'Unknown',
     riskLevel: patient.riskLevel,
@@ -201,7 +201,7 @@ function patientSummary(patient: Patient, now: Date): HealthRecordPatientSummary
 
 function matchesQuery(patient: HealthRecordPatientSummary, query: string) {
   if (!query) return true;
-  const source = [patient.displayName, patient.mrn, patient.phone, patient.email].filter(Boolean).join(' ').toLowerCase();
+  const source = [patient.displayName, patient.mrn, patient.birthDate, patient.phone, patient.email].filter(Boolean).join(' ').toLowerCase();
   return source.includes(query.toLowerCase());
 }
 

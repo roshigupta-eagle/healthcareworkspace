@@ -1,0 +1,15 @@
+@startuml
+[*] --> DRAFT
+DRAFT --> SUBMITTED : clinician sends
+SUBMITTED --> QUEUED : transaction committed
+QUEUED --> SENT : realtime/provider dispatch accepted
+QUEUED --> RETRYING : transient failure
+RETRYING --> SENT : retry succeeds
+RETRYING --> DELIVERY_FAILED : retry policy exhausted
+SENT --> DELIVERED : recipient endpoint evidence
+DELIVERED --> READ : recipient opens
+READ --> ACKNOWLEDGED : explicit acknowledgement
+ACKNOWLEDGED --> RESPONDED : response linked
+DELIVERY_FAILED --> RETRYING : manual/automatic retry
+RESPONDED --> [*]
+@enduml

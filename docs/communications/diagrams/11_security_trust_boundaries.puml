@@ -1,0 +1,39 @@
+@startuml
+skinparam componentStyle rectangle
+rectangle "Untrusted / User Device" {
+  [Clinician Browser]
+  [Patient Browser]
+}
+rectangle "Roshi Trusted Application Zone" {
+  [WAF/API Gateway]
+  [AuthN/AuthZ]
+  [Communication API]
+  [Realtime Gateway]
+  [Notification Service]
+  [AI Context Service]
+}
+rectangle "Sensitive Data Zone" {
+  database "PostgreSQL"
+  cloud "Object Storage"
+  [FHIR Services]
+  [Audit Store]
+}
+rectangle "Media Zone" {
+  [LiveKit]
+  [TURN]
+}
+cloud "External Push Providers" as PUSH
+[Clinician Browser] --> [WAF/API Gateway] : TLS
+[Patient Browser] --> [WAF/API Gateway] : TLS
+[WAF/API Gateway] --> [AuthN/AuthZ]
+[Communication API] --> PostgreSQL
+[Communication API] --> [FHIR Services]
+[Notification Service] --> PUSH : minimum data
+[Communication API] --> [LiveKit] : server API / signed grants
+[Clinician Browser] --> [LiveKit] : short-lived scoped token
+[Patient Browser] --> [LiveKit] : short-lived scoped token
+[LiveKit] --> [TURN]
+[AI Context Service] --> [AuthN/AuthZ] : authorize before retrieval
+[AI Context Service] --> PostgreSQL
+[AI Context Service] --> [FHIR Services]
+@enduml

@@ -1,9 +1,10 @@
 import type { AppointmentStatus, FHIRAppointment, FHIRSlot, SlotStatus } from '@/scheduling/types/fhir-scheduling';
+import { getPreviewSchedulingSnapshot } from '@/lib/previewSchedulingStore';
 
 type JsonObject = Record<string, unknown>;
 type FhirBundle = { resourceType?: string; type?: string; total?: number; entry?: Array<{ resource?: JsonObject }>; link?: Array<{ relation?: string; url?: string }> };
 
-export type SchedulingPatient = { id: string; name: string; mrn?: string; birthDate?: string };
+export type SchedulingPatient = { id: string; name: string; mrn?: string; birthDate?: string; status?: 'Active' | 'Inactive' | 'Unknown' };
 export type SchedulingProvider = { id: string; name: string; specialty?: string };
 export type SchedulingLocation = { id: string; name: string };
 
@@ -43,6 +44,10 @@ type SchedulingResourceRead = { resource: JsonObject; etag?: string };
 
 export function schedulingFhirBase() {
   return (process.env.FHIR_BASE_URL || process.env.NEXT_PUBLIC_FHIR_API_URL || 'http://localhost:8081/fhir').replace(/\/$/, '');
+}
+
+export function isPreviewSchedulingParams(params: URLSearchParams) {
+  return process.env.NODE_ENV !== 'production' && (['1', 'true'].includes(params.get('noauth') || '') || ['dev', 'dev-doctor'].includes(params.get('asUser') || ''));
 }
 
 function fhirHeaders(contentType?: string) {
@@ -231,7 +236,7 @@ function directoryMaps(patients: JsonObject[], practitioners: JsonObject[], loca
     const id = text(resource.id);
     if (!id) continue;
     const identifiers = array(resource.identifier).map(object).filter((identifier): identifier is JsonObject => Boolean(identifier));
-    patientMap.set(id, { id, name: resourceDisplay(resource) || 'Patient name unavailable', mrn: identifiers.map((identifier) => text(identifier.value)).find(Boolean), birthDate: text(resource.birthDate) });
+    patientMap.set(id, { id, name: resourceDisplay(resource) || 'Patient name unavailable', mrn: identifiers.map((identifier) => text(identifier.value)).find(Boolean), birthDate: text(resource.birthDate), status: resource.active === true ? 'Active' : resource.active === false ? 'Inactive' : 'Unknown' });
   }
   const providerMap = new Map<string, SchedulingProvider>();
   for (const resource of practitioners) {
@@ -256,7 +261,8 @@ function source(state: SchedulingSource['state'], sourceName: string, error?: un
   return { state, source: sourceName, ...(error ? { error: error instanceof Error ? error.message : 'Source unavailable.' } : {}) };
 }
 
-export async function getSchedulingSnapshot(query = ''): Promise<SchedulingSnapshot> {
+export async function getSchedulingSnapshot(query = '', options: { preview?: boolean } = {}): Promise<SchedulingSnapshot> {
+  if (options.preview) return getPreviewSchedulingSnapshot(query);
   const base = schedulingFhirBase();
   const results = await Promise.allSettled([
     fetchBundle(base, 'Appointment'),

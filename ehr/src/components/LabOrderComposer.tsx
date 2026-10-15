@@ -8,20 +8,21 @@ type LabTest = {
   id: string;
   name: string;
   code: string;
+  categories: readonly string[];
   tat?: string;
   panel?: boolean;
   description?: string;
 };
 
 const LAB_CATALOG: LabTest[] = [
-  { id: 'cmp', name: 'Comprehensive Metabolic Panel (CMP)', code: 'CMP', tat: '24h', panel: true, description: 'Glucose, electrolytes, kidney & liver markers' },
-  { id: 'cbc', name: 'Complete Blood Count (CBC)', code: 'CBC', tat: '6h', panel: true, description: 'Hemoglobin, WBC, Platelets' },
-  { id: 'trop', name: 'Troponin I', code: 'TNI', tat: '1h', description: 'Cardiac injury marker' },
-  { id: 'lipid', name: 'Lipid Panel', code: 'LIPID', tat: '24h', panel: true, description: 'Cholesterol and heart risk markers' },
-  { id: 'hba1c', name: 'Hemoglobin A1c', code: 'A1C', tat: '24h', description: 'Diabetes control marker' },
-  { id: 'd_dimer', name: 'D-dimer', code: 'DDI', tat: '4h', description: 'Clot breakdown marker' },
-  { id: 'tsh', name: 'TSH (Thyroid Stimulating Hormone)', code: 'TSH', tat: '48h', description: 'Thyroid function' },
-  { id: 'vitd', name: 'Vitamin D (25-OH)', code: 'VITD', tat: '48h', description: 'Vitamin D level' },
+  { id: 'cmp', name: 'Comprehensive Metabolic Panel (CMP)', code: 'CMP', categories: ['Blood', 'Kidney', 'Liver'], tat: '24h', panel: true, description: 'Glucose, electrolytes, kidney & liver markers' },
+  { id: 'cbc', name: 'Complete Blood Count (CBC)', code: 'CBC', categories: ['Blood', 'Infection'], tat: '6h', panel: true, description: 'Hemoglobin, WBC, Platelets' },
+  { id: 'trop', name: 'Troponin I', code: 'TNI', categories: ['Blood', 'Cardiology'], tat: '1h', description: 'Cardiac injury marker' },
+  { id: 'lipid', name: 'Lipid Panel', code: 'LIPID', categories: ['Blood', 'Cardiology'], tat: '24h', panel: true, description: 'Cholesterol and heart risk markers' },
+  { id: 'hba1c', name: 'Hemoglobin A1c', code: 'A1C', categories: ['Blood', 'Diabetes'], tat: '24h', description: 'Diabetes control marker' },
+  { id: 'd_dimer', name: 'D-dimer', code: 'DDI', categories: ['Blood', 'Cardiology'], tat: '4h', description: 'Clot breakdown marker' },
+  { id: 'tsh', name: 'TSH (Thyroid Stimulating Hormone)', code: 'TSH', categories: ['Blood', 'Hormones'], tat: '48h', description: 'Thyroid function' },
+  { id: 'vitd', name: 'Vitamin D (25-OH)', code: 'VITD', categories: ['Blood', 'Vitamins'], tat: '48h', description: 'Vitamin D level' },
 ];
 
 const COMMON_PANELS = ['cbc', 'lipid', 'hba1c', 'cmp'];
@@ -127,9 +128,9 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
       const recentNames = (patient?.recentTests || []).map((r:string) => r.toLowerCase());
       list = list.filter(l => recentNames.some(rn => l.name.toLowerCase().includes(rn) || l.code.toLowerCase().includes(rn)));
     }
-    // simple filter placeholder
+    if (filter !== 'All') list = list.filter((test) => test.categories.includes(filter));
     return list;
-  }, [query, filter]);
+  }, [patient?.recentTests, query, quickView, filter]);
 
   function highlightMatch(text: string) {
     const q = query.trim();
@@ -140,30 +141,6 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
     const match = text.slice(idx, idx + q.length);
     const after = text.slice(idx + q.length);
     return (<>{before}<mark className="bg-yellow-100 text-yellow-800 px-0.5">{match}</mark>{after}</>);
-  }
-
-  function addTest(t: LabTest) {
-    if (selected.some(s => s.id === t.id)) {
-      // already selected
-      setDetailsTest(t);
-      return;
-    }
-
-    try {
-      const recent = JSON.parse(localStorage.getItem(sentKey) || '[]');
-      const found = recent.find((r: any) => r.tests && r.tests.find((x: any) => x.id === t.id) && (Date.now() - r.ts) < 24*60*60*1000);
-      if (found) {
-        if (!confirm(`${t.name} was ordered recently. Add anyway?`)) return;
-      }
-    } catch (e) {}
-
-    const fastingRecommended = (t.code === 'LIPID');
-    setSelected(s => [...s, { ...t, specimen: t.panel ? 'Blood' : 'Blood', fastingRecommended, note: '' }]);
-  }
-
-  function addPanel(panelId: string) {
-    const item = LAB_CATALOG.find(t => t.id === panelId);
-    if (item) addTest(item);
   }
 
   async function addTest(t: LabTest) {
@@ -316,7 +293,7 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="max-w-7xl mx-auto min-w-0 px-6 py-6">
         {/* Top header */}
         <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -406,8 +383,8 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <main className="lg:col-span-8">
             <div className="bg-white rounded-xl p-6 shadow-sm">
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                  <div className="flex-1">
+                <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="min-w-0 flex-1">
                     <label htmlFor="lab-search" className="sr-only">Search lab tests</label>
                     <div className="relative">
                       <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -425,8 +402,8 @@ export default function LabOrderComposer({ patient }: { patient?: any }) {
                     </div>
                   </div>
 
-                  <div className="flex-1 lg:flex-none">
-                    <div className="filter-chips flex gap-2 flex-wrap max-w-full">
+                  <div className="min-w-0 flex-1">
+                    <div className="filter-chips flex max-w-full min-w-0 flex-wrap gap-2">
                       {['All','Blood','Urine','Diabetes','Cardiology','Infection','Hormones','Vitamins','Kidney','Liver'].map((f) => (
                         <button key={f} onClick={() => setFilter(f as any)} aria-pressed={filter===f} className={`px-3 py-1 rounded-full text-xs ${filter===f ? 'bg-teal-700 text-white' : 'bg-gray-100 text-gray-700'} focus:outline-none focus:ring-2 focus:ring-teal-200`}>{f}</button>
                       ))}

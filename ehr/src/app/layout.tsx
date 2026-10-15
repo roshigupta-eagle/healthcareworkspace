@@ -9,6 +9,7 @@ import ThemeLangProvider from '@/components/ThemeLangProvider';
 import GlobalHeader from '@/components/GlobalHeader';
 import FloatingActions from '@/components/FloatingActions';
 import PageTransition from '@/components/PageTransition';
+import PreviewNavigationGuard from '@/components/PreviewNavigationGuard';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,6 +42,7 @@ export default async function RootLayout({
       <body className="min-h-full bg-gray-50 text-gray-900">
         <ClientLandingMode />
         <ThemeLangProvider>
+        <PreviewNavigationGuard />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded"

@@ -1,0 +1,28 @@
+@startuml
+left to right direction
+skinparam componentStyle rectangle
+actor Clinician
+actor Patient
+actor "Care Team Member" as CareTeam
+actor "Platform / Security Admin" as Admin
+rectangle "Roshi EHR" {
+  component "Communication Hub" as Hub
+  component "Patient Portal" as Portal
+  component "Clinical Modules\nFHIR / Tasks / Labs / Meds / Referrals" as Clinical
+}
+cloud "Notification Channels\nWeb Push / APNs / FCM" as Push
+cloud "External Clinical Systems" as External
+rectangle "Self-hosted LiveKit" as LK
+
+Clinician --> Hub
+Patient --> Portal
+CareTeam --> Hub
+Admin --> Hub
+Hub --> Clinical
+Portal --> Clinical
+Hub --> LK : audio/video/group calls
+Portal --> LK : audio/video/group calls
+Hub --> Push : notify
+Portal --> Push
+Clinical --> External : FHIR / APIs / events
+@enduml

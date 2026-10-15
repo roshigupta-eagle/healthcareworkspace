@@ -1,19 +1,12 @@
 "use client";
 
 import React from 'react';
-import { formatSignedWeight, formatWeight, toKg } from '@/lib/weightMath';
-import type { WeightTrendEvent, WeightTrendGoal, WeightTrendMeasurement, WeightTrendPatient } from './weightTrendTypes';
 
 type Props = {
-  patient: WeightTrendPatient;
-  currentMeasurement: WeightTrendMeasurement;
-  previousVisitMeasurement?: WeightTrendMeasurement | null;
-  clinicalEvents: WeightTrendEvent[];
-  displayUnit?: 'kg' | 'lb';
-  lastClinicalVisit?: string;
-  measurementsSinceLastVisit?: number;
-  reviewCountSinceLastVisit?: number;
-  goal?: WeightTrendGoal | null;
+  patient: any;
+  currentMeasurement: any;
+  previousVisitMeasurement?: any;
+  clinicalEvents: any[];
   onClose: () => void;
   onOpenThread: () => void;
 };
@@ -23,23 +16,18 @@ export default function WhatChangedDrawer({
   currentMeasurement,
   previousVisitMeasurement,
   clinicalEvents,
-  displayUnit = 'kg',
-  lastClinicalVisit,
-  measurementsSinceLastVisit = 0,
-  reviewCountSinceLastVisit = 0,
-  goal,
   onClose,
   onOpenThread,
 }: Props) {
-  const lastVisitDate = lastClinicalVisit || patient?.lastVisit;
+  const lastVisitDate = patient?.lastVisit;
   const hasComparison = currentMeasurement && previousVisitMeasurement;
-  const currKg = hasComparison ? toKg(Number(currentMeasurement.value), currentMeasurement.unit) : null;
-  const prevKg = hasComparison ? toKg(Number(previousVisitMeasurement.value), previousVisitMeasurement.unit) : null;
-  const diffKg = currKg != null && prevKg != null ? +(currKg - prevKg).toFixed(2) : null;
+  const currVal = currentMeasurement?.value;
+  const prevVal = previousVisitMeasurement?.value;
+  const diffVal = hasComparison ? +(currVal - prevVal).toFixed(2) : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
-      <div className="weight-trend-drawer flex h-full flex-col bg-white shadow-2xl">
+      <div className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -74,10 +62,10 @@ export default function WhatChangedDrawer({
               <>
                 <div className="flex items-baseline justify-between">
                   <div className="text-2xl font-black text-slate-900 tabular-nums">
-                    {diffKg == null ? '—' : formatSignedWeight(diffKg, displayUnit)}
+                    {diffVal! > 0 ? `+${diffVal} kg` : `${diffVal} kg`}
                   </div>
                   <div className="text-slate-600 font-medium">
-                    {formatWeight(Number(previousVisitMeasurement.value), previousVisitMeasurement.unit, displayUnit)} → <span className="font-bold text-slate-900">{formatWeight(Number(currentMeasurement.value), currentMeasurement.unit, displayUnit)}</span>
+                    {prevVal} kg → <span className="font-bold text-slate-900">{currVal} kg</span>
                   </div>
                 </div>
                 <p className="text-[11px] text-cyan-800/80 italic pt-1">
@@ -88,13 +76,6 @@ export default function WhatChangedDrawer({
               <p className="text-xs text-cyan-800/80">Not enough documented measurements to compute a comparison for this period.</p>
             )}
           </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Measurements</div><div className="mt-1 text-lg font-black text-slate-900">{measurementsSinceLastVisit}</div><div className="text-[11px] text-slate-500">new since visit</div></div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Data quality</div><div className="mt-1 text-lg font-black text-slate-900">{reviewCountSinceLastVisit}</div><div className="text-[11px] text-slate-500">review item{reviewCountSinceLastVisit === 1 ? '' : 's'}</div></div>
-          </div>
-
-          {goal && <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-3 text-xs text-slate-700"><div className="text-[10px] font-bold uppercase tracking-wide text-violet-700">Documented goal</div><div className="mt-1 font-semibold">{goal.targetWeight != null ? `${goal.targetWeight} kg target` : 'Target range or maintenance goal'}</div><div className="mt-0.5 text-slate-500">Direction is used only when explicitly documented.</div></div>}
 
           {/* Section: Clinical Events in Interval */}
           <div className="space-y-3">

@@ -1,10 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { resolveDataPath } from './dataPath';
 
-function getDataPath(): string {
-  return resolveDataPath('allergy_reviews.json');
-}
+const DATA_PATH = path.join(process.cwd(), 'ehr', 'data', 'allergy_reviews.json');
 
 export type NkaStatus = 'confirmed-nka' | 'has-allergies' | 'unconfirmed' | 'not-documented';
 
@@ -28,8 +25,7 @@ export interface AllergyReviewRecord {
 
 async function readRaw(): Promise<{ items: AllergyReviewRecord[] }> {
   try {
-    const dataPath = getDataPath();
-    const raw = await fs.promises.readFile(dataPath, 'utf-8');
+    const raw = await fs.promises.readFile(DATA_PATH, 'utf-8');
     return JSON.parse(raw || '{}');
   } catch {
     return { items: [] };
@@ -38,9 +34,8 @@ async function readRaw(): Promise<{ items: AllergyReviewRecord[] }> {
 
 async function writeAll(data: { items: AllergyReviewRecord[] }) {
   try {
-    const dataPath = getDataPath();
-    await fs.promises.mkdir(path.dirname(dataPath), { recursive: true });
-    await fs.promises.writeFile(dataPath, JSON.stringify(data, null, 2), 'utf-8');
+    await fs.promises.mkdir(path.dirname(DATA_PATH), { recursive: true });
+    await fs.promises.writeFile(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
   } catch {
     /* best-effort persistence in mock environment */
   }

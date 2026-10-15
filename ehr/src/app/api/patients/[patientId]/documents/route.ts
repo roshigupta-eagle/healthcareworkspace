@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { NextResponse } from 'next/server';
 import { getPatientById } from '@/app/dashboard/records/mockPatients';
-import { createDocument, documentStoragePath, listDocuments, normalizeDocumentSource, normalizeDocumentStatus, type DocumentInput, type DocumentStatus } from '@/lib/documentStore';
+import { createDocument, documentStoragePath, listDocuments, normalizeDocumentSource, normalizeDocumentStatus, toFhirDocumentReference, type DocumentInput, type DocumentStatus } from '@/lib/documentStore';
 import { canAccessTaskPatient } from '@/lib/doctorWorkStore';
 import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 
@@ -108,5 +108,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ pat
     checksum,
   };
   const document = await createDocument(patientId, input, access.actor!.name || 'Clinician');
-  return NextResponse.json({ item: document }, { status: 201, headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
+  return NextResponse.json({ item: document, fhir: toFhirDocumentReference(document, patient) }, { status: 201, headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
 }

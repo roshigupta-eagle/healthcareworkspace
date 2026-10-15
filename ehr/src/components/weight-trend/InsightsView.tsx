@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   computeFluctuation,
@@ -12,16 +12,25 @@ import {
   computeTrend,
   weekdayLabel,
 } from '@/lib/weightInsights';
-import { canonicalMeasurements, detectOutlierIds, formatWeight, inferGoalDirection } from '@/lib/weightMath';
+import { detectOutlierIds, inferGoalDirection } from '@/lib/weightMath';
 import MeasurementDetailDrawer from './MeasurementDetailDrawer';
 import WeekdayMeasurementsDrawer from './WeekdayMeasurementsDrawer';
 import ComparePeriodsDrawer from './ComparePeriodsDrawer';
-import type { WeightTrendGoal, WeightTrendMeasurement, WeightTrendPatient } from './weightTrendTypes';
+
+type Measurement = {
+  id?: string;
+  value: number;
+  unit?: string;
+  occurredAt: string;
+  source?: string;
+  enteredInError?: boolean;
+};
 
 function formatDateShort(iso?: string) {
   if (!iso) return '—';
   try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' }); } catch { return iso as string; }
 }
+
 export default function InsightsView({
   measurements,
   range,
@@ -30,38 +39,40 @@ export default function InsightsView({
   goal,
   patientData,
   onRefresh,
-  onAddMeasurement,
 }: {
-  measurements: WeightTrendMeasurement[] | null;
+  measurements: Measurement[] | null;
   range: string;
-  unitOverride?: 'kg' | 'lb';
+  unitOverride?: string;
   patientId: string;
-  goal?: WeightTrendGoal | null;
-  patientData?: WeightTrendPatient;
+  goal?: any;
+  patientData?: any;
   onRefresh: () => Promise<void> | void;
-  onAddMeasurement?: () => void;
 }) {
   const pathname = usePathname() || '';
+  const searchParams = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [selectedWeekday, setSelectedWeekday] = useState<{ label: string; index: number } | null>(null);
-  const [selectedMeasurement, setSelectedMeasurement] = useState<WeightTrendMeasurement | null>(null);
+  const [selectedMeasurement, setSelectedMeasurement] = useState<any | null>(null);
 
-  const filtered = useMemo(() => canonicalMeasurements(measurements || []), [measurements]);
+  const filtered = useMemo(() => {
+    if (!measurements) return [] as Measurement[];
+    return measurements.filter((m) => !m.enteredInError && typeof m.value === 'number');
+  }, [measurements]);
 
-  // Analytics are calculated in the canonical unit so labels stay truthful for mixed-source records.
-  const unit = unitOverride || 'kg';
+  const unit = unitOverride || filtered[filtered.length - 1]?.unit || 'kg';
   const measurementCount = filtered.length;
 
-  const fluctuation = useMemo(() => computeFluctuation(filtered), [filtered]);
-  const fullRange = useMemo(() => computeRange(filtered), [filtered]);
-  const mostActiveDay = useMemo(() => computeMostActiveDay(filtered), [filtered]);
-  const weekdayAverages = useMemo(() => computeWeekdayAverages(filtered), [filtered]);
-  const monthlyAverages = useMemo(() => computeMonthlyAverages(filtered), [filtered]);
-  const trend = useMemo(() => computeTrend(filtered), [filtered]);
-  const outlierIds = useMemo(() => detectOutlierIds(filtered), [filtered]);
+  const fluctuation = useMemo(() => computeFluctuation(filtered as any), [filtered]);
+  const fullRange = useMemo(() => computeRange(filtered as any), [filtered]);
+  const mostActiveDay = useMemo(() => computeMostActiveDay(filtered as any), [filtered]);
+  const weekdayAverages = useMemo(() => computeWeekdayAverages(filtered as any), [filtered]);
+  const monthlyAverages = useMemo(() => computeMonthlyAverages(filtered as any), [filtered]);
+  const trend = useMemo(() => computeTrend(filtered as any), [filtered]);
+  const outlierIds = useMemo(() => detectOutlierIds(filtered as any), [filtered]);
   const goalDirection = useMemo(() => inferGoalDirection(goal), [goal]);
 
+  const hasEnoughForCharts = filtered.length >= 2;
   const maxWeekdayAvg = Math.max(...weekdayAverages.map((d) => d.average || 0), 0.0001);
   const maxMonthAvg = Math.max(...monthlyAverages.map((m) => m.average || 0), 0.0001);
   const firstFlaggedMeasurement = useMemo(() => filtered.find((m) => outlierIds.has(String(m.id))), [filtered, outlierIds]);
@@ -79,7 +90,7 @@ export default function InsightsView({
   if (!measurements) {
     // loading skeletons
     return (
-      <div id="weight-panel-insights" role="tabpanel" aria-labelledby="weight-tab-insights" className="weight-trend-view">
+      <div className="mt-6 space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="h-28 bg-slate-100 rounded-2xl animate-pulse" />
           <div className="h-28 bg-slate-100 rounded-2xl animate-pulse" />
@@ -96,13 +107,13 @@ export default function InsightsView({
 
   if (measurementCount === 0) {
     return (
-      <div id="weight-panel-insights" role="tabpanel" aria-labelledby="weight-tab-insights" className="weight-trend-view weight-trend-surface bg-white p-6">
+      <div className="mt-6 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
         <h3 className="text-lg font-semibold text-slate-900">No weight insights for this period</h3>
         <p className="text-sm text-slate-600 mt-2">No valid weight measurements are available in the selected date range.</p>
         <div className="mt-4 flex gap-2">
           <Link href={`${pathname}?tab=insights&range=All`} className="px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">View All Time</Link>
           <button
-            onClick={() => onAddMeasurement?.()}
+            onClick={() => { const p = new URLSearchParams(searchParams?.toString() || ''); p.set('tab', 'overview'); window.history.pushState({}, '', `${pathname}?${p.toString()}`); window.location.reload(); }}
             className="px-3.5 py-2 bg-teal-700 text-white rounded-lg text-sm font-semibold hover:bg-teal-800"
           >
             + Add Measurement
@@ -113,11 +124,10 @@ export default function InsightsView({
   }
 
   return (
-    <div id="weight-panel-insights" role="tabpanel" aria-labelledby="weight-tab-insights" className="weight-trend-view">
-      <h2 className="sr-only">Weight Insights</h2>
+    <div className="mt-6 space-y-5">
       {/* Insights Snapshot */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="weight-trend-surface bg-cyan-50/70 p-5 border-cyan-100">
+        <div className="bg-cyan-50/70 p-5 rounded-2xl border border-cyan-100">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 flex-shrink-0 rounded-xl bg-cyan-100 flex items-center justify-center text-cyan-700">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M3 12h3l2-7 4 14 2-7h7" /></svg>
@@ -125,28 +135,28 @@ export default function InsightsView({
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-800 uppercase tracking-wide">
                 Fluctuation
-                <button type="button" title="Describes how widely recorded weights vary around the average during the selected period." className="inline-flex h-5 w-5 items-center justify-center rounded-full text-cyan-600 hover:bg-cyan-100 focus-visible:ring-2 focus-visible:ring-cyan-500" aria-label="About fluctuation">i</button>
+                <span title="Describes how widely recorded weights vary around the average during the selected period." className="cursor-help text-cyan-500" aria-label="About Fluctuation">ⓘ</span>
               </div>
-              <div className="text-2xl font-black text-slate-900 mt-1 tabular-nums">{fluctuation != null ? formatWeight(fluctuation, 'kg', unit, 2) : 'Not enough data'}</div>
+              <div className="text-2xl font-black text-slate-900 mt-1 tabular-nums">{fluctuation != null ? `${fluctuation} ${unit}` : 'Not enough data'}</div>
               <div className="text-xs text-slate-500 mt-1">{filtered.length >= 2 ? `Standard deviation across ${filtered.length} measurements` : 'At least 2 measurements needed.'}</div>
             </div>
           </div>
         </div>
 
-        <div className="weight-trend-surface bg-blue-50/70 p-5 border-blue-100">
+        <div className="bg-blue-50/70 p-5 rounded-2xl border border-blue-100">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 flex-shrink-0 rounded-xl bg-blue-100 flex items-center justify-center text-blue-700">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" /></svg>
             </div>
             <div className="min-w-0">
               <div className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Full Range</div>
-              <div className="text-2xl font-black text-slate-900 mt-1 tabular-nums">{fullRange ? formatWeight(fullRange.difference, 'kg', unit, 2) : 'Not enough data'}</div>
-              <div className="text-xs text-slate-500 mt-1">{fullRange ? `${formatWeight(fullRange.lowestKg, 'kg', unit, 2)} → ${formatWeight(fullRange.highestKg, 'kg', unit, 2)} · selected period` : 'Highest minus lowest recorded'}</div>
+              <div className="text-2xl font-black text-slate-900 mt-1 tabular-nums">{fullRange ? `${fullRange.difference} ${unit}` : 'Not enough data'}</div>
+              <div className="text-xs text-slate-500 mt-1">{fullRange ? `${fullRange.lowestKg} ${unit} → ${fullRange.highestKg} ${unit}` : 'Highest minus lowest recorded'}</div>
             </div>
           </div>
         </div>
 
-        <div className="weight-trend-surface bg-violet-50/70 p-5 border-violet-100">
+        <div className="bg-violet-50/70 p-5 rounded-2xl border border-violet-100">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 flex-shrink-0 rounded-xl bg-violet-100 flex items-center justify-center text-violet-700">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18" /></svg>
@@ -174,7 +184,7 @@ export default function InsightsView({
 
       {/* Analytics row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="weight-trend-surface bg-white p-5">
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[15px] font-semibold text-slate-900">Average by Day of Week</div>
@@ -190,8 +200,8 @@ export default function InsightsView({
                 type="button"
                 disabled={d.count === 0}
                 onClick={() => setSelectedWeekday({ label: d.weekday, index: d.weekdayIndex })}
-                title={d.count ? `${d.weekday}\nAverage: ${formatWeight(d.average!, 'kg', unit, 2)}\nMeasurements: ${d.count}\nSelected period: ${range}` : `No measurements on ${d.weekday}`}
-                className="weight-trend-control w-full flex items-center gap-3 group disabled:cursor-default"
+                title={d.count ? `${d.weekday}\nAverage: ${d.average} ${unit}\nMeasurements: ${d.count}\nSelected period: ${range}` : `No measurements on ${d.weekday}`}
+                className="w-full flex items-center gap-3 group disabled:cursor-default"
               >
                 <div className="w-10 text-xs font-medium text-slate-600 text-left">{d.weekday}</div>
                 <div className="flex-1 bg-slate-50 rounded-full h-6 flex items-center overflow-hidden">
@@ -199,7 +209,7 @@ export default function InsightsView({
                     <div className="bg-teal-500 group-hover:bg-teal-600 h-4 rounded-full ml-1 transition-colors" style={{ width: `${Math.max(4, (d.average / maxWeekdayAvg) * 100)}%` }} aria-hidden />
                   )}
                 </div>
-                <div className="w-24 text-right text-xs font-semibold text-slate-700 tabular-nums">{d.average != null ? formatWeight(d.average, 'kg', unit, 2) : '—'}</div>
+                <div className="w-24 text-right text-xs font-semibold text-slate-700 tabular-nums">{d.average != null ? `${d.average} ${unit}` : '—'}</div>
               </button>
             ))}
           </div>
@@ -209,7 +219,7 @@ export default function InsightsView({
           </div>
         </div>
 
-        <div className="weight-trend-surface bg-white p-5">
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[15px] font-semibold text-slate-900">Monthly Averages</div>
@@ -228,7 +238,7 @@ export default function InsightsView({
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18" /></svg>
               </div>
               <div className="text-xs font-semibold text-teal-800 uppercase tracking-wide">{monthlyAverages[0].month}</div>
-              <div className="text-2xl font-black text-slate-900 mt-1 tabular-nums">{formatWeight(monthlyAverages[0].average, 'kg', unit, 2)}</div>
+              <div className="text-2xl font-black text-slate-900 mt-1 tabular-nums">{monthlyAverages[0].average} {unit}</div>
               <div className="text-xs text-slate-500 mt-1">Average Weight · Based on {monthlyAverages[0].count} measurements</div>
               <p className="text-xs text-slate-400 mt-3 italic">More months are needed for a longitudinal monthly comparison.</p>
             </div>
@@ -242,14 +252,14 @@ export default function InsightsView({
                 return (
                   <div
                     key={m.monthKey}
-                    title={`${m.month}\nAverage: ${formatWeight(m.average, 'kg', unit, 2)}\nMeasurements: ${m.count}${change != null ? `\nChange from ${prevMonth!.month}: ${formatWeight(change, 'kg', unit, 2)}` : ''}`}
+                    title={`${m.month}\nAverage: ${m.average} ${unit}\nMeasurements: ${m.count}${change != null ? `\nChange from ${prevMonth!.month}: ${change > 0 ? '+' : ''}${change} kg` : ''}`}
                     className="flex items-center gap-3"
                   >
                     <div className="w-20 text-xs font-medium text-slate-600">{m.month}</div>
                     <div className="flex-1 bg-slate-50 rounded-full h-6 flex items-center overflow-hidden">
                       <div className="bg-teal-500 h-4 rounded-full ml-1" style={{ width: `${Math.max(4, (m.average / maxMonthAvg) * 100)}%` }} aria-hidden />
                     </div>
-                    <div className="w-24 text-right text-xs font-semibold text-slate-700 tabular-nums">{formatWeight(m.average, 'kg', unit, 2)}</div>
+                    <div className="w-24 text-right text-xs font-semibold text-slate-700 tabular-nums">{m.average} {unit}</div>
                   </div>
                 );
               })}
@@ -257,13 +267,13 @@ export default function InsightsView({
           )}
 
           <div className="mt-4 flex justify-end">
-            <button onClick={() => setCompareOpen(true)} className="weight-trend-control inline-flex items-center px-3 text-xs font-semibold border border-blue-200 bg-blue-50 text-blue-800 rounded-lg hover:bg-blue-100">Compare Periods</button>
+            <button onClick={() => setCompareOpen(true)} className="px-3 py-1.5 text-xs font-semibold border border-blue-200 bg-blue-50 text-blue-800 rounded-lg hover:bg-blue-100">Compare Periods</button>
           </div>
         </div>
       </div>
 
       {/* Clinical Insights */}
-      <div className="weight-trend-surface bg-white p-5">
+      <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-lg font-bold text-slate-900">Clinical Insights</div>
@@ -278,7 +288,7 @@ export default function InsightsView({
             <div className="font-bold text-slate-900 mt-1">
               {trend.direction === 'insufficient-data' ? 'Insufficient Data' : trend.direction === 'increasing' ? 'Increasing' : trend.direction === 'decreasing' ? 'Decreasing' : 'Stable'}
             </div>
-            {trend.weeklyRate != null && <div className="text-xs text-slate-500 mt-0.5">{formatWeight(trend.weeklyRate, 'kg', unit, 2)}/week · selected period</div>}
+            {trend.weeklyRate != null && <div className="text-xs text-slate-500 mt-0.5">{trend.weeklyRate} kg/week · selected period</div>}
           </div>
           <div className="p-4 bg-violet-50/60 rounded-xl border border-violet-100">
             <div className="text-xs font-semibold text-violet-800 uppercase tracking-wide">Measurement Pattern</div>
@@ -290,7 +300,7 @@ export default function InsightsView({
             {goal ? (
               <>
                 <div className="font-bold text-slate-900 mt-1">{goalTypeLabel()}</div>
-                <div className="text-xs text-slate-500 mt-0.5">Target: {goal.targetWeight != null ? formatWeight(Number(goal.targetWeight), 'kg', unit) : 'Documented target range'}{goal.targetDate ? ` · ${formatDateShort(goal.targetDate)}` : ''}</div>
+                <div className="text-xs text-slate-500 mt-0.5">Target: {goal.targetWeight} {unit}{goal.targetDate ? ` · ${formatDateShort(goal.targetDate)}` : ''}</div>
               </>
             ) : (
               <>
@@ -306,7 +316,7 @@ export default function InsightsView({
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs" onClick={() => setDrawerOpen(false)} />
-          <div className="weight-trend-drawer ml-auto h-full bg-white p-6 overflow-auto shadow-2xl">
+          <div className="ml-auto w-full md:w-2/5 bg-white h-full p-6 overflow-auto shadow-2xl">
             <div className="flex items-center justify-between">
               <h4 className="text-lg font-bold text-slate-900">All Weight Insights</h4>
               <button onClick={() => setDrawerOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Close">
@@ -314,14 +324,14 @@ export default function InsightsView({
               </button>
             </div>
             <div className="mt-4 space-y-3 text-sm text-slate-700">
-              <div><div className="text-xs text-slate-500">Trend</div><div className="font-medium">{trend.direction === 'insufficient-data' ? 'Insufficient Data' : trend.direction}{trend.weeklyRate != null ? ` · ${formatWeight(trend.weeklyRate, 'kg', unit, 2)}/week` : ''}</div></div>
-              <div><div className="text-xs text-slate-500">Average</div><div className="font-medium">{filtered.length ? formatWeight(filtered.reduce((sum, measurement) => sum + measurement.weightKg, 0) / filtered.length, 'kg', unit, 2) : '—'}</div></div>
-              <div><div className="text-xs text-slate-500">Fluctuation</div><div className="font-medium">{fluctuation != null ? formatWeight(fluctuation, 'kg', unit, 2) : 'Not enough data'}</div></div>
-              <div><div className="text-xs text-slate-500">Full Range</div><div className="font-medium">{fullRange ? `${formatWeight(fullRange.lowestKg, 'kg', unit, 2)} → ${formatWeight(fullRange.highestKg, 'kg', unit, 2)}` : 'Not enough data'}</div></div>
+              <div><div className="text-xs text-slate-500">Trend</div><div className="font-medium">{trend.direction === 'insufficient-data' ? 'Insufficient Data' : trend.direction}{trend.weeklyRate != null ? ` · ${trend.weeklyRate} kg/week` : ''}</div></div>
+              <div><div className="text-xs text-slate-500">Average</div><div className="font-medium">{filtered.length ? `${(filtered.reduce((s, m) => s + Number(m.value), 0) / filtered.length).toFixed(2)} ${unit}` : '—'}</div></div>
+              <div><div className="text-xs text-slate-500">Fluctuation</div><div className="font-medium">{fluctuation != null ? `${fluctuation} ${unit}` : 'Not enough data'}</div></div>
+              <div><div className="text-xs text-slate-500">Full Range</div><div className="font-medium">{fullRange ? `${fullRange.lowestKg} → ${fullRange.highestKg} ${unit}` : 'Not enough data'}</div></div>
               <div><div className="text-xs text-slate-500">Measurements</div><div className="font-medium">{measurementCount}</div></div>
               <div><div className="text-xs text-slate-500">Weekday Pattern</div><div className="font-medium">{mostActiveDay ? `${weekdayLabel(mostActiveDay.days[0])} (${mostActiveDay.count})` : '—'}</div></div>
               <div><div className="text-xs text-slate-500">Monthly Pattern</div><div className="font-medium">{monthlyAverages.length ? `${monthlyAverages.length} month(s) documented` : 'Not enough monthly data'}</div></div>
-              <div><div className="text-xs text-slate-500">Goal Context</div><div className="font-medium">{goal ? `${goalTypeLabel()} · ${goal.targetWeight != null ? `Target ${formatWeight(Number(goal.targetWeight), 'kg', unit)}` : 'Documented range'}` : 'No active weight goal'}</div></div>
+              <div><div className="text-xs text-slate-500">Goal Context</div><div className="font-medium">{goal ? `${goalTypeLabel()} · Target ${goal.targetWeight} ${unit}` : 'No active weight goal'}</div></div>
               {patientData?.lastVisit && (
                 <div><div className="text-xs text-slate-500">Since Last Visit</div><div className="font-medium">Last visit {formatDateShort(patientData.lastVisit)}</div></div>
               )}
@@ -346,7 +356,7 @@ export default function InsightsView({
 
       {/* Compare periods */}
       {compareOpen && (
-        <ComparePeriodsDrawer patientId={patientId} goal={goal} displayUnit={unit} onClose={() => setCompareOpen(false)} />
+        <ComparePeriodsDrawer patientId={patientId} goal={goal} onClose={() => setCompareOpen(false)} />
       )}
 
       {/* Measurement detail (correction / entered-in-error) */}
@@ -354,7 +364,7 @@ export default function InsightsView({
         <MeasurementDetailDrawer
           patientId={patientId}
           measurement={selectedMeasurement}
-          needsReview={outlierIds.has(String(selectedMeasurement.id))}
+          isOutlier={outlierIds.has(String(selectedMeasurement.id))}
           onClose={() => setSelectedMeasurement(null)}
           onUpdated={async () => { await onRefresh(); setSelectedMeasurement(null); }}
         />

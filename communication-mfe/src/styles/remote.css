@@ -1,0 +1,34 @@
+.roshi-communication-mfe { color: #17232f; border: 1px solid #dbe4e7; border-radius: 12px; background: #f8fbfa; font-family: ui-sans-serif, system-ui, sans-serif; overflow: hidden; }
+.roshi-communication-mfe *, .roshi-communication-composer * { box-sizing: border-box; }
+.roshi-communication-mfe__header { display: flex; justify-content: space-between; gap: 1rem; padding: 1.1rem; border-bottom: 1px solid #dbe4e7; background: #fff; }
+.roshi-communication-mfe__kicker { display: block; color: #0b766e; font-size: .64rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.roshi-communication-mfe h1 { margin-top: .25rem; font-size: 1.35rem; font-weight: 850; }
+.roshi-communication-mfe__header p { margin-top: .3rem; color: #647381; font-size: .72rem; }
+.roshi-communication-mfe__secure { align-self: flex-start; border-radius: 99px; padding: .3rem .5rem; color: #276f56; background: #e0f4e7; font-size: .6rem; font-weight: 800; white-space: nowrap; }
+.roshi-communication-mfe__toolbar { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem 1rem; }
+.roshi-communication-mfe__toolbar label { min-width: 0; flex: 1; }
+.roshi-communication-mfe input, .roshi-communication-composer textarea { width: 100%; border: 1px solid #d1dfe0; border-radius: 7px; padding: .55rem .6rem; color: #17232f; background: #fff; font-size: .72rem; outline: 0; }
+.roshi-communication-mfe input:focus, .roshi-communication-composer textarea:focus { border-color: #72b9b1; box-shadow: 0 0 0 3px rgba(11,118,110,.1); }
+.roshi-communication-mfe__toolbar > span { color: #718188; font-size: .64rem; white-space: nowrap; }
+.roshi-communication-mfe__list { border-top: 1px solid #dbe4e7; }
+.roshi-communication-mfe__list button { display: flex; width: 100%; align-items: flex-start; gap: .6rem; border: 0; border-bottom: 1px solid #e8eeee; padding: .75rem 1rem; color: inherit; background: #fff; text-align: left; }
+.roshi-communication-mfe__list button:hover, .roshi-communication-mfe__list button.is-selected { background: #e9f7f4; }
+.roshi-communication-mfe__avatar { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 2.1rem; height: 2.1rem; border-radius: 8px; color: #236c68; background: #d8f0ec; font-size: .63rem; font-weight: 900; }
+.roshi-communication-mfe__list button > span:nth-child(2) { display: grid; min-width: 0; flex: 1; gap: .16rem; }
+.roshi-communication-mfe__list strong { font-size: .7rem; }
+.roshi-communication-mfe__list b { overflow: hidden; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.roshi-communication-mfe__list small { overflow: hidden; color: #718188; font-size: .61rem; text-overflow: ellipsis; white-space: nowrap; }
+.roshi-communication-mfe__list time { color: #829197; font-size: .58rem; white-space: nowrap; }
+.roshi-communication-mfe__empty { display: grid; gap: .25rem; padding: 2rem; text-align: center; }
+.roshi-communication-mfe__empty span { color: #718188; font-size: .68rem; }
+.roshi-communication-mfe__error, .roshi-communication-mfe__success { margin: .65rem 1rem; border: 1px solid; border-radius: 7px; padding: .55rem .65rem; font-size: .65rem; line-height: 1.45; }
+.roshi-communication-mfe__error { color: #8d3c3d; background: #fff1ef; border-color: #e9b9b2; }
+.roshi-communication-mfe__success { color: #236b55; background: #edf9f2; border-color: #b9dfc8; }
+.roshi-communication-composer { display: grid; gap: .7rem; padding: 1rem; border: 1px solid #dbe4e7; border-radius: 10px; background: #fff; }
+.roshi-communication-composer label { display: grid; gap: .3rem; color: #4f6269; font-size: .65rem; font-weight: 800; }
+.roshi-communication-composer textarea { resize: vertical; line-height: 1.5; }
+.roshi-communication-composer__notice { display: grid; gap: .22rem; border: 1px solid #bfe1dc; border-radius: 7px; padding: .6rem; color: #316b65; background: #eff9f7; font-size: .62rem; line-height: 1.4; }
+.roshi-communication-composer__actions { display: flex; justify-content: flex-end; }
+.roshi-communication-composer__actions button { border: 1px solid #0b766e; border-radius: 7px; padding: .55rem .75rem; color: #fff; background: #0b766e; font-size: .68rem; font-weight: 800; }
+.roshi-communication-composer__actions button:disabled { cursor: not-allowed; opacity: .5; }
+@media (max-width: 560px) { .roshi-communication-mfe__header { flex-direction: column; } .roshi-communication-mfe__secure { align-self: flex-start; } .roshi-communication-mfe__list time { display: none; } }

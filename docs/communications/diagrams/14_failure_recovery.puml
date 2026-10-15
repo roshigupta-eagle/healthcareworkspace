@@ -1,0 +1,28 @@
+@startuml
+start
+:User initiates message/call;
+if (Database commit succeeds?) then (yes)
+  :Durable state exists;
+else (no)
+  :Return explicit failure;
+  stop
+endif
+if (Realtime/provider healthy?) then (yes)
+  :Deliver/establish session;
+else (no)
+  :Mark pending/degraded;
+  if (Message/notification?) then (yes)
+    :Queue retry with backoff;
+    :Dead-letter/manual intervention after policy;
+  else (Call/media)
+    :Reconnect / ICE restart / TURN fallback;
+    if (Recovered?) then (yes)
+      :Resume ACTIVE;
+    else (no)
+      :Persist FAILED with reason;
+    endif
+  endif
+endif
+:Emit audit + metrics + user-visible truthful state;
+stop
+@enduml

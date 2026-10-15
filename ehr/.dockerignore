@@ -1,0 +1,36 @@
+# Local configuration and credentials must be injected by the deployment platform.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+secrets/
+
+# Dependency, build, and test artifacts are rebuilt inside the image.
+node_modules/
+.next/
+.build/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Never package local persisted state or diagnostics in an application image.
+data/
+*.sqlite
+*.sqlite3
+*.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Repository and editor metadata are not runtime inputs.
+.git/
+.vscode/

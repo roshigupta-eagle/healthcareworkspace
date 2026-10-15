@@ -68,7 +68,6 @@ export default function TaskDetailPanel({ task, onMarkComplete, onDelegate, onOp
                   ? 'Critical lab values require provider review and follow up.'
                   : 'This task has been marked high priority and needs timely attention.'}
               </div>
-              <div className="mt-3 text-sm"><a className="text-sky-600" href="#">View guideline</a></div>
             </div>
           )}
 
@@ -147,7 +146,6 @@ export default function TaskDetailPanel({ task, onMarkComplete, onDelegate, onOp
                 </div>
               ))}
             </div>
-            <div className="mt-2 text-xs text-slate-400"><a href="#">Show more activity</a></div>
           </div>
 
           <div className="text-xs text-slate-400">All task actions are logged and auditable.</div>

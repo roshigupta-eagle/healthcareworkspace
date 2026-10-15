@@ -1,284 +1,51 @@
-"use client";
+'use client';
 
-import React, { useMemo, useState } from 'react';
-import BackToPatientButton from '@/components/BackToPatientButton';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import BackToPatientButton from '@/components/BackToPatientButton';
+import type { Patient } from '@/app/dashboard/records/mockPatients';
 
-type Props = {
-  patient: any;
-  conditionName: string;
-  patientId: string;
-};
+type Props = { patient: Patient; conditionName: string; patientId: string };
+type Tab = 'overview' | 'history' | 'related' | 'monitoring' | 'notes';
+
+type ConditionDetail = NonNullable<Patient['conditionDetails']>[number];
+
+function dateLabel(value?: string) {
+  if (!value) return 'Not documented';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(date);
+}
+
+function concernLabel(concern: NonNullable<Patient['currentConcerns']>[number]) {
+  return typeof concern === 'string' ? concern : concern.title;
+}
+
+function conditionDetail(patient: Patient, name: string): ConditionDetail | undefined {
+  return patient.conditionDetails?.find((condition) => condition.name.toLowerCase() === name.toLowerCase());
+}
 
 export default function ConditionDetailClient({ patient, conditionName, patientId }: Props) {
-  const [activeTab, setActiveTab] = useState<string>('overview');
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const detail = conditionDetail(patient, conditionName);
+  const relatedMedications = useMemo(() => (patient.medications || []).filter((medication) => medication.indication?.toLowerCase().includes(conditionName.toLowerCase()) || conditionName.toLowerCase().includes(medication.indication?.toLowerCase() || '\u0000')), [conditionName, patient.medications]);
+  const bloodPressure = patient.vitals?.bloodPressure || [];
+  const relatedLabs = (patient.labResults || []).filter((result) => result.name.toLowerCase().includes('a1c') || result.name.toLowerCase().includes(conditionName.toLowerCase()));
+  const notes = patient.notes || [];
+  const history = patient.history || [];
+  const concerns = (patient.currentConcerns || []).map(concernLabel);
+  const hasRecordedData = Boolean(detail || relatedMedications.length || bloodPressure.length || relatedLabs.length || notes.length || history.length);
 
-  const key = (conditionName || '').toLowerCase();
-  const isHypertension = key.includes('hypert');
-  const isDiabetes = key.includes('diabet');
-
-  const bpReadings = useMemo(() => {
-    if (!isHypertension) return [];
-    return [
-      { date: '2025-01-15', systolic: 138, diastolic: 88 },
-      { date: '2025-02-20', systolic: 130, diastolic: 82 },
-      { date: '2025-04-10', systolic: 128, diastolic: 78 },
-      { date: '2025-05-15', systolic: 132, diastolic: 80 },
-      { date: '2026-06-05', systolic: 128, diastolic: 76 },
-    ];
-  }, [isHypertension]);
-
-  const a1cReadings = useMemo(() => {
-    if (!isDiabetes) return [];
-    return [
-      { date: '2025-01-15', value: 7.6 },
-      { date: '2025-07-01', value: 7.4 },
-      { date: '2026-04-10', value: 7.2 },
-    ];
-  }, [isDiabetes]);
-
-  const latestBP = bpReadings[bpReadings.length - 1];
-
-  const tabs = ['overview', 'history', 'related', 'careplan', 'monitoring', 'notes'];
-
-  return (
-    <div className="mt-6">
-      {/* Top header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <BackToPatientButton patientId={patientId} />
-          <div>
-            <div className="text-2xl font-bold text-[#0f1724]">Condition Detail</div>
-            <div className="text-sm text-gray-500">{conditionName}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 text-sm text-gray-500">
-          <div>Updated just now</div>
-          <button aria-label="Refresh" className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">🔄</button>
-          <button aria-label="More" className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">⋯</button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 space-y-6">
-          {/* Hero card */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-gray-100">
-            <div className="flex items-center gap-5">
-              <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-purple-600 to-indigo-500 flex items-center justify-center text-white text-xl font-bold">C</div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-2xl font-bold text-gray-900">{conditionName}</div>
-                    <div className="mt-1 text-sm text-gray-500">{isHypertension ? 'Chronic' : isDiabetes ? 'Chronic' : 'Condition'}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="inline-flex items-center gap-2">
-                      <div className="px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-sm">ICD-10: {isHypertension ? 'I10' : isDiabetes ? 'E11.9' : '—'}</div>
-                      <div className={`px-3 py-1 rounded-full text-sm ${isHypertension ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-800'}`}>{isHypertension ? 'Active' : isDiabetes ? 'Active' : 'Status'}</div>
-                    </div>
-                    <div className="text-sm text-gray-500 mt-2">Diagnosed On: {isHypertension ? 'May 15, 2022' : isDiabetes ? 'Aug 01, 2021' : '—'}</div>
-                    <div className="text-sm text-gray-500">Managing Provider: {patient.lastAttendingDoctor || '—'}</div>
-                  </div>
-                </div>
-                <div className="mt-4 text-sm text-gray-700">{isHypertension ? 'Hypertension is a chronic condition in which the force of the blood against the artery walls is too high.' : isDiabetes ? 'Type 2 Diabetes is a chronic metabolic condition characterized by insulin resistance and hyperglycemia.' : 'Condition overview.'}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="bg-white rounded-lg p-2 shadow-sm ring-1 ring-gray-100">
-            <div role="tablist" aria-label="Condition sections" className="flex gap-2 overflow-x-auto">
-              {tabs.map((t) => (
-                <button
-                  key={t}
-                  role="tab"
-                  aria-selected={activeTab === t}
-                  onClick={() => setActiveTab(t)}
-                  className={`px-4 py-2 rounded-md text-sm ${activeTab === t ? 'bg-teal-50 text-teal-700 ring-1 ring-teal-100' : 'text-gray-600 hover:bg-gray-50'}`}
-                >
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Main workspace - Overview tab */}
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-lg p-6 shadow-sm ring-1 ring-gray-100">
-                  <h4 className="text-lg font-semibold text-gray-900">Condition Overview</h4>
-                  <p className="mt-3 text-sm text-gray-700">{isHypertension ? 'Hypertension is a chronic condition in which the force of the blood against the artery walls is too high.' : isDiabetes ? 'Type 2 Diabetes requires regular monitoring of glycemic control and related complications.' : 'Overview content.'}</p>
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600">
-                    <div>
-                      <div className="text-xs text-gray-500">Duration</div>
-                      <div className="font-medium text-gray-900">{isHypertension ? '4 years' : isDiabetes ? '5 years' : '—'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Control Status</div>
-                      <div className="font-medium text-gray-900">{isHypertension ? 'Controlled' : isDiabetes ? 'Suboptimal' : '—'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Severity</div>
-                      <div className="font-medium text-gray-900">{isHypertension ? 'Moderate' : isDiabetes ? 'Moderate' : '—'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Last Reviewed</div>
-                      <div className="font-medium text-gray-900">Jun 05, 2026</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg p-6 shadow-sm ring-1 ring-gray-100">
-                  <h4 className="text-lg font-semibold text-gray-900">Recent {isHypertension ? 'Blood Pressure' : isDiabetes ? 'A1C' : 'Measurements'}</h4>
-                  <div className="mt-4">
-                    {isHypertension && bpReadings.length > 0 ? (
-                      <div>
-                        <svg viewBox="0 0 100 40" className="w-full h-32" preserveAspectRatio="none">
-                          <polyline fill="none" stroke="#0f766e" strokeWidth="2" points={bpReadings.map((p, i) => `${(i/(bpReadings.length-1))*100},${40 - ((p.systolic - 110) / 40) * 30}`).join(' ')} />
-                        </svg>
-                        <div className="mt-2 text-sm">
-                          <div className="font-medium text-gray-900">Latest: {latestBP ? `${latestBP.systolic}/${latestBP.diastolic} mmHg` : '—'}</div>
-                          <div className="text-xs text-gray-500">Status: Good</div>
-                        </div>
-                      </div>
-                    ) : isDiabetes && a1cReadings.length > 0 ? (
-                      <div>
-                        <div className="text-sm font-medium">Latest A1C: {a1cReadings[a1cReadings.length - 1].value}%</div>
-                        <div className="text-xs text-gray-500 mt-1">Goal: &lt; 7.0%</div>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-gray-500">No recent measurements</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                  <div className="bg-white rounded-lg p-6 shadow-sm ring-1 ring-gray-100">
-                    <h4 className="text-lg font-semibold text-gray-900">Risk Factors</h4>
-                    <ul className="mt-3 space-y-2 text-sm text-gray-700">
-                      <li>• Family history of hypertension</li>
-                      <li>• Sedentary lifestyle</li>
-                      <li>• Overweight</li>
-                      <li>• High sodium intake</li>
-                      <li>• Stress</li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-white rounded-lg p-6 shadow-sm ring-1 ring-gray-100">
-                    <h4 className="text-lg font-semibold text-gray-900">Associated Symptoms</h4>
-                    <div className="mt-3 text-sm text-gray-700">{patient.currentConcerns && patient.currentConcerns.length > 0 ? patient.currentConcerns.join(', ') : 'None reported'}</div>
-                  </div>
-
-                  <div className="bg-white rounded-lg p-6 shadow-sm ring-1 ring-gray-100">
-                    <h4 className="text-lg font-semibold text-gray-900">Condition Timeline</h4>
-                    <div className="mt-4 space-y-4">
-                      <div className="flex items-start gap-4">
-                        <div className="w-24 text-xs text-gray-400">May 15, 2022</div>
-                        <div className="flex-1 bg-gray-50 p-3 rounded-md">
-                          <div className="font-medium">Diagnosed</div>
-                          <div className="text-xs text-gray-500">Initial diagnosis based on elevated BP readings.</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-4">
-                        <div className="w-24 text-xs text-gray-400">Jun 01, 2022</div>
-                        <div className="flex-1 bg-gray-50 p-3 rounded-md">
-                          <div className="font-medium">Treatment Started</div>
-                          <div className="text-xs text-gray-500">Started on Lisinopril 10 mg once daily.</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-4">
-                        <div className="w-24 text-xs text-gray-400">Jun 05, 2026</div>
-                        <div className="flex-1 bg-gray-50 p-3 rounded-md">
-                          <div className="font-medium">Reviewed</div>
-                          <div className="text-xs text-gray-500">BP controlled. Continue current management.</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-lg p-6 shadow-sm ring-1 ring-gray-100">
-                    <h4 className="text-lg font-semibold text-gray-900">Recent Notes</h4>
-                    <div className="mt-3 space-y-3 text-sm text-gray-700">
-                      {(patient.notes || []).slice(0, 3).map((n: any) => (
-                        <div key={n.id} className="border-b border-gray-100 pb-2">
-                          <div className="font-medium text-gray-900">{n.author} <span className="text-xs text-gray-500">• {n.date}</span></div>
-                          <div className="text-xs text-gray-500 mt-1">{n.snippet}</div>
-                        </div>
-                      ))}
-                      {(patient.notes || []).length === 0 && <div className="text-sm text-gray-500">No recent notes</div>}
-                      <div className="mt-3"><Link href={`/dashboard/records/${patientId}/doctor-notes`} className="text-teal-600 text-sm">View All Notes →</Link></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="bg-white rounded-lg p-4 shadow-sm ring-1 ring-gray-100">
-                    <h5 className="text-md font-semibold text-gray-900">Related Information</h5>
-                    <div className="mt-3 text-sm text-gray-700 space-y-2">
-                      <Link href={`/dashboard/records/${patientId}/medications`} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-md"> <div>Medications</div> <div className="text-sm text-gray-500">{(patient.medications || []).length}</div> </Link>
-                      <Link href={`/dashboard/records/${patientId}/labs`} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-md"> <div>Related Labs</div> <div className="text-sm text-gray-500">{(patient.labResults || []).length}</div> </Link>
-                      <Link href={`/dashboard/records/${patientId}`} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-md"> <div>Recent Visits</div> <div className="text-sm text-gray-500">{(patient.history || []).length}</div> </Link>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-lg p-4 shadow-sm ring-1 ring-gray-100">
-                    <h5 className="text-md font-semibold text-gray-900">Care Plan Summary</h5>
-                    <div className="mt-3 text-sm text-gray-700 space-y-2">
-                      <div className="flex items-center justify-between"><div>Medication Adherence</div><div className="text-sm text-green-700">On Track</div></div>
-                      <div className="flex items-center justify-between"><div>Lifestyle Modification</div><div className="text-sm text-green-700">On Track</div></div>
-                      <div className="flex items-center justify-between"><div>Follow-up</div><div className="text-sm text-teal-700">Due in 6 weeks</div></div>
-                      <div className="mt-3"><Link href="#" className="text-teal-600 text-sm">View Care Plan →</Link></div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-br from-indigo-50 to-teal-50 rounded-lg p-4 shadow-sm ring-1 ring-gray-100">
-                    <h5 className="text-md font-semibold text-gray-900">AI Condition Summary</h5>
-                    <div className="mt-3 text-sm text-gray-700">BP is well-controlled with current treatment. Continue monitoring and lifestyle management. Consider reviewing renal function and electrolytes periodically.</div>
-                    <div className="mt-3 flex gap-2">
-                      <button className="px-3 py-2 bg-purple-600 text-white rounded-md">Generate Full Summary</button>
-                      <button className="px-3 py-2 border border-gray-200 rounded-md">Create Follow-up Task</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 shadow-sm ring-1 ring-gray-100">
-                <h4 className="text-lg font-semibold text-gray-900">Document Center</h4>
-                <div className="mt-3 space-y-2">
-                  {(patient.documents || []).map((d: any) => (
-                    <div key={d.id} className="flex items-center justify-between">
-                      <div className="text-sm text-gray-800">{d.name}</div>
-                      <div className="text-sm text-teal-600"><a href={d.url} className="hover:underline">Download</a></div>
-                    </div>
-                  ))}
-                  {(patient.documents || []).length === 0 && <div className="text-sm text-gray-500">No documents linked to this condition.</div>}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* other tabs could render alternate content */}
-        </div>
-
-        {/* Right sidebar */}
-        <aside className="lg:col-span-4 space-y-6">
-        </aside>
-      </div>
-
-      {/* Bottom action bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-3 px-6 shadow-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="text-sm text-gray-500">Last updated just now</div>
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 bg-white border border-gray-200 rounded-md">Add Note</button>
-            <button className="px-4 py-2 bg-white border border-gray-200 rounded-md">Message Patient</button>
-            <button className="px-4 py-2 bg-teal-600 text-white rounded-md">Create Follow-up Task</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <main className="mt-6 pb-24" aria-labelledby="condition-title">
+    <header className="mb-6 flex flex-wrap items-start justify-between gap-4"><div className="flex items-start gap-4"><BackToPatientButton patientId={patientId} /><div><span className="text-xs font-bold uppercase tracking-[.14em] text-teal-700">Patient condition</span><h1 id="condition-title" className="mt-1 text-2xl font-bold text-slate-900">{conditionName}</h1><p className="mt-1 text-sm text-slate-500">Factual condition context from the patient record.</p></div></div><div className="flex items-center gap-2"><button type="button" aria-label="Refresh condition detail" onClick={() => router.refresh()} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Refresh</button><Link href={`/dashboard/records/${encodeURIComponent(patientId)}`} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Patient Overview</Link></div></header>
+    <section className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100"><div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-xl font-semibold text-slate-900">{conditionName}</h2><p className="mt-1 text-sm text-slate-500">{detail?.severity || 'Severity not documented'} · {detail?.status || 'Status not documented'}</p></div><dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-right text-sm"><div><dt className="text-xs text-slate-400">Last reviewed</dt><dd className="font-medium text-slate-800">{dateLabel(detail?.lastReviewed)}</dd></div><div><dt className="text-xs text-slate-400">Managing clinician</dt><dd className="font-medium text-slate-800">{detail?.managedBy || patient.lastAttendingDoctor || 'Not documented'}</dd></div></dl></div>{!hasRecordedData && <p className="mt-5 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">No additional condition history or related clinical data is recorded for this patient.</p>}</section>
+    <nav className="mt-6 overflow-x-auto rounded-lg bg-white p-2 shadow-sm ring-1 ring-slate-100" aria-label="Condition sections" role="tablist">{([['overview', 'Overview'], ['history', 'History'], ['related', 'Related Care'], ['monitoring', 'Monitoring'], ['notes', 'Notes']] as Array<[Tab, string]>).map(([tab, label]) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`mr-1 rounded-md px-4 py-2 text-sm ${activeTab === tab ? 'bg-teal-50 text-teal-700 ring-1 ring-teal-100' : 'text-slate-600 hover:bg-slate-50'}`}>{label}</button>)}</nav>
+    {activeTab === 'overview' && <div className="mt-6 grid gap-6 lg:grid-cols-2"><section className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100"><h2 className="text-lg font-semibold text-slate-900">Condition Overview</h2><dl className="mt-4 grid gap-3 text-sm"><div><dt className="text-xs text-slate-400">Clinical status</dt><dd className="font-medium text-slate-800">{detail?.status || 'Not documented'}</dd></div><div><dt className="text-xs text-slate-400">Severity</dt><dd className="font-medium text-slate-800">{detail?.severity || 'Not documented'}</dd></div><div><dt className="text-xs text-slate-400">First documented review</dt><dd className="font-medium text-slate-800">{dateLabel(detail?.lastReviewed)}</dd></div><div><dt className="text-xs text-slate-400">Associated concerns</dt><dd className="font-medium text-slate-800">{concerns.length ? concerns.join(', ') : 'None documented'}</dd></div></dl></section><section className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100"><h2 className="text-lg font-semibold text-slate-900">Recorded Monitoring</h2>{bloodPressure.length || relatedLabs.length ? <div className="mt-4 space-y-3 text-sm">{bloodPressure.slice(-5).map((reading) => <div key={`${reading.date}-${reading.value}`} className="flex items-center justify-between border-b border-slate-100 pb-2"><span>{dateLabel(reading.date)}</span><strong>{reading.value} {reading.unit}</strong></div>)}{relatedLabs.slice(-5).map((result) => <div key={result.id} className="flex items-center justify-between border-b border-slate-100 pb-2"><span>{result.name} · {dateLabel(result.date)}</span><strong>{result.result}{result.unit ? ` ${result.unit}` : ''}</strong></div>)}</div> : <p className="mt-4 text-sm text-slate-500">No measurements are recorded for this condition.</p>}</section></div>}
+    {activeTab === 'history' && <section className="mt-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100"><h2 className="text-lg font-semibold text-slate-900">Patient History</h2>{history.length ? <ol className="mt-4 space-y-3">{history.map((visit) => <li key={visit.id} className="border-l-2 border-teal-200 pl-4"><div className="text-xs text-slate-400">{dateLabel(visit.date)} · {visit.status || 'Status not documented'}</div><strong className="text-sm text-slate-800">{visit.reason}</strong><div className="text-xs text-slate-500">{visit.provider}</div></li>)}</ol> : <p className="mt-4 text-sm text-slate-500">No related history is recorded.</p>}</section>}
+    {activeTab === 'related' && <div className="mt-6 grid gap-6 lg:grid-cols-2"><section className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100"><h2 className="text-lg font-semibold text-slate-900">Medications</h2>{relatedMedications.length ? <ul className="mt-4 space-y-3">{relatedMedications.map((medication) => <li key={`${medication.name}-${medication.startDate || ''}`} className="border-b border-slate-100 pb-3"><strong className="text-sm text-slate-800">{medication.name}</strong><p className="text-xs text-slate-500">{[medication.dose, medication.freq, medication.route].filter(Boolean).join(' · ') || 'Directions not documented'}</p></li>)}</ul> : <p className="mt-4 text-sm text-slate-500">No medication is explicitly linked to this condition.</p>}</section><section className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100"><h2 className="text-lg font-semibold text-slate-900">Current Concerns</h2>{concerns.length ? <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-slate-700">{concerns.map((concern) => <li key={concern}>{concern}</li>)}</ul> : <p className="mt-4 text-sm text-slate-500">No current concerns are recorded.</p>}</section></div>}
+    {activeTab === 'monitoring' && <section className="mt-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100"><h2 className="text-lg font-semibold text-slate-900">Monitoring Data</h2><p className="mt-1 text-sm text-slate-500">Only recorded measurements and results are shown.</p><div className="mt-4 grid gap-3 sm:grid-cols-2">{[...bloodPressure.map((reading) => ({ id: `bp-${reading.date}`, label: 'Blood pressure', value: `${reading.value} ${reading.unit}`, date: reading.date })), ...relatedLabs.map((result) => ({ id: result.id, label: result.name, value: `${result.result}${result.unit ? ` ${result.unit}` : ''}`, date: result.date }))].map((item) => <div key={item.id} className="rounded-lg bg-slate-50 p-3"><span className="text-xs text-slate-400">{item.label}</span><strong className="mt-1 block text-sm text-slate-800">{item.value}</strong><small className="text-xs text-slate-500">{dateLabel(item.date)}</small></div>)}</div>{!bloodPressure.length && !relatedLabs.length && <p className="mt-4 text-sm text-slate-500">No monitoring data is recorded.</p>}</section>}
+    {activeTab === 'notes' && <section className="mt-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100"><h2 className="text-lg font-semibold text-slate-900">Related Notes</h2>{notes.length ? <ul className="mt-4 space-y-3">{notes.map((note) => <li key={note.id} className="border-b border-slate-100 pb-3"><div className="text-xs text-slate-400">{dateLabel(note.date)} · {note.author}</div><p className="mt-1 text-sm text-slate-700">{note.snippet}</p></li>)}</ul> : <p className="mt-4 text-sm text-slate-500">No notes are recorded for this patient.</p>}</section>}
+    <footer className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white/95 px-6 py-3 shadow-lg backdrop-blur"><div className="mx-auto flex max-w-7xl flex-wrap justify-end gap-2"><Link href={`/dashboard/records/${encodeURIComponent(patientId)}/doctor-notes/new`} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Add Note</Link><Link href={`/dashboard/records/${encodeURIComponent(patientId)}/messages`} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Message Patient</Link><Link href={`/dashboard/tasks?new=1&patientId=${encodeURIComponent(patientId)}`} className="rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800">Create Follow-up Task</Link></div></footer>
+  </main>;
 }

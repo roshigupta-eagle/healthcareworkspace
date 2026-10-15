@@ -1,13 +1,26 @@
-﻿import { auth } from "@/lib/auth";
-import { NextResponse } from "next/server";
+import { auth } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const searchParams = req.nextUrl.searchParams;
-  const previewActor = process.env.NODE_ENV !== 'production' && (['1', 'true'].includes(searchParams.get('noauth') || '') || searchParams.get('asUser') === 'dev' || searchParams.get('asUser') === 'dev-doctor');
+  const previewUser = searchParams.get('asUser');
+  const previewActor = process.env.NODE_ENV !== 'production' && (['1', 'true'].includes(searchParams.get('noauth') || '') || ['dev', 'dev-doctor', 'user-admin-khan', 'patient-001'].includes(previewUser || ''));
+
+  if (pathname.startsWith('/admin') && previewActor && previewUser === 'user-admin-khan') {
+    return NextResponse.next();
+  }
+  if (pathname.startsWith('/api/admin') && previewActor && previewUser === 'user-admin-khan') {
+    return NextResponse.next();
+  }
 
   // Allow dev bypass for doctor view when ?noauth=1 is present
   if (pathname.startsWith('/doctor') && previewActor) {
+    return NextResponse.next();
+  }
+
+  // Allow dev bypass for the patient portal only with the explicit patient preview identity
+  if (pathname.startsWith('/patient') && previewActor && previewUser === 'patient-001') {
     return NextResponse.next();
   }
 
@@ -16,19 +29,29 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  const previewClinicalPaths = ['/dashboard/appointments', '/dashboard/encounters', '/dashboard/records', '/dashboard/orders', '/dashboard/patients', '/schedule/today', '/communication'];
+  const previewClinicalPaths = ['/dashboard', '/dashboard/appointments', '/dashboard/encounters', '/dashboard/records', '/dashboard/orders', '/dashboard/patients', '/schedule/today', '/communication', '/telehealth'];
   if (previewActor && previewClinicalPaths.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
     return NextResponse.next();
   }
 
-  const previewWorkspaceApiPaths = ['/api/doctor-view', '/api/doctor-work-summary', '/api/doctor/work', '/api/doctor/messages', '/api/doctor/documents', '/api/alerts/acknowledge', '/api/health-records', '/api/scheduling', '/api/communication', '/api/tasks', '/api/patients'];
+  // Generic educational reference assets carry no patient data. Permit only
+  // their read-only delivery so browser-side WebGL loaders never receive a
+  // login document in place of a GLB file. Patient images remain protected.
+  if (pathname === '/skeleton-reference.png' && ['GET', 'HEAD'].includes(req.method)) {
+    return NextResponse.next();
+  }
+  if (pathname.startsWith('/models/hubmap/') && ['GET', 'HEAD'].includes(req.method)) {
+    return NextResponse.next();
+  }
+
+  const previewWorkspaceApiPaths = ['/api/doctor-view', '/api/doctor-work-summary', '/api/doctor/work', '/api/doctor/messages', '/api/doctor/documents', '/api/alerts/acknowledge', '/api/health-records', '/api/scheduling', '/api/communication', '/api/tasks', '/api/patients', '/api/orders', '/api/laboratory', '/api/referrals', '/api/encounters', '/api/dashboard'];
   if (previewActor && previewWorkspaceApiPaths.some((route) => pathname === route || pathname.startsWith(`${route}/`)) && !req.auth) {
     return NextResponse.next();
   }
 
   // Public — no auth required
-  if (pathname === "/") return NextResponse.next();
-  const publicRoutes = ["/login", "/register", "/api/auth", "/api/register", "/scheduling", "/docs", "/debug"];
+  if (pathname === '/') return NextResponse.next();
+  const publicRoutes = ['/login', '/register', '/api/auth', '/api/register', '/scheduling', '/docs', '/debug'];
 
   // Redirect login/register to doctor view (dev convenience)
   if (pathname === '/login' || pathname === '/register') {
@@ -38,48 +61,53 @@ export default auth((req) => {
   if (publicRoutes.some((r) => pathname.startsWith(r))) return NextResponse.next();
 
   // Playwright / E2E bypass is gated behind explicit env enable + allowlist
-  const enableE2EBypass = process.env.ENABLE_E2E_BYPASS === "true";
-  const bypassAllowlist = (process.env.E2E_BYPASS_ALLOWLIST || "").split(",").map(s => s.trim()).filter(Boolean);
+  const enableE2EBypass = process.env.ENABLE_E2E_BYPASS === 'true';
+  const bypassAllowlist = (process.env.E2E_BYPASS_ALLOWLIST || '').split(',').map(s => s.trim()).filter(Boolean);
 
-  if (process.env.NODE_ENV !== "production" && enableE2EBypass) {
-    if (req.headers.get("x-playwright") === "1") return NextResponse.next();
-    if (req.nextUrl.searchParams.get("playwright") === "1") return NextResponse.next();
-    const asUser = req.nextUrl.searchParams.get("asUser");
+  if (process.env.NODE_ENV !== 'production' && enableE2EBypass) {
+    if (req.headers.get('x-playwright') === '1') return NextResponse.next();
+    if (req.nextUrl.searchParams.get('playwright') === '1') return NextResponse.next();
+    const asUser = req.nextUrl.searchParams.get('asUser');
     if (asUser && bypassAllowlist.includes(asUser)) return NextResponse.next();
 
-    const allowedPaths = bypassAllowlist.filter(p => p.startsWith("/"));
-    const devAllowed = allowedPaths.length ? allowedPaths : ["/dashboard/encounters", "/dashboard/appointments", "/dashboard/records", "/dashboard"];
+    const allowedPaths = bypassAllowlist.filter(p => p.startsWith('/'));
+    const devAllowed = allowedPaths.length ? allowedPaths : ['/dashboard/encounters', '/dashboard/appointments', '/dashboard/records', '/dashboard'];
     if (devAllowed.some((r) => req.nextUrl.pathname.startsWith(r))) return NextResponse.next();
   }
 
   // Must be authenticated
-  if (!req.auth) return NextResponse.redirect(new URL("/login", req.url));
+  if (!req.auth) return NextResponse.redirect(new URL('/login', req.url));
 
   const role = req.auth.user?.role as string | undefined;
 
   // EPIC-SEC-02: PENDING users cannot access any protected route
-  if (role === "PENDING") {
-    return NextResponse.redirect(new URL("/pending-approval", req.url));
+  if (role === 'PENDING') {
+    return NextResponse.redirect(new URL('/pending-approval', req.url));
   }
 
   // Admin-only routes
-  if (pathname.startsWith("/admin") && role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/unauthorized", req.url));
+  if (pathname.startsWith('/admin') && role !== 'ADMIN') {
+    return NextResponse.redirect(new URL('/unauthorized', req.url));
   }
 
   // Doctor / clinical routes
-  if (pathname.startsWith("/doctor") && role !== "DOCTOR" && role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/unauthorized", req.url));
+  if (pathname.startsWith('/doctor') && role !== 'DOCTOR' && role !== 'ADMIN') {
+    return NextResponse.redirect(new URL('/unauthorized', req.url));
   }
 
   // Triage — nurses and doctors
-  if (pathname.startsWith("/triage") && !["NURSE","DOCTOR","ADMIN"].includes(role ?? "")) {
-    return NextResponse.redirect(new URL("/unauthorized", req.url));
+  if (pathname.startsWith('/triage') && !['NURSE', 'DOCTOR', 'ADMIN'].includes(role ?? '')) {
+    return NextResponse.redirect(new URL('/unauthorized', req.url));
+  }
+
+  // Patient portal — only the patient's own account may enter
+  if (pathname.startsWith('/patient') && role !== 'PATIENT') {
+    return NextResponse.redirect(new URL('/unauthorized', req.url));
   }
 
   return NextResponse.next();
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|public).*)'],
 };
