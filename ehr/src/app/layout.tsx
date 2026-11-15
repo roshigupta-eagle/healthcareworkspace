@@ -1,72 +1,26 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { auth } from "@/lib/auth";
-import Sidebar from "@/components/Sidebar";
-import MobileDoctorNav from "@/components/MobileDoctorNav";
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
 import ClientLandingMode from '@/components/ClientLandingMode';
 import ThemeLangProvider from '@/components/ThemeLangProvider';
-import GlobalHeader from '@/components/GlobalHeader';
-import FloatingActions from '@/components/FloatingActions';
-import PageTransition from '@/components/PageTransition';
-import PreviewNavigationGuard from '@/components/PreviewNavigationGuard';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
+const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "Roshi EHR",
-  description: "Electronic Health Record System — FHIR-native, WCAG 2.2 AA compliant",
+  title: 'Roshi EHR',
+  description: 'Electronic Health Record System - FHIR-native, WCAG 2.2 AA compliant',
 };
 
-export default async function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const session = await auth();
-  const role = session?.user?.role ?? "PATIENT";
+export const dynamic = 'force-dynamic';
 
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full bg-gray-50 text-gray-900">
+    <html lang='en' className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+      <body className='min-h-full bg-gray-50 text-gray-900'>
         <ClientLandingMode />
         <ThemeLangProvider>
-        <PreviewNavigationGuard />
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded"
-        >
-          Skip to main content
-        </a>
-
-        <div className="min-h-screen flex">
-          <aside className="hidden md:block min-h-screen md:w-64 lg:w-72">
-            <div className="h-full">
-              <Sidebar session={session} role={role} />
-            </div>
-          </aside>
-
-          <main id="main-content" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8 max-w-8xl w-full">
-            <GlobalHeader session={session} role={role} />
-            <MobileDoctorNav role={role} />
-            <FloatingActions />
-
-            <PageTransition>
-              <div className="bg-white shadow-sm rounded-lg p-6">{children}</div>
-            </PageTransition>
-          </main>
-        </div>
+          {children}
         </ThemeLangProvider>
       </body>
     </html>

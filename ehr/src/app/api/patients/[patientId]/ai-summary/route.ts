@@ -3,7 +3,7 @@ import { getPatientById } from '@/app/dashboard/records/mockPatients';
 import { generateSummaryFromPatient, getLatestSummary } from '@/lib/aiSummaryStore';
 import { resolveSession } from '@/lib/serverAuth';
 
-const CLINICAL_ROLES = new Set(['ADMIN', 'DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER', 'DEV']);
+const CLINICAL_ROLES = new Set(['DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER']);
 
 async function authorized(request: Request) {
   const session = await resolveSession(request);

@@ -42,7 +42,6 @@ const originalDataDirectory = process.env.EHR_DATA_DIR;
 const actor = { id: 'dev-doctor', name: 'Dr. Maya Chen', role: 'DOCTOR' };
 
 let store: typeof import('@/lib/clinicalCommunicationStore');
-let preview: typeof import('@/lib/communicationPreview');
 
 async function preferredRecipientId() {
   const snapshot = await store.getCommunicationHubSnapshot(actor);
@@ -108,7 +107,6 @@ describe('clinical communication store', () => {
     process.env.EHR_DATA_DIR = testDataDirectory;
     vi.resetModules();
     store = await import('@/lib/clinicalCommunicationStore');
-    preview = await import('@/lib/communicationPreview');
   });
 
   beforeEach(async () => {
@@ -123,14 +121,6 @@ describe('clinical communication store', () => {
     await fs.rm(testDataDirectory, { force: true, recursive: true });
     if (originalDataDirectory === undefined) delete process.env.EHR_DATA_DIR;
     else process.env.EHR_DATA_DIR = originalDataDirectory;
-  });
-
-  it('normalizes the development alias to the seeded clinician', () => {
-    expect(preview.resolveDevelopmentPreviewActor('dev')).toEqual(actor);
-    expect(preview.resolveDevelopmentPreviewActor('dev-doctor')).toEqual(actor);
-    expect(preview.resolveDevelopmentPreviewActor('not-a-preview-user')).toBeUndefined();
-    expect(preview.isDevelopmentPreviewRequest('dev')).toBe(true);
-    expect(preview.isDevelopmentPreviewRequest('not-a-preview-user')).toBe(false);
   });
 
   it('persists an issued safe attachment exactly once on a new conversation', async () => {

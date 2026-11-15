@@ -25,9 +25,7 @@ export default function PatientProfileHeader({ patient, showActions = true }: { 
 
   useEffect(() => {
     const controller = new AbortController();
-    const query = new URLSearchParams(window.location.search);
-    const preview = query.get('asUser') ? `?asUser=${encodeURIComponent(query.get('asUser')!)}` : query.get('noauth') ? '?noauth=1&asUser=dev' : '';
-    fetch(`/api/patients/${encodeURIComponent(patient.id)}/allergies${preview}`, { cache: 'no-store', signal: controller.signal }).then(async (response) => {
+    fetch(`/api/patients/${encodeURIComponent(patient.id)}/allergies`, { cache: 'no-store', signal: controller.signal }).then(async (response) => {
       if (!response.ok) throw new Error('Allergy records could not be loaded.');
       return response.json() as Promise<{ items?: Array<{ substance?: { display?: string }; clinicalStatus?: string; verificationStatus?: string }> }>;
     }).then((payload) => {

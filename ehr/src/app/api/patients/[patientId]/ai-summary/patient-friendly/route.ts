@@ -4,7 +4,7 @@ import { getPatientById } from '@/app/dashboard/records/mockPatients';
 import { resolveSession } from '@/lib/serverAuth';
 import { logAuditEvent } from '@/lib/audit';
 
-const CLINICAL_ROLES = new Set(['ADMIN', 'DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER', 'DEV']);
+const CLINICAL_ROLES = new Set(['DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER']);
 
 export async function POST(request: Request, { params }: { params: Promise<{ patientId: string }> }) {
   const { patientId } = await params;

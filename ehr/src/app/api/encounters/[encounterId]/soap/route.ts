@@ -7,7 +7,7 @@ export async function POST(req: Request, context: any) {
   const session = await auth().catch(() => null);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const role = (session.user as any).role;
-  if (role !== "DOCTOR" && role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (role !== "DOCTOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const params = context?.params && typeof context.params.then === "function" ? await context.params : context?.params ?? {};
   const { encounterId } = params as { encounterId: string };

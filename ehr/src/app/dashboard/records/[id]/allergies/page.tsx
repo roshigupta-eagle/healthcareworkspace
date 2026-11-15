@@ -8,31 +8,14 @@ import AllergyCommandCenterClient from '@/components/allergies/AllergyCommandCen
 
 export default async function AllergyDetailPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ asUser?: string | string[] }>;
 }) {
   const resolvedParams = await params;
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const id = resolvedParams?.id;
 
-  let session: any = null;
-  try {
-    // @ts-ignore
-    session = await auth();
-  } catch {
-    /* dev fallback */
-  }
-
-  if (!session && resolvedSearchParams?.asUser && process.env.NODE_ENV !== 'production') {
-    const override = Array.isArray(resolvedSearchParams.asUser)
-      ? resolvedSearchParams.asUser[0]
-      : resolvedSearchParams.asUser;
-    if (override) session = { user: { id: override, name: override } };
-  }
-
-  if (!session) redirect('/login');
+  const session = await auth().catch(() => null);
+  if (!session?.user) redirect('/login');
 
   const patient = getPatientById(String(id));
   if (!patient) redirect('/dashboard/records');

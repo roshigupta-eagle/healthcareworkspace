@@ -1,15 +1,39 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-function canEnterPatientPortal(role: string | undefined, previewUser: string | null, production: boolean) {
-  if (!production && previewUser === 'patient-001') return true;
-  return role === 'PATIENT';
-}
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), redirect: vi.fn() }));
+
+vi.mock('@/lib/auth', () => ({ auth: mocks.auth }));
+vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
+
+import { requirePatientPortalAccess } from '@/lib/patientPortalAccess';
 
 describe('patient portal authorization', () => {
-  it('permits a patient and the explicit local patient preview only', () => {
-    expect(canEnterPatientPortal('PATIENT', null, true)).toBe(true);
-    expect(canEnterPatientPortal('ADMIN', null, true)).toBe(false);
-    expect(canEnterPatientPortal(undefined, 'patient-001', false)).toBe(true);
-    expect(canEnterPatientPortal(undefined, 'user-admin-khan', false)).toBe(false);
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.redirect.mockImplementation((path: string) => {
+      throw new Error(`redirect:${path}`);
+    });
+  });
+
+  it('sends visitors without a session to sign-in', async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    await expect(requirePatientPortalAccess()).rejects.toThrow('redirect:/login');
+  });
+
+  it('sends signed-in users who are not patients to the unauthorized page', async () => {
+    mocks.auth.mockResolvedValue({ user: { id: 'user-1', name: 'Admin', role: 'ADMIN' } });
+
+    await expect(requirePatientPortalAccess()).rejects.toThrow('redirect:/unauthorized');
+  });
+
+  it('derives the patient identity from the session only', async () => {
+    mocks.auth.mockResolvedValue({ user: { id: 'user-9', name: 'Pat Ient', role: 'PATIENT', fhirId: 'patient-009' } });
+
+    await expect(requirePatientPortalAccess()).resolves.toEqual({
+      patientId: 'patient-009',
+      patientName: 'Pat Ient',
+      agentId: 'user-9',
+    });
   });
 });

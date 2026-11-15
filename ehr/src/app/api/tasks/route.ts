@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 import { getPatientById } from '@/app/dashboard/records/mockPatients';
 import { canAccessTaskPatient, canActorUpdateTask, findCanonicalTask, validateTaskSources } from '@/lib/doctorWorkStore';
 import { createTask, listAllTasks } from '@/lib/tasksStore';
-import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
+import { canAssignWorkToOthers, resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 import type { ClinicalTask } from '@/types/clinicalTask';
 
 function legacyStatus(task: ClinicalTask) {
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     if (existing) return NextResponse.json({ task: existing.task, idempotent: true });
   }
   const assignedTo = typeof body?.assignedTo === 'string' ? body.assignedTo.trim() : '';
-  if (assignedTo && assignedTo !== access.actor!.id && access.actor!.role !== 'ADMIN' && access.actor!.role !== 'DEV') return NextResponse.json({ error: 'You do not have permission to assign work to another clinician.' }, { status: 403 });
+  if (assignedTo && assignedTo !== access.actor!.id && !canAssignWorkToOthers(access.actor!.role)) return NextResponse.json({ error: 'You do not have permission to assign work to another clinician.' }, { status: 403 });
   const assignee = assignedTo ? { id: assignedTo, name: assignedTo, role: 'DOCTOR' } : access.actor;
   const task = await createTask(patientId, { id: stableId, title, description: typeof body?.description === 'string' ? body.description.trim() : '', category: typeof body?.category === 'string' ? body.category.trim() : 'Clinical Task', priority: typeof body?.priority === 'string' ? body.priority as 'routine' | 'normal' | 'high' | 'urgent' : 'normal', dueDate: typeof body?.dueAt === 'string' ? body.dueAt : null, assignee, relatedResources }, access.actor);
   return NextResponse.json({ task: legacyTask(task, access.actor!.id) }, { status: 201 });

@@ -4,21 +4,8 @@ import { getPatientById } from '../../records/mockPatients';
 import PrescriptionComposerSerene from '@/components/PrescriptionComposerSerene';
 
 export default async function NewPrescriptionPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
-  let session: any = null;
-  try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    session = await auth();
-  } catch (e) {
-    // allow dev preview
-  }
-  if (!session) {
-    if (process.env.NODE_ENV === 'development') {
-      session = { user: { name: 'Dev User' } };
-    } else {
-      redirect('/login');
-    }
-  }
+  const session = await auth().catch(() => null);
+  if (!session?.user) redirect('/login?returnTo=%2Fdashboard%2Fprescriptions%2Fnew');
 
   const params = await searchParams;
   const qRaw = params?.patientId;

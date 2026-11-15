@@ -1,8 +1,18 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth';
+import { MEDICATION_WORKSPACE_ROLES } from '@/lib/doctorWorkspaceAuth';
 import { getMockPatients } from '@/app/dashboard/records/mockPatients';
 import MedicationsPatientCard from '@/components/MedicationsPatientCard';
 
-export default function MedicationsPage({ searchParams }: { searchParams?: any }) {
+export const dynamic = 'force-dynamic';
+
+export default async function MedicationsPage({ searchParams }: { searchParams?: any }) {
+  const session = await auth().catch(() => null);
+  if (!session?.user) redirect('/login?returnTo=%2Fdashboard%2Fmedications');
+  const role = String((session.user as { role?: string }).role || '').toUpperCase();
+  if (!MEDICATION_WORKSPACE_ROLES.has(role)) redirect('/unauthorized');
+
   const patients = getMockPatients();
 
   const totalPatients = patients.length;

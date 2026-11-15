@@ -4,7 +4,7 @@ import { getPatientById } from '@/app/dashboard/records/mockPatients';
 import { createTask } from '@/lib/tasksStore';
 import { canAccessTaskPatient, findCanonicalTask, getDoctorWorkSnapshot, validateTaskSources } from '@/lib/doctorWorkStore';
 import { logAuditEvent } from '@/lib/audit';
-import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
+import { canAssignWorkToOthers, resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 import type { ClinicalTaskPriority } from '@/types/clinicalTask';
 
 const PRIORITIES = new Set<ClinicalTaskPriority>(['routine', 'normal', 'high', 'urgent']);
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     if (existing) return NextResponse.json({ data: existing.task, idempotent: true });
   }
   const assignee = body.assignee && typeof body.assignee === 'object' ? body.assignee as { id?: unknown; name?: unknown; role?: unknown } : null;
-  if (assignee?.id && assignee.id !== actor.id && actor.role !== 'ADMIN' && actor.role !== 'DEV') return NextResponse.json({ error: 'You do not have permission to assign work to another clinician.' }, { status: 403 });
+  if (assignee?.id && assignee.id !== actor.id && !canAssignWorkToOthers(actor.role)) return NextResponse.json({ error: 'You do not have permission to assign work to another clinician.' }, { status: 403 });
   const selectedAssignee = typeof assignee?.id === 'string' && typeof assignee?.name === 'string' ? { id: assignee.id, name: assignee.name, ...(typeof assignee.role === 'string' ? { role: assignee.role } : {}) } : body.assigneeMode === 'unassigned' ? null : { id: actor.id, name: actor.name, role: actor.role };
   const relatedResources = Array.isArray(body.relatedResources) ? body.relatedResources.filter((resource): resource is { type: string; id: string; display?: string } => Boolean(resource && typeof resource === 'object' && typeof (resource as { type?: unknown }).type === 'string' && typeof (resource as { id?: unknown }).id === 'string')) : [];
   if (relatedResources.length && !(await validateTaskSources(patientId, relatedResources))) return NextResponse.json({ error: 'The selected source record is invalid or does not belong to this patient.' }, { status: 400 });

@@ -2,7 +2,9 @@ import PatientLaboratoryWorkspace from '@/components/PatientLaboratoryWorkspace'
 import { getPatientById } from '../mockPatients';
 import { redirect } from 'next/navigation';
 
-export default async function LabsByQueryPage({ searchParams }: { searchParams?: any }) {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function LabsByQueryPage({ searchParams }: { searchParams?: SearchParams }) {
   const resolvedSearch = await searchParams;
   const patientId = resolvedSearch?.patient ? (Array.isArray(resolvedSearch.patient) ? resolvedSearch.patient[0] : resolvedSearch.patient) : null;
 

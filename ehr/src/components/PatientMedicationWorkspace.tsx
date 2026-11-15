@@ -2,8 +2,10 @@
 
 import React, { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { publishPatientRecordChange } from '@/lib/patientRecordSync';
+import type { Patient } from '@/app/dashboard/records/mockPatients';
 
-export default function PatientMedicationWorkspace({ patient }: { patient: any }) {
+export default function PatientMedicationWorkspace({ patient }: { patient: Patient }) {
   const router = useRouter();
   const [busyIndex, setBusyIndex] = useState<number | null>(null);
 
@@ -20,14 +22,12 @@ export default function PatientMedicationWorkspace({ patient }: { patient: any }
         const txt = await res.text();
         throw new Error(`Review API failed: ${res.status} ${txt}`);
       }
+      publishPatientRecordChange(patient.id);
       try {
         router.refresh();
-      } catch (e) {
-        // best-effort
-      }
+      } catch {}
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to mark medication reviewed', e);
+    console.error('Failed to mark medication reviewed', e);
       throw e;
     } finally {
       setBusyIndex(null);
@@ -41,7 +41,7 @@ export default function PatientMedicationWorkspace({ patient }: { patient: any }
       <h2 className="text-lg font-semibold mb-2">Medications for {patient.name}</h2>
       {meds.length === 0 && <div className="text-sm text-slate-500">No medications on file.</div>}
       <ul className="space-y-3">
-        {meds.map((m: any, i: number) => (
+        {meds.map((m, i: number) => (
           <li key={m.id || `med-${i}`} className="flex items-center justify-between">
             <div>
               <div className="font-medium">{m.name} {m.dose ? `· ${m.dose}` : ''}</div>

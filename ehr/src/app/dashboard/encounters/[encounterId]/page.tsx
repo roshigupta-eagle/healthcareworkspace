@@ -8,7 +8,7 @@ export default async function VisitDetailPage({ params }: { params: { encounterI
   if (!session) redirect('/login');
 
   const role = session.user.role;
-  if (role !== 'DOCTOR' && role !== 'ADMIN') redirect('/unauthorized');
+  if (role !== 'DOCTOR') redirect('/unauthorized');
 
   // `params` may be a Promise in Next.js; unwrap before destructuring
   const { encounterId } = await params;

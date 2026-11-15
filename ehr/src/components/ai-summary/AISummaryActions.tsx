@@ -335,13 +335,9 @@ export default function AISummaryActions({
   const encodedPatientId = encodeURIComponent(patientId);
   const apiBase = `/api/patients/${encodedPatientId}/ai-summary`;
   const pageBase = `/dashboard/records/${encodedPatientId}/ai-clinical-summary`;
-  const previewActor = process.env.NODE_ENV !== 'production'
-    ? currentSearchParams.get('asUser') || (currentSearchParams.get('noauth') ? 'dev' : '')
-    : '';
 
   function actionUrl(path: string, query?: string): string {
     const params = new URLSearchParams(query || '');
-    if (previewActor) params.set('asUser', previewActor);
     const serialized = params.toString();
     return `${path}${serialized ? `?${serialized}` : ''}`;
   }

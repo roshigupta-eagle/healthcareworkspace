@@ -67,10 +67,6 @@ function searchDate(value?: string): string {
   return value ? `${value} ${formatBirthDate(value)}`.toLowerCase() : '';
 }
 
-function withPreview(path: string, query = ''): string {
-  return query ? `${path}${path.includes('?') ? '&' : '?'}${query}` : path;
-}
-
 function Field({ label, name, value, type = 'text', required, onChange }: { label: string; name: keyof CreateForm; value: string; type?: string; required?: boolean; onChange: (name: keyof CreateForm, value: string) => void }) {
   return (
     <label className="directory-form-field">
@@ -80,7 +76,7 @@ function Field({ label, name, value, type = 'text', required, onChange }: { labe
   );
 }
 
-function CreatePatientDrawer({ preview, onClose, onCreated }: { preview: string; onClose: () => void; onCreated: (patientId: string) => void }) {
+function CreatePatientDrawer({ onClose, onCreated }: { onClose: () => void; onCreated: (patientId: string) => void }) {
   const [form, setForm] = useState<CreateForm>(EMPTY_FORM);
   const [duplicate, setDuplicate] = useState<Duplicate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +91,7 @@ function CreatePatientDrawer({ preview, onClose, onCreated }: { preview: string;
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch(`/api/health-records?${preview}`, {
+      const response = await fetch('/api/health-records', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ ...form, confirmDuplicate }),
@@ -119,7 +115,7 @@ function CreatePatientDrawer({ preview, onClose, onCreated }: { preview: string;
       <div className="directory-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
         <aside className="directory-drawer" role="dialog" aria-modal="true" aria-labelledby="duplicate-patient-title">
           <div className="directory-drawer-header"><div><span className="directory-eyebrow">Identity review</span><h2 id="duplicate-patient-title">Possible Existing Patient</h2></div><button type="button" onClick={onClose} className="directory-close" aria-label="Close patient creation"><span aria-hidden="true">×</span></button></div>
-          <div className="directory-drawer-body"><p className="directory-drawer-copy">Review these existing records before creating a new patient. No new record has been saved yet.</p><div className="directory-duplicate-list">{duplicate.map((match) => <div className="directory-duplicate" key={match.patientId}><div><strong>{match.displayName}</strong><span>DOB {formatBirthDate(match.birthDate)} · MRN {match.mrn || 'Not Documented'}</span><small>{match.status}</small></div><Link href={withPreview(`/dashboard/records/${encodeURIComponent(match.patientId)}`, preview)} className="directory-open">Open Existing Record <span aria-hidden="true">→</span></Link></div>)}</div></div>
+          <div className="directory-drawer-body"><p className="directory-drawer-copy">Review these existing records before creating a new patient. No new record has been saved yet.</p><div className="directory-duplicate-list">{duplicate.map((match) => <div className="directory-duplicate" key={match.patientId}><div><strong>{match.displayName}</strong><span>DOB {formatBirthDate(match.birthDate)} · MRN {match.mrn || 'Not Documented'}</span><small>{match.status}</small></div><Link href={`/dashboard/records/${encodeURIComponent(match.patientId)}`} className="directory-open">Open Existing Record <span aria-hidden="true">→</span></Link></div>)}</div></div>
           <div className="directory-drawer-footer"><button type="button" onClick={() => setDuplicate(null)} className="directory-secondary-button">Back to Form</button><button type="button" disabled={saving} onClick={(event) => void submit(event as unknown as React.FormEvent<HTMLFormElement>, true)} className="directory-primary-button">{saving ? 'Creating…' : 'Continue Creating'}</button></div>
         </aside>
       </div>
@@ -142,18 +138,18 @@ function CreatePatientDrawer({ preview, onClose, onCreated }: { preview: string;
   );
 }
 
-function PatientRow({ patient, preview }: { patient: PatientRecord; preview: string }) {
+function PatientRow({ patient }: { patient: PatientRecord }) {
   const recordHref = `/doctor/health-records/patient/${encodeURIComponent(patient.id)}`;
   const status = patient.status || 'Unknown';
   const statusClass = status === 'Active' ? 'is-active' : status === 'Inactive' ? 'is-inactive' : 'is-unknown';
   return (
     <article className="directory-patient-row">
-      <Link href={withPreview(recordHref, preview)} className="directory-patient-main" aria-label={`Open record for ${patient.name}`}>
+      <Link href={recordHref} className="directory-patient-main" aria-label={`Open record for ${patient.name}`}>
         <span className={`directory-avatar ${avatarTone(patient.name)}`} aria-hidden="true">{initials(patient.name)}</span>
         <span className="directory-patient-identity"><strong>{patient.name}</strong><small>{formatBirthDate(patient.birthDate)} · {patient.mrn ? `MRN ${patient.mrn}` : 'MRN Not Documented'}</small></span>
       </Link>
       <span className={`directory-patient-status ${statusClass}`}>{status === 'Active' ? 'Active Record' : status === 'Inactive' ? 'Inactive Record' : 'Status Not Recorded'}</span>
-      <Link href={withPreview(recordHref, preview)} className="directory-open">Open Record <span aria-hidden="true">→</span></Link>
+      <Link href={recordHref} className="directory-open">Open Record <span aria-hidden="true">→</span></Link>
     </article>
   );
 }
@@ -162,7 +158,7 @@ function DirectorySkeleton() {
   return <section className="directory-surface" aria-busy="true" aria-label="Loading patient directory"><div className="directory-skeleton-list">{Array.from({ length: 6 }).map((_, index) => <div className="directory-skeleton-row" key={index}><span /><div><span /><small /></div><i /><b /></div>)}</div></section>;
 }
 
-export default function ClinicalDirectoryClient({ patients, source, preview }: { patients: PatientRecord[]; source: DirectorySource; preview: string }) {
+export default function ClinicalDirectoryClient({ patients, source }: { patients: PatientRecord[]; source: DirectorySource }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
@@ -181,14 +177,14 @@ export default function ClinicalDirectoryClient({ patients, source, preview }: {
 
   function openCreated(patientId: string) {
     setCreateOpen(false);
-    router.push(withPreview(`/dashboard/records/${encodeURIComponent(patientId)}`, preview));
+    router.push(`/dashboard/records/${encodeURIComponent(patientId)}`);
   }
 
   return (
     <main className="clinical-directory" aria-labelledby="directory-title">
       <header className="directory-header">
         <div className="directory-heading"><span className="directory-eyebrow">Clinical Directory</span><h1 id="directory-title">Patients</h1><p>Find a patient record and move directly into the clinical chart.</p><span className="directory-context">{source.state === 'ready' ? `${patients.length} Patient${patients.length === 1 ? '' : 's'} Available · ${source.source}` : 'Patient Directory Unavailable'}</span></div>
-        <div className="directory-header-actions"><Link href={withPreview('/dashboard/records', preview)} className="directory-secondary-button">Health Records</Link><button type="button" onClick={() => setCreateOpen(true)} className="directory-primary-button">New Patient Record</button></div>
+        <div className="directory-header-actions"><Link href="/dashboard/records" className="directory-secondary-button">Health Records</Link><button type="button" onClick={() => setCreateOpen(true)} className="directory-primary-button">New Patient Record</button></div>
       </header>
 
       {source.state === 'unavailable' && <div className="directory-error" role="alert"><div><strong>Unable to Load Patient Directory</strong><span>{source.error || 'The clinical directory could not be retrieved.'}</span></div><button type="button" onClick={retry} disabled={refreshing}>{refreshing ? 'Retrying…' : 'Try Again'}</button></div>}
@@ -196,9 +192,9 @@ export default function ClinicalDirectoryClient({ patients, source, preview }: {
 
       <section className="directory-toolbar" aria-label="Patient Search"><label className="directory-search"><span className="directory-search-icon" aria-hidden="true">⌕</span><span className="sr-only">Search Patients</span><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape') setQuery(''); }} placeholder="Search by Name, MRN, or Date of Birth..." /><span className="directory-matching">{source.state === 'ready' ? `${filtered.length} Matching` : 'Unavailable'}</span></label></section>
 
-      {source.state === 'ready' && filtered.length > 0 ? <section className="directory-surface" aria-label="Patient Directory"><div className="directory-list">{filtered.map((patient) => <PatientRow key={patient.id} patient={patient} preview={preview} />)}</div></section> : source.state === 'ready' ? <section className="directory-surface directory-empty" aria-live="polite"><div className="directory-empty-icon" aria-hidden="true">⌕</div><strong>{query ? 'No Patients Found' : 'No Patient Records Found'}</strong><p>{query ? 'Try searching by Patient Name, MRN, or Date of Birth.' : 'Create a New Patient Record to begin.'}</p>{query && <button type="button" onClick={() => setQuery('')} className="directory-secondary-button">Clear Search</button>}</section> : <DirectorySkeleton />}
+      {source.state === 'ready' && filtered.length > 0 ? <section className="directory-surface" aria-label="Patient Directory"><div className="directory-list">{filtered.map((patient) => <PatientRow key={patient.id} patient={patient} />)}</div></section> : source.state === 'ready' ? <section className="directory-surface directory-empty" aria-live="polite"><div className="directory-empty-icon" aria-hidden="true">⌕</div><strong>{query ? 'No Patients Found' : 'No Patient Records Found'}</strong><p>{query ? 'Try searching by Patient Name, MRN, or Date of Birth.' : 'Create a New Patient Record to begin.'}</p>{query && <button type="button" onClick={() => setQuery('')} className="directory-secondary-button">Clear Search</button>}</section> : <DirectorySkeleton />}
 
-      {createOpen && <CreatePatientDrawer preview={preview} onClose={() => setCreateOpen(false)} onCreated={openCreated} />}
+      {createOpen && <CreatePatientDrawer onClose={() => setCreateOpen(false)} onCreated={openCreated} />}
     </main>
   );
 }

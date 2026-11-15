@@ -9,6 +9,8 @@
     "lint": "eslint",
     "test:unit": "vitest src",
     "test:ui": "vitest --ui",
+    "test:roles": "vitest run tests/integration/roleAccess.test.ts",
+    "docs:routes": "vitest run src/__tests__/routeConvention.test.ts -u",
     "test:e2e": "playwright test"
   },
   "dependencies": {

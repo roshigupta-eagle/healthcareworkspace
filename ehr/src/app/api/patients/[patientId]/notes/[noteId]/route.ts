@@ -31,6 +31,7 @@ export async function PATCH(request: Request, { params }: { params: { patientId:
   const type: DoctorNoteType | undefined = body?.type;
 
   const actor = await resolveActor();
+  if (!actor) return NextResponse.json({ error: 'authentication required' }, { status: 401 });
   const result = await updateDraft(patientId, noteId, { sections, type }, expectedVersion, actor);
 
   if (!result.ok) {

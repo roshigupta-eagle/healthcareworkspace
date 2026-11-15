@@ -24,14 +24,9 @@ export default async function AuditPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await auth().catch(() => null);
-  const params = searchParams ? await searchParams : {};
-  const rawFilter = params.entityType;
-  const rawAsUser = params.asUser;
-  const asUser = Array.isArray(rawAsUser) ? rawAsUser[0] : rawAsUser;
-  const preview = process.env.NODE_ENV !== 'production' && asUser === 'user-admin-khan';
-  const effectiveSession = session?.user ? session : preview ? { user: { role: 'ADMIN' } } : null;
-  if (!effectiveSession) redirect("/login");
-  if ((effectiveSession as any).user?.role !== "ADMIN") redirect("/unauthorized");
+  const rawFilter = searchParams ? (await searchParams).entityType : undefined;
+  if (!session?.user) redirect("/login?returnTo=%2Fadmin%2Faudit");
+  if ((session.user as any).role !== "ADMIN") redirect("/unauthorized");
 
   const entityType = Array.isArray(rawFilter) ? rawFilter[0] : rawFilter;
 

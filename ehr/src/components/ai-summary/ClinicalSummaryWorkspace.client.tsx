@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import type { Patient } from '@/app/dashboard/records/mockPatients';
 import type { AIClinicalSummaryVersion, AIEvidenceReference } from '@/types/aiSummary';
 
@@ -95,7 +94,6 @@ function SnapshotCard({ label, value, detail, href, icon, tone }: { label: strin
 }
 
 export default function ClinicalSummaryWorkspace({ patient, summary, evidence, needsAttention, metrics, events, snapshot, summaryError }: Props) {
-  const searchParams = useSearchParams();
   const [currentSummary, setCurrentSummary] = useState(summary);
   const [renderedAt] = useState(() => Date.now());
   const [period, setPeriod] = useState<'30d' | '3m' | '6m' | '1y'>('1y');
@@ -109,10 +107,7 @@ export default function ClinicalSummaryWorkspace({ patient, summary, evidence, n
   const [friendlyError, setFriendlyError] = useState<string | null>(null);
 
   const patientBase = `/dashboard/records/${encodeURIComponent(patient.id)}`;
-  const previewActor = process.env.NODE_ENV !== 'production'
-    ? searchParams.get('asUser') || (searchParams.get('noauth') ? 'dev' : '')
-    : '';
-  const patientFriendlyUrl = `${patientBase}/ai-summary/patient-friendly${previewActor ? `?asUser=${encodeURIComponent(previewActor)}` : ''}`;
+  const patientFriendlyUrl = `${patientBase}/ai-summary/patient-friendly`;
   const visibleEvidence = evidence.filter((source) => source.status !== 'restricted');
   const evidenceStats = currentSummary?.evidenceStats || { analyzed: evidence.length, used: evidence.filter((source) => source.status === 'used').length, excluded: evidence.filter((source) => source.status === 'excluded').length, updatedAt: currentSummary?.generatedAt || '' };
   const usedEvidence = visibleEvidence.filter((source) => source.status === 'used');

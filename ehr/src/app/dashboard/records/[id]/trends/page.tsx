@@ -5,24 +5,12 @@ import PatientProfileHeader from '@/components/PatientProfileHeader';
 import { getPatientById } from '../../mockPatients';
 import HealthTrendAppClient from '@/components/trends/HealthTrendAppClient';
 
-export default async function PatientHealthTrendsPage({ params, searchParams }: { params: any; searchParams?: any }) {
+export default async function PatientHealthTrendsPage({ params }: { params: any }) {
   const resolvedParams = await params;
   const id = resolvedParams?.id ?? (params && params.id);
 
-  let session: any = null;
-  try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    session = await auth();
-  } catch (e) {
-    // allow dev preview
-  }
-  if (!session && searchParams && searchParams.asUser && process.env.NODE_ENV !== 'production') {
-    const override = Array.isArray(searchParams.asUser) ? searchParams.asUser[0] : searchParams.asUser;
-    if (override) session = { user: { id: override, name: override } };
-  }
-
-  if (!session) redirect('/login');
+  const session = await auth().catch(() => null);
+  if (!session?.user) redirect('/login');
 
   const patient = getPatientById(String(id));
   if (!patient) {

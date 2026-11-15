@@ -50,7 +50,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     message: `${a.patientName ?? a.patientFhirId} — ${a.testName}: ${a.value}${a.unit ? " " + a.unit : ""}${a.referenceRange ? " (ref: " + a.referenceRange + ")" : ""}`,
     patientFhirId: a.patientFhirId,
     orderId:  a.orderId,
-    targetRoles: ["DOCTOR", "NURSE", "ADMIN"],
+    targetRoles: ["DOCTOR", "NURSE"],
     reportedAt: a.reportedAt ?? new Date().toISOString(),
   };
 

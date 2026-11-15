@@ -420,12 +420,7 @@ async function fhirRead(resourceType: string, id: string): Promise<JsonObject> {
   return fetchJson<JsonObject>(sourceUrl(`/${resourceType}/${encodeURIComponent(id)}`));
 }
 
-function previewActor(actor: DoctorWorkspaceActor): boolean {
-  return process.env.NODE_ENV !== 'production' && actor.role === 'DEV';
-}
-
-function canAccessEncounterPatient(patientId: string, actor: DoctorWorkspaceActor): boolean {
-  if (previewActor(actor)) return true;
+function canAccessEncounterPatient(patientId: string): boolean {
   const configured = (process.env.ENCOUNTER_WORKSPACE_PATIENT_IDS || '')
     .split(',')
     .map((value) => value.trim())
@@ -433,13 +428,12 @@ function canAccessEncounterPatient(patientId: string, actor: DoctorWorkspaceActo
   return configured.includes(patientId);
 }
 
-function configuredForProduction(actor: DoctorWorkspaceActor): boolean {
+function configuredForProduction(): boolean {
   if (process.env.NODE_ENV !== 'production') return true;
   return Boolean(
-    actor.role === 'ADMIN' ||
-      (process.env.CARDIOLOGY_SERVICE_TOKEN &&
-        process.env.FHIR_INTERNAL_TOKEN &&
-        process.env.ENCOUNTER_WORKSPACE_PATIENT_IDS),
+    process.env.CARDIOLOGY_SERVICE_TOKEN &&
+      process.env.FHIR_INTERNAL_TOKEN &&
+      process.env.ENCOUNTER_WORKSPACE_PATIENT_IDS,
   );
 }
 
@@ -578,7 +572,7 @@ export async function getEncounterWorkspace(
     policy: { waitingThresholdMinutes: thresholdMinutes, source: 'ENCOUNTER_WAIT_THRESHOLD_MINUTES', timeZone: zone },
   });
 
-  if (!configuredForProduction(actor)) {
+  if (!configuredForProduction()) {
     return unavailable('Encounter integration is not configured with a production patient-access scope.');
   }
 
@@ -613,7 +607,7 @@ export async function getEncounterWorkspace(
   const candidates = encounterResult.value
     .map((resource) => ({ resource, id: text(resource.id), patientId: referenceId(resource.subject, 'Patient') }))
     .filter((entry): entry is { resource: JsonObject; id: string; patientId: string } => Boolean(entry.id && entry.patientId))
-    .filter((entry) => canAccessEncounterPatient(entry.patientId, actor));
+    .filter((entry) => canAccessEncounterPatient(entry.patientId));
   const patientIds = [...new Set(candidates.map((entry) => entry.patientId))];
   const patientReads = await Promise.allSettled(
     patientIds.map(async (patientId) => [patientId, await fhirRead('Patient', patientId)] as const),
@@ -929,7 +923,6 @@ export async function getEncounterDetail(
       lastUpdated: text(metadata?.lastUpdated),
       profiles,
       references,
-      ...(actor.role === 'ADMIN' || actor.role === 'DEV' ? { resource } : {}),
     },
     activity,
     transitions,

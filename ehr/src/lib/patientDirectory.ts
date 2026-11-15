@@ -1,5 +1,5 @@
-import { getMockPatients, getPatientById, type Patient } from '@/app/dashboard/records/mockPatients';
-import { getSchedulingPatientDirectory, type SchedulingAppointment, type SchedulingPatient, type SchedulingSnapshot } from '@/lib/schedulingData';
+import { getMockPatients, type Patient } from '@/app/dashboard/records/mockPatients';
+import { getSchedulingPatientDirectory, type SchedulingPatient } from '@/lib/schedulingData';
 
 export type CanonicalPatient = {
   id: string;
@@ -40,24 +40,12 @@ export function getLocalPatientDirectory(): PatientDirectorySnapshot {
   return { patients: getMockPatients().map(fromLocal), source: { state: 'ready', label: 'Roshi Health Records patient directory' } };
 }
 
-export function getLocalPatient(patientId: string) {
-  const patient = getPatientById(patientId);
-  return patient ? fromLocal(patient) : null;
-}
-
-export async function getCanonicalPatientDirectory(options: { preview?: boolean } = {}): Promise<PatientDirectorySnapshot> {
-  if (options.preview || process.env.NODE_ENV !== 'production') return getLocalPatientDirectory();
+export async function getCanonicalPatientDirectory(): Promise<PatientDirectorySnapshot> {
+  if (process.env.NODE_ENV !== 'production') return getLocalPatientDirectory();
   const scheduling = await getSchedulingPatientDirectory();
   if (scheduling.source.state === 'ready') {
     const patients = scheduling.patients.map(fromScheduling).filter((patient): patient is CanonicalPatient => Boolean(patient));
     return { patients, source: { state: 'ready', label: scheduling.source.source } };
   }
   return { patients: [], source: { state: 'unavailable', label: scheduling.source.source, error: scheduling.source.error } };
-}
-
-export function scopeSchedulingSnapshot(snapshot: SchedulingSnapshot, directory: PatientDirectorySnapshot, enabled: boolean): SchedulingSnapshot {
-  if (!enabled) return snapshot;
-  const patientIds = new Set(directory.patients.map((patient) => patient.id));
-  const appointments = snapshot.appointments.filter((appointment: SchedulingAppointment) => Boolean(appointment.patientId && patientIds.has(appointment.patientId)));
-  return { ...snapshot, patients: directory.patients, appointments };
 }

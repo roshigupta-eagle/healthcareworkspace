@@ -4,21 +4,8 @@ import { getPatientById, getMockPatients } from '../../../records/mockPatients';
 import LabOrderComposer from '@/components/LabOrderComposer';
 
 export default async function NewLabOrderPage({ searchParams }: { searchParams?: Record<string, string | string[]> }) {
-  let session: any = null;
-  try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    session = await auth();
-  } catch (e) {
-    // allow dev preview
-  }
-  if (!session) {
-    if (process.env.NODE_ENV === 'development') {
-      session = { user: { name: 'Dev User' } };
-    } else {
-      redirect('/login');
-    }
-  }
+  const session = await auth().catch(() => null);
+  if (!session?.user) redirect('/login?returnTo=%2Fdashboard%2Forders%2Flabs%2Fnew');
 
   const qRaw = searchParams?.patientId;
   const patientId = Array.isArray(qRaw) ? qRaw[0] : qRaw;

@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { IconX, IconClipboardCheck, IconShieldCheck, IconCheck } from './AllergyIcons';
 import type { AllergyReviewRecord, NkaStatus } from '@/lib/allergyReviewStore';
 import type { AllergyRecord } from '@/lib/allergyStore';
-import { withAllergyApiPreview } from './apiPreview';
 
 interface Props {
   patientId: string;
@@ -51,7 +50,7 @@ export default function UpdateReviewDrawer({
     setErrorMsg(null);
 
     try {
-      const res = await fetch(withAllergyApiPreview(`/api/patients/${encodeURIComponent(patientId)}/allergy-review`), {
+      const res = await fetch(`/api/patients/${encodeURIComponent(patientId)}/allergy-review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

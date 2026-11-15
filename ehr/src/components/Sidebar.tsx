@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import AnimatedLink from '@/components/AnimatedLink';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 type SidebarSession = { user?: { name?: string; role?: string } } | null;
 type WorkCounts = { counts?: { open?: number; urgent?: number }; messages?: { unread?: number }; documents?: { needsReview?: number } };
 type IconName = 'dashboard' | 'calendar' | 'stethoscope' | 'patients' | 'appointments' | 'encounters' | 'referrals' | 'tasks' | 'messages' | 'communication' | 'records' | 'documents' | 'orders' | 'laboratory' | 'medications' | 'users' | 'audit';
 
-const STAFF_ROLES = new Set(['DOCTOR', 'ADMIN', 'NURSE', 'CLINICIAN', 'PRACTITIONER']);
+const STAFF_ROLES = new Set(['DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER']);
 
 export function isSidebarRouteActive(pathname: string, href: string) {
   return href === '/dashboard' ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
@@ -46,25 +46,19 @@ function badgeTone(kind: 'tasks' | 'messages' | 'documents', counts: WorkCounts)
 
 export default function Sidebar({ session, role = 'PATIENT' }: { session?: SidebarSession; role?: string }) {
   const pathname = usePathname() || '';
-  const searchParams = useSearchParams();
-  const asUser = searchParams.get('asUser');
-  const noAuth = searchParams.get('noauth') === '1' || searchParams.get('noauth') === 'true';
-  const explicitPreview = process.env.NODE_ENV !== 'production' && (noAuth || ['dev', 'dev-doctor', 'user-admin-khan'].includes(asUser || ''));
-  const preview = explicitPreview;
-  const effectiveRole = STAFF_ROLES.has(role.toUpperCase()) || explicitPreview ? 'DOCTOR' : role.toUpperCase();
+  const effectiveRole = STAFF_ROLES.has(role.toUpperCase()) ? 'DOCTOR' : role.toUpperCase();
   const [counts, setCounts] = useState<WorkCounts>({});
 
   useEffect(() => {
     if (!STAFF_ROLES.has(effectiveRole) && effectiveRole !== 'DOCTOR') return;
-    const query = asUser ? `?asUser=${encodeURIComponent(asUser)}` : '';
     let active = true;
-    fetch(`/api/doctor-work-summary${query}`, { cache: 'no-store' }).then(async (response) => {
+    fetch('/api/doctor-work-summary', { cache: 'no-store' }).then(async (response) => {
       if (!response.ok) return;
       const next = await response.json() as WorkCounts;
       if (active) setCounts(next);
     }).catch(() => undefined);
     return () => { active = false; };
-  }, [asUser, effectiveRole]);
+  }, [effectiveRole]);
 
   function linkClass(href: string) {
     return `doctor-sidebar-link${isSidebarRouteActive(pathname, href) ? ' is-active' : ''}`;
@@ -72,9 +66,7 @@ export default function Sidebar({ session, role = 'PATIENT' }: { session?: Sideb
 
   function item(href: string, label: string, icon: IconName, badge?: { value?: number; kind: 'tasks' | 'messages' | 'documents' }, dataI18n?: string) {
     const value = badge?.value || 0;
-    const previewQuery = asUser ? `asUser=${encodeURIComponent(asUser)}` : 'noauth=1&asUser=dev';
-    const linkHref = preview ? `${href}${href.includes('?') ? '&' : '?'}${previewQuery}` : href;
-    return <li key={href}><AnimatedLink href={linkHref} className={linkClass(href)} aria-current={isSidebarRouteActive(pathname, href) ? 'page' : undefined} data-i18n={dataI18n}><span className="doctor-sidebar-link-content"><SidebarIcon name={icon} /><span>{label}</span></span>{badge && value > 0 && <span className={badgeTone(badge.kind, counts)}>{value}</span>}</AnimatedLink></li>;
+    return <li key={href}><AnimatedLink href={href} className={linkClass(href)} aria-current={isSidebarRouteActive(pathname, href) ? 'page' : undefined} data-i18n={dataI18n}><span className="doctor-sidebar-link-content"><SidebarIcon name={icon} /><span>{label}</span></span>{badge && value > 0 && <span className={badgeTone(badge.kind, counts)}>{value}</span>}</AnimatedLink></li>;
   }
 
   const staff = STAFF_ROLES.has(effectiveRole) || effectiveRole === 'DOCTOR';

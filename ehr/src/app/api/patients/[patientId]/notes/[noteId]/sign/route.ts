@@ -9,6 +9,7 @@ export async function POST(_req: Request, { params }: { params: { patientId: str
   if (!patient) return NextResponse.json({ error: 'patient not found' }, { status: 404 });
 
   const actor = await resolveActor();
+  if (!actor) return NextResponse.json({ error: 'authentication required' }, { status: 401 });
   const result = await signNote(patientId, noteId, actor);
   if ('error' in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);

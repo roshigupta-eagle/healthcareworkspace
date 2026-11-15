@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { DataTable } from '@/design-system';
 
 type User = { id: string; email?: string; name?: string; role?: string };
@@ -9,13 +8,11 @@ type User = { id: string; email?: string; name?: string; role?: string };
 export default function UsersTableClient({ rows: initialRows }: { rows: User[] }) {
   const [rows, setRows] = useState<User[]>(initialRows ?? []);
   const [loading, setLoading] = useState(false);
-  const searchParams = useSearchParams();
-  const query = searchParams.toString();
 
   const fetchList = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/users${query ? `?${query}` : ''}`);
+      const res = await fetch('/api/admin/users');
       if (res.ok) {
         const data = await res.json();
         setRows(data);
@@ -36,7 +33,7 @@ export default function UsersTableClient({ rows: initialRows }: { rows: User[] }
     const handler = () => fetchList();
     window.addEventListener('users:changed', handler);
     return () => window.removeEventListener('users:changed', handler);
-  }, [initialRows, query]);
+  }, [initialRows]);
 
   const columns = useMemo(
     () => [
@@ -54,7 +51,7 @@ export default function UsersTableClient({ rows: initialRows }: { rows: User[] }
       striped
       loading={loading}
       rowAction={(row: any) => (
-          <a className="text-primary-600 hover:underline" href={`/admin/users/${row.id}${query ? `?${query}` : ''}`}>
+          <a className="text-primary-600 hover:underline" href={`/admin/users/${row.id}`}>
           Open
         </a>
       )}

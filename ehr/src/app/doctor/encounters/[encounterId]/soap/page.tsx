@@ -7,7 +7,7 @@ export default async function SOAPNotePage({ params }: { params: { encounterId: 
   const session = await auth().catch(() => null);
   if (!session?.user) redirect("/login");
   const role = (session.user as any).role;
-  if (role !== "DOCTOR" && role !== "ADMIN") redirect("/unauthorized");
+  if (role !== "DOCTOR") redirect("/unauthorized");
   const { encounterId } = params;
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-4">

@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { signInAs } from './support/signIn';
 
-const ORDERS_URL = '/dashboard/orders?noauth=1&asUser=dev';
+const ORDERS_URL = '/dashboard/orders';
 
 async function openOrders(page: Parameters<typeof test>[0]['page']) {
+  await signInAs(page, 'doctor');
   await page.goto(ORDERS_URL, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle');
   await expect(page.getByTestId('orders-page')).toBeVisible();

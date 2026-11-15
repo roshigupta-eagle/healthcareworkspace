@@ -1,7 +1,6 @@
 "use client";
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useEffect, useState, type ReactNode } from 'react';
 import type { CommunicationChannel, CommunicationItem, CommunicationSnapshot } from '@/lib/communicationStore';
 import './communication.css';
@@ -35,18 +34,6 @@ function Icon({ name, size = 18 }: { name: string; size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] || paths.message}</svg>;
 }
 
-function previewQuery(searchParams: URLSearchParams) {
-  const query = new URLSearchParams();
-  const asUser = searchParams.get('asUser');
-  if (asUser) query.set('asUser', asUser);
-  return query;
-}
-
-function withPreview(href: string, searchParams: URLSearchParams) {
-  const query = previewQuery(searchParams).toString();
-  return query ? `${href}${href.includes('?') ? '&' : '?'}${query}` : href;
-}
-
 function formatDateTime(value?: string) {
   if (!value) return 'Time not documented';
   const date = new Date(value);
@@ -62,19 +49,17 @@ function patientHref(item: CommunicationItem) {
 }
 
 export function CommunicationModuleNav({ active }: { active: ActiveModule }) {
-  const searchParams = useSearchParams();
   return <nav className="communication-module-nav" aria-label="Communication modules">
-    <Link href={withPreview('/communication', searchParams)} className={active === 'hub' ? 'is-active' : ''}>Hub</Link>
-    <Link href={withPreview('/communication/messages', searchParams)} className={active === 'messages' ? 'is-active' : ''}><Icon name="message" size={14} /> Messages</Link>
-    <Link href={withPreview('/communication/email', searchParams)} className={active === 'email' ? 'is-active' : ''}><Icon name="mail" size={14} /> Email</Link>
-    <Link href={withPreview('/communication/calls', searchParams)} className={active === 'calls' ? 'is-active' : ''}><Icon name="phone" size={14} /> Calls</Link>
+    <Link href="/communication" className={active === 'hub' ? 'is-active' : ''}>Hub</Link>
+    <Link href="/communication/messages" className={active === 'messages' ? 'is-active' : ''}><Icon name="message" size={14} /> Messages</Link>
+    <Link href="/communication/email" className={active === 'email' ? 'is-active' : ''}><Icon name="mail" size={14} /> Email</Link>
+    <Link href="/communication/calls" className={active === 'calls' ? 'is-active' : ''}><Icon name="phone" size={14} /> Calls</Link>
   </nav>;
 }
 
 function Header({ active, onRefresh, refreshing }: { active: ActiveModule; onRefresh?: () => void; refreshing?: boolean }) {
-  const searchParams = useSearchParams();
   return <>
-    <div className="communication-route-bar"><CommunicationModuleNav active={active} /><div className="communication-route-actions">{onRefresh && <button type="button" className="communication-secondary-button" onClick={onRefresh} disabled={refreshing}><Icon name="refresh" size={14} /> {refreshing ? 'Refreshing' : 'Refresh'}</button>}<Link href={withPreview('/communication/messages?new=1', searchParams)} className="communication-primary-button"><Icon name="plus" size={15} /> New Message</Link></div></div>
+    <div className="communication-route-bar"><CommunicationModuleNav active={active} /><div className="communication-route-actions">{onRefresh && <button type="button" className="communication-secondary-button" onClick={onRefresh} disabled={refreshing}><Icon name="refresh" size={14} /> {refreshing ? 'Refreshing' : 'Refresh'}</button>}<Link href="/communication/messages?new=1" className="communication-primary-button"><Icon name="plus" size={15} /> New Message</Link></div></div>
   </>;
 }
 
@@ -83,26 +68,24 @@ function ChannelIcon({ channel }: { channel: CommunicationChannel }) {
 }
 
 function ChannelCard({ channel, title, description, count, detail, available, href, reason }: { channel: CommunicationChannel; title: string; description: string; count: string; detail: string; available: boolean; href: string; reason?: string }) {
-  const searchParams = useSearchParams();
   return <article className={`communication-channel-card ${available ? 'is-available' : 'is-unavailable'}`}>
     <div className="communication-channel-card-top"><ChannelIcon channel={channel} /><span className={`communication-availability ${available ? 'is-live' : 'is-muted'}`}>{available ? 'Live' : 'Unavailable'}</span></div>
     <h2>{title}</h2><p>{description}</p>
     <div className="communication-channel-count"><strong>{count}</strong><span>{detail}</span></div>
     {!available && <p className="communication-channel-reason"><Icon name="lock" size={14} /> {reason}</p>}
-    <Link href={withPreview(href, searchParams)} className="communication-card-link">Open {title} <Icon name="arrow" size={14} /></Link>
+    <Link href={href} className="communication-card-link">Open {title} <Icon name="arrow" size={14} /></Link>
   </article>;
 }
 
 function CommunicationRow({ item, onPin, pinBusy }: { item: CommunicationItem; onPin?: (item: CommunicationItem) => void; pinBusy?: boolean }) {
-  const searchParams = useSearchParams();
   const chart = patientHref(item);
   return <article className={`communication-row ${item.unread ? 'is-unread' : ''}`}>
-    <Link href={withPreview(item.href, searchParams)} className="communication-row-main">
+    <Link href={item.href} className="communication-row-main">
       <span className={`communication-row-channel is-${item.channel}`} title={channelLabel(item.channel)}><Icon name={item.channel === 'message' ? 'message' : item.channel} size={16} /><span className="sr-only">{channelLabel(item.channel)}</span></span>
       <span className="communication-row-copy"><strong>{item.contactName}</strong><span className="communication-row-meta">{item.patientName || 'No patient context'} · {item.subject}</span><span className="communication-row-preview">{item.preview}</span></span>
       <time dateTime={item.occurredAt}>{formatDateTime(item.occurredAt)}</time>
     </Link>
-    <div className="communication-row-actions">{item.requiresFollowUp && <span className="communication-follow-up"><Icon name="follow" size={13} /> Follow-up</span>}{chart && <Link href={withPreview(chart, searchParams)} className="communication-patient-link">Chart</Link>}{onPin && <button type="button" className={`communication-icon-button ${item.pinned ? 'is-pinned' : ''}`} onClick={() => onPin(item)} disabled={pinBusy} aria-label={item.pinned ? `Unpin ${item.subject}` : `Pin ${item.subject}`} title={item.pinned ? 'Unpin' : 'Pin'}><Icon name="pin" size={15} /></button>}</div>
+    <div className="communication-row-actions">{item.requiresFollowUp && <span className="communication-follow-up"><Icon name="follow" size={13} /> Follow-up</span>}{chart && <Link href={chart} className="communication-patient-link">Chart</Link>}{onPin && <button type="button" className={`communication-icon-button ${item.pinned ? 'is-pinned' : ''}`} onClick={() => onPin(item)} disabled={pinBusy} aria-label={item.pinned ? `Unpin ${item.subject}` : `Pin ${item.subject}`} title={item.pinned ? 'Unpin' : 'Pin'}><Icon name="pin" size={15} /></button>}</div>
   </article>;
 }
 
@@ -112,28 +95,24 @@ function EmptyState({ title, detail, action }: { title: string; detail: string; 
 
 function UnavailableChannel({ type, reason }: { type: 'Email' | 'Calls'; reason: string }) {
   const isEmail = type === 'Email';
-  const searchParams = useSearchParams();
-  return <main className="communication-page" aria-labelledby="communication-module-title"><Header active={isEmail ? 'email' : 'calls'} /><section className="communication-unavailable-panel"><span className={`communication-unavailable-icon is-${isEmail ? 'email' : 'call'}`}><Icon name={isEmail ? 'mail' : 'phone'} size={28} /></span><span className="communication-eyebrow">{type} workspace</span><h1 id="communication-module-title">{type}</h1><p>{isEmail ? 'Review and send clinical email only after an approved delivery provider is connected.' : 'Review call activity and voicemail only after an approved telephony provider is connected.'}</p><div className="communication-honesty"><Icon name="lock" size={16} /><span><strong>Provider not configured</strong>{reason}</span></div><div className="communication-unavailable-actions"><Link href={withPreview('/communication', searchParams)} className="communication-primary-button">Back to Communication Hub</Link><Link href={withPreview('/admin/audit', searchParams)} className="communication-secondary-button">View Audit Log <Icon name="arrow" size={14} /></Link></div></section></main>;
+  return <main className="communication-page" aria-labelledby="communication-module-title"><Header active={isEmail ? 'email' : 'calls'} /><section className="communication-unavailable-panel"><span className={`communication-unavailable-icon is-${isEmail ? 'email' : 'call'}`}><Icon name={isEmail ? 'mail' : 'phone'} size={28} /></span><span className="communication-eyebrow">{type} workspace</span><h1 id="communication-module-title">{type}</h1><p>{isEmail ? 'Review and send clinical email only after an approved delivery provider is connected.' : 'Review call activity and voicemail only after an approved telephony provider is connected.'}</p><div className="communication-honesty"><Icon name="lock" size={16} /><span><strong>Provider not configured</strong>{reason}</span></div><div className="communication-unavailable-actions"><Link href="/communication" className="communication-primary-button">Back to Communication Hub</Link><Link href="/admin/audit" className="communication-secondary-button">View Audit Log <Icon name="arrow" size={14} /></Link></div></section></main>;
 }
 
 export default function CommunicationWorkspace({ initialData, active = 'hub' }: Props) {
-  const searchParams = useSearchParams();
   const [data, setData] = useState(initialData);
   const [query, setQuery] = useState(initialData.query);
   const [channel, setChannel] = useState<CommunicationChannel | 'all'>(initialData.channel);
   const [busy, setBusy] = useState(false);
   const [pinBusy, setPinBusy] = useState<string | null>(null);
   const deferredQuery = useDeferredValue(query);
-  const preview = previewQuery(searchParams);
-  const previewKey = preview.toString();
-  const tasksHref = withPreview('/dashboard/tasks', searchParams);
-  const appointmentsHref = withPreview('/dashboard/appointments', searchParams);
-  const recordsHref = withPreview('/dashboard/records', searchParams);
+  const tasksHref = '/dashboard/tasks';
+  const appointmentsHref = '/dashboard/appointments';
+  const recordsHref = '/dashboard/records';
 
   useEffect(() => {
     if (active !== 'hub') return;
     const controller = new AbortController();
-    const params = new URLSearchParams(previewKey);
+    const params = new URLSearchParams();
     if (deferredQuery) params.set('q', deferredQuery);
     if (channel !== 'all') params.set('channel', channel);
     fetch(`/api/communication?${params.toString()}`, { cache: 'no-store', signal: controller.signal }).then(async (response) => {
@@ -141,12 +120,12 @@ export default function CommunicationWorkspace({ initialData, active = 'hub' }: 
       return response.json() as Promise<CommunicationSnapshot>;
     }).then(setData).catch((error: unknown) => { if ((error as { name?: string }).name !== 'AbortError') return; }).finally(() => undefined);
     return () => controller.abort();
-  }, [active, channel, deferredQuery, previewKey]);
+  }, [active, channel, deferredQuery]);
 
   async function refresh() {
     setBusy(true);
     try {
-      const params = new URLSearchParams(previewKey);
+      const params = new URLSearchParams();
       if (query) params.set('q', query);
       if (channel !== 'all') params.set('channel', channel);
       const response = await fetch(`/api/communication?${params.toString()}`, { cache: 'no-store' });
@@ -160,7 +139,7 @@ export default function CommunicationWorkspace({ initialData, active = 'hub' }: 
   async function togglePin(item: CommunicationItem) {
     setPinBusy(item.id);
     try {
-      const response = await fetch(`/api/communication/${encodeURIComponent(item.id)}/pin?${previewKey}`, { method: 'POST' });
+      const response = await fetch(`/api/communication/${encodeURIComponent(item.id)}/pin`, { method: 'POST' });
       if (!response.ok) throw new Error('Communication could not be pinned.');
       await refresh();
     } finally {
@@ -181,7 +160,7 @@ export default function CommunicationWorkspace({ initialData, active = 'hub' }: 
     <section className="communication-search-band" aria-label="Search communications"><div className="communication-search"><Icon name="search" size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape') setQuery(''); }} placeholder="Search people, patients, subjects, and message text..." aria-label="Search communications" /><kbd>⌘ K</kbd></div><div className="communication-filter-tabs" role="tablist" aria-label="Communication channels">{([['all', 'All'], ['message', 'Messages'], ['email', 'Email'], ['call', 'Calls'], ['voicemail', 'Voicemail']] as const).map(([value, label]) => <button type="button" key={value} role="tab" aria-selected={channel === value} onClick={() => setChannel(value)}>{label}{value === 'message' && data.channels.messages.unread > 0 && <span>{data.channels.messages.unread}</span>}</button>)}</div></section>
     <section className="communication-metrics" aria-label="Communication summary"><div><span className="communication-metric-icon is-blue"><Icon name="message" /></span><span><small>Unread</small><strong>{data.counts.unread}</strong><em>secure messages</em></span></div><div><span className="communication-metric-icon is-amber"><Icon name="alert" /></span><span><small>Needs attention</small><strong>{attention.length}</strong><em>new or waiting</em></span></div><div><span className="communication-metric-icon is-teal"><Icon name="follow" /></span><span><small>Follow-ups</small><strong>{followUps.length}</strong><em>flagged conversations</em></span></div><div><span className="communication-metric-icon is-slate"><Icon name="phone" /></span><span><small>Calls today</small><strong>{data.counts.callsToday ?? '—'}</strong><em>{data.channels.calls.available ? 'activity logged' : 'provider unavailable'}</em></span></div></section>
     <section className="communication-channel-grid" aria-label="Communication channels"><ChannelCard channel="email" title="Email" description="Clinical email with delivery controls and audit history." count="—" detail="provider unavailable" available={false} href="/communication/email" reason={data.channels.email.reason} /><ChannelCard channel="message" title="Secure Messages" description="Patient and care-team conversations from the secure message store." count={String(data.channels.messages.unread)} detail="unread conversations" available href="/communication/messages" /><ChannelCard channel="call" title="Calls & Voicemail" description="Call activity, voicemail, and scheduled callbacks." count="—" detail="provider unavailable" available={false} href="/communication/calls" reason={data.channels.calls.reason} /></section>
-    <section className="communication-content-grid"><div className="communication-main-column"><section className="communication-panel"><div className="communication-panel-heading"><div><span className="communication-section-kicker">Priority queue</span><h2>Needs Attention</h2></div><span className="communication-panel-count">{attention.length}</span></div>{attention.length ? attention.slice(0, 6).map((item) => <CommunicationRow item={item} key={item.id} onPin={(current) => void togglePin(current)} pinBusy={pinBusy === item.id} />) : <EmptyState title="Nothing needs attention" detail="New messages and flagged follow-ups will appear here." action={<Link href="/communication/messages?new=1" className="communication-text-link">Start a secure message <Icon name="arrow" size={14} /></Link>} />}</section><section className="communication-panel"><div className="communication-panel-heading"><div><span className="communication-section-kicker">Activity</span><h2>Recent Activity</h2></div><Link href={withPreview('/communication/messages', searchParams)} className="communication-text-link">Open Messages <Icon name="arrow" size={14} /></Link></div>{recent.length ? recent.slice(0, 5).map((item) => <CommunicationRow item={item} key={item.id} onPin={(current) => void togglePin(current)} pinBusy={pinBusy === item.id} />) : <EmptyState title="No communication activity" detail="Communication activity will be listed here as it is recorded." />}</section></div><aside className="communication-side-column"><section className="communication-panel communication-brief"><div className="communication-panel-heading"><div><span className="communication-section-kicker">Workspace brief</span><h2>Communication Brief</h2></div><span className="communication-brief-status">Live data</span></div><p>{data.counts.unread ? `${data.counts.unread} secure message${data.counts.unread === 1 ? '' : 's'} need review.` : 'No unread secure messages are waiting.'} {data.counts.waitingForReply ? `${data.counts.waitingForReply} conversation${data.counts.waitingForReply === 1 ? ' is' : 's are'} flagged for follow-up.` : 'No conversations are currently flagged for follow-up.'}</p><div className="communication-brief-list"><span><Icon name="message" size={14} /> Secure messages <strong>{data.channels.messages.unread} unread</strong></span><span><Icon name="mail" size={14} /> Email <strong>Not connected</strong></span><span><Icon name="phone" size={14} /> Calls <strong>Not connected</strong></span></div></section><section className="communication-panel"><div className="communication-panel-heading"><div><span className="communication-section-kicker">Work queue</span><h2>Follow-ups</h2></div><span className="communication-panel-count">{followUps.length}</span></div>{followUps.length ? followUps.slice(0, 4).map((item) => <CommunicationRow item={item} key={item.id} onPin={(current) => void togglePin(current)} pinBusy={pinBusy === item.id} />) : <EmptyState title="No follow-ups" detail="Flag a conversation when it needs another touch." />}</section><section className="communication-panel"><div className="communication-panel-heading"><div><span className="communication-section-kicker">Saved for later</span><h2>Pinned</h2></div><span className="communication-panel-count">{pinned.length}</span></div>{pinned.length ? pinned.slice(0, 4).map((item) => <CommunicationRow item={item} key={item.id} onPin={(current) => void togglePin(current)} pinBusy={pinBusy === item.id} />) : <EmptyState title="Nothing pinned" detail="Pin a conversation to keep it close at hand." />}</section></aside></section>
-    <section className="communication-quick-actions" aria-label="Quick actions"><span>Quick actions</span><Link href={withPreview('/communication/messages?new=1', searchParams)}><Icon name="message" size={15} /> New secure message</Link><Link href={tasksHref}><Icon name="task" size={15} /> Create task</Link><Link href={recordsHref}><Icon name="records" size={15} /> Find patient</Link><Link href={appointmentsHref}><Icon name="calendar" size={15} /> View appointments</Link></section>
+    <section className="communication-content-grid"><div className="communication-main-column"><section className="communication-panel"><div className="communication-panel-heading"><div><span className="communication-section-kicker">Priority queue</span><h2>Needs Attention</h2></div><span className="communication-panel-count">{attention.length}</span></div>{attention.length ? attention.slice(0, 6).map((item) => <CommunicationRow item={item} key={item.id} onPin={(current) => void togglePin(current)} pinBusy={pinBusy === item.id} />) : <EmptyState title="Nothing needs attention" detail="New messages and flagged follow-ups will appear here." action={<Link href="/communication/messages?new=1" className="communication-text-link">Start a secure message <Icon name="arrow" size={14} /></Link>} />}</section><section className="communication-panel"><div className="communication-panel-heading"><div><span className="communication-section-kicker">Activity</span><h2>Recent Activity</h2></div><Link href="/communication/messages" className="communication-text-link">Open Messages <Icon name="arrow" size={14} /></Link></div>{recent.length ? recent.slice(0, 5).map((item) => <CommunicationRow item={item} key={item.id} onPin={(current) => void togglePin(current)} pinBusy={pinBusy === item.id} />) : <EmptyState title="No communication activity" detail="Communication activity will be listed here as it is recorded." />}</section></div><aside className="communication-side-column"><section className="communication-panel communication-brief"><div className="communication-panel-heading"><div><span className="communication-section-kicker">Workspace brief</span><h2>Communication Brief</h2></div><span className="communication-brief-status">Live data</span></div><p>{data.counts.unread ? `${data.counts.unread} secure message${data.counts.unread === 1 ? '' : 's'} need review.` : 'No unread secure messages are waiting.'} {data.counts.waitingForReply ? `${data.counts.waitingForReply} conversation${data.counts.waitingForReply === 1 ? ' is' : 's are'} flagged for follow-up.` : 'No conversations are currently flagged for follow-up.'}</p><div className="communication-brief-list"><span><Icon name="message" size={14} /> Secure messages <strong>{data.channels.messages.unread} unread</strong></span><span><Icon name="mail" size={14} /> Email <strong>Not connected</strong></span><span><Icon name="phone" size={14} /> Calls <strong>Not connected</strong></span></div></section><section className="communication-panel"><div className="communication-panel-heading"><div><span className="communication-section-kicker">Work queue</span><h2>Follow-ups</h2></div><span className="communication-panel-count">{followUps.length}</span></div>{followUps.length ? followUps.slice(0, 4).map((item) => <CommunicationRow item={item} key={item.id} onPin={(current) => void togglePin(current)} pinBusy={pinBusy === item.id} />) : <EmptyState title="No follow-ups" detail="Flag a conversation when it needs another touch." />}</section><section className="communication-panel"><div className="communication-panel-heading"><div><span className="communication-section-kicker">Saved for later</span><h2>Pinned</h2></div><span className="communication-panel-count">{pinned.length}</span></div>{pinned.length ? pinned.slice(0, 4).map((item) => <CommunicationRow item={item} key={item.id} onPin={(current) => void togglePin(current)} pinBusy={pinBusy === item.id} />) : <EmptyState title="Nothing pinned" detail="Pin a conversation to keep it close at hand." />}</section></aside></section>
+    <section className="communication-quick-actions" aria-label="Quick actions"><span>Quick actions</span><Link href="/communication/messages?new=1"><Icon name="message" size={15} /> New secure message</Link><Link href={tasksHref}><Icon name="task" size={15} /> Create task</Link><Link href={recordsHref}><Icon name="records" size={15} /> Find patient</Link><Link href={appointmentsHref}><Icon name="calendar" size={15} /> View appointments</Link></section>
   </main>;
 }

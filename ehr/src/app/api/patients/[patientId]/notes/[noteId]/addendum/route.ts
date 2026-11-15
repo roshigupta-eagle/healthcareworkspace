@@ -12,6 +12,7 @@ export async function POST(request: Request, { params }: { params: { patientId: 
   const text = typeof body?.text === 'string' ? body.text : '';
 
   const actor = await resolveActor();
+  if (!actor) return NextResponse.json({ error: 'authentication required' }, { status: 401 });
   const result = await addAddendum(patientId, noteId, text, actor);
   if ('error' in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);

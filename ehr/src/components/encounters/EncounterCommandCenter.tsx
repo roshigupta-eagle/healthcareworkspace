@@ -31,7 +31,6 @@ type DetailTab = 'overview' | 'timeline' | 'results' | 'orders' | 'notes' | 'mor
 
 type Props = {
   initialData: EncounterWorkspaceSnapshot;
-  preview: string;
 };
 
 type IconName =
@@ -133,10 +132,6 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
       {paths[name]}
     </svg>
   );
-}
-
-function withPreview(path: string, preview: string) {
-  return preview ? `${path}${path.includes('?') ? '&' : '?'}${preview}` : path;
 }
 
 function timestamp(value?: string) {
@@ -614,7 +609,7 @@ function MetricsPanel({ data }: { data: EncounterWorkspaceSnapshot }) {
   return <section className="enc-bottom-panel"><header><span className="enc-panel-icon is-metrics"><Icon name="activity" size={17} /></span><div><span className="enc-kicker">Today</span><h2>Encounter metrics</h2></div></header><dl className="enc-metrics-definition"><div><dt>Active encounters</dt><dd>{metrics.active}</dd><small>FHIR Encounter records not in a terminal status.</small></div><div><dt>Average wait</dt><dd>{metrics.averageWaitMinutes === null ? 'N/A' : formatDuration(metrics.averageWaitMinutes)}</dd><small>Elapsed time from recorded arrival for current waiting workflows.</small></div><div><dt>Longest wait</dt><dd>{metrics.longestWaitMinutes === null ? 'N/A' : formatDuration(metrics.longestWaitMinutes)}</dd><small>Operational alert threshold: {policy.waitingThresholdMinutes} min.</small></div><div><dt>Room utilization</dt><dd>{data.locations.length ? `${data.locations.filter((room) => room.occupancy > 0).length}/${data.locations.length}` : 'N/A'}</dd><small>Locations with at least one active operational occupant.</small></div></dl></section>;
 }
 
-export default function EncounterCommandCenter({ initialData, preview }: Props) {
+export default function EncounterCommandCenter({ initialData }: Props) {
   const [data, setData] = useState(initialData);
   const [filter, setFilter] = useState<EncounterWorkspaceFilter>('all');
   const [search, setSearch] = useState('');
@@ -669,7 +664,6 @@ export default function EncounterCommandCenter({ initialData, preview }: Props) 
       if (practitioner) params.set('practitioner', practitioner);
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (dateTo) params.set('dateTo', dateTo);
-      if (preview) new URLSearchParams(preview).forEach((value, key) => params.set(key, value));
       setLoading(true);
       fetch(`/api/encounters?${params.toString()}`, { cache: 'no-store', signal: controller.signal })
         .then(async (response) => {
@@ -691,7 +685,7 @@ export default function EncounterCommandCenter({ initialData, preview }: Props) 
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [dateFrom, dateTo, deferredSearch, filter, fhirStatus, location, practitioner, preview, priority, refreshKey, search, sort, type]);
+  }, [dateFrom, dateTo, deferredSearch, filter, fhirStatus, location, practitioner, priority, refreshKey, search, sort, type]);
 
   function refresh() {
     setError(null);
@@ -723,7 +717,7 @@ export default function EncounterCommandCenter({ initialData, preview }: Props) 
     setDetailError(null);
     setDetailLoading(true);
     try {
-      const response = await fetch(withPreview(`/api/encounters/${encodeURIComponent(encounterId)}`, preview), { cache: 'no-store' });
+      const response = await fetch(`/api/encounters/${encodeURIComponent(encounterId)}`, { cache: 'no-store' });
       const payload = await response.json().catch(() => ({})) as EncounterDetail & { error?: string };
       if (!response.ok) throw new Error(payload.error || 'Unable to load encounter details.');
       if (detailRequest.current === encounterId) setDetail(payload);
@@ -739,7 +733,7 @@ export default function EncounterCommandCenter({ initialData, preview }: Props) 
     setBusyAction(event);
     setDetailError(null);
     try {
-      const response = await fetch(withPreview(`/api/encounters/${encodeURIComponent(detail.item.encounterId)}/transition`, preview), {
+      const response = await fetch(`/api/encounters/${encodeURIComponent(detail.item.encounterId)}/transition`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ event, expectedUpdatedAt: detail.item.workflowUpdatedAt, roomId: values.roomId, assignedPractitionerId: values.practitionerId, note: values.note }),
@@ -785,7 +779,7 @@ export default function EncounterCommandCenter({ initialData, preview }: Props) 
           <div className="enc-header-meta"><span className={`enc-connected is-${data.sources.encounter.state}`}><i />{data.sources.encounter.state === 'ready' ? 'Connected clinical data' : 'Encounter source unavailable'}</span><span>Updated {formatDate(data.generatedAt, true)}</span><span><Icon name="shield" size={13} /> Authorized workflow</span></div>
         </div>
         <div className="enc-header-actions">
-          <Link className="enc-primary-button" href={withPreview('/dashboard/appointments/book?from=encounters', preview)}><Icon name="calendar" size={16} /> New Encounter</Link>
+          <Link className="enc-primary-button" href="/dashboard/appointments/book?from=encounters"><Icon name="calendar" size={16} /> New Encounter</Link>
           <button className="enc-secondary-button" onClick={() => setNotice('FHIR import is quarantined until a validated import endpoint is configured.')} type="button"><Icon name="upload" size={15} /> Import FHIR</button>
           <button className="enc-secondary-button" disabled={!selectedId} onClick={() => setNotice(selectedId ? 'Open the selected encounter and use its technical FHIR panel to inspect the authorized resource.' : 'Select an encounter before exporting its authorized FHIR resource.')} type="button"><Icon name="download" size={15} /> Export</button>
           <button aria-label="Refresh encounters" className="enc-icon-button" disabled={loading} onClick={refresh} title="Refresh encounters" type="button"><Icon name="refresh" size={16} /></button>
@@ -804,7 +798,7 @@ export default function EncounterCommandCenter({ initialData, preview }: Props) 
           <div className="enc-toolbar-actions"><button aria-expanded={showFilters} className="enc-secondary-button" onClick={() => setShowFilters((open) => !open)} type="button"><Icon name="filter" size={14} /> Filters</button><label className="enc-sort"><span className="sr-only">Sort encounters</span><select aria-label="Sort encounters" onChange={(event) => setSort(event.target.value as EncounterWorkspaceSort)} value={sort}><option value="clinical-priority">Clinical priority</option><option value="arrival">Arrival time</option><option value="longest-waiting">Longest waiting</option><option value="recently-updated">Recently updated</option><option value="patient">Patient name</option><option value="encounter-start">Encounter start</option><option value="location">Location</option></select></label><div className="enc-view-toggle" role="group" aria-label="Encounter worklist view"><button aria-pressed={view === 'list'} onClick={() => setPreferredView('list')} title="Table view" type="button"><Icon name="orders" size={15} /><span>List</span></button><button aria-pressed={view === 'cards'} onClick={() => setPreferredView('cards')} title="Card view" type="button"><Icon name="grid" size={15} /><span>Cards</span></button></div></div>
         </div>
         {showFilters && <div className="enc-advanced-filters"><label>FHIR status<select onChange={(event) => setFhirStatus(event.target.value)} value={fhirStatus}><option value="">All statuses</option>{Object.entries(FHIR_STATUS_LABELS).map(([status, label]) => <option key={status} value={status}>{label}</option>)}</select></label><label>Encounter type<select onChange={(event) => setType(event.target.value)} value={type}><option value="">All types</option>{data.options.types.map((option) => <option key={option} value={option}>{option}</option>)}</select></label><label>Priority<select onChange={(event) => setPriority(event.target.value)} value={priority}><option value="">All priorities</option>{data.options.priorities.map((option) => <option key={option} value={option}>{option}</option>)}</select></label><label>Location<select onChange={(event) => setLocation(event.target.value)} value={location}><option value="">All locations</option>{data.options.locations.map((option) => <option key={option} value={option}>{option}</option>)}</select></label><label>Practitioner<select onChange={(event) => setPractitioner(event.target.value)} value={practitioner}><option value="">All practitioners</option>{data.options.practitioners.map((option) => <option key={option} value={option}>{option}</option>)}</select></label><label>From<input onChange={(event) => setDateFrom(event.target.value)} type="date" value={dateFrom} /></label><label>To<input onChange={(event) => setDateTo(event.target.value)} type="date" value={dateTo} /></label><button className="enc-clear-filter" disabled={!hasFilters} onClick={clearFilters} type="button">Clear filters</button></div>}
-        {loading && !data.items.length ? <div className="enc-skeleton"><span /><span /><span /><span /></div> : !data.items.length ? <EmptyState filtered={hasFilters} onClear={clearFilters} onNew={() => { window.location.href = withPreview('/dashboard/appointments/book?from=encounters', preview); }} /> : view === 'list' ? <><EncounterTable items={data.items} now={now} onOpen={(id) => void openDetail(id)} selectedId={selectedId} /><div className="enc-mobile-cards"><EncounterCards items={data.items} now={now} onOpen={(id) => void openDetail(id)} selectedId={selectedId} /></div></> : <EncounterCards items={data.items} now={now} onOpen={(id) => void openDetail(id)} selectedId={selectedId} />}
+        {loading && !data.items.length ? <div className="enc-skeleton"><span /><span /><span /><span /></div> : !data.items.length ? <EmptyState filtered={hasFilters} onClear={clearFilters} onNew={() => { window.location.href = '/dashboard/appointments/book?from=encounters'; }} /> : view === 'list' ? <><EncounterTable items={data.items} now={now} onOpen={(id) => void openDetail(id)} selectedId={selectedId} /><div className="enc-mobile-cards"><EncounterCards items={data.items} now={now} onOpen={(id) => void openDetail(id)} selectedId={selectedId} /></div></> : <EncounterCards items={data.items} now={now} onOpen={(id) => void openDetail(id)} selectedId={selectedId} />}
       </section>
       <section className="enc-bottom-grid"><LocationStatus locations={data.locations} /><AttentionQueue items={data.attention} onOpen={(id) => void openDetail(id)} /><MetricsPanel data={data} /></section>
       <footer className="enc-system-footer"><div><Icon name="code" size={14} /><span>FHIR R4 Encounter source</span></div><div><Icon name="shield" size={14} /><span>Audit events requested for workspace reads and commands</span></div><button onClick={() => setShowMoreActions(true)} type="button">System source status <Icon name="arrow" size={13} /></button></footer>

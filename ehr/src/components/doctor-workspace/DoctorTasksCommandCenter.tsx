@@ -187,20 +187,6 @@ function Icon({ name, size = 18 }: { name: string; size?: number }) {
   );
 }
 
-function previewQuery(searchParams: URLSearchParams) {
-  const query = new URLSearchParams();
-  const asUser = searchParams.get("asUser");
-  if (asUser) query.set("asUser", asUser);
-  else if (["1", "true"].includes(searchParams.get("noauth") || ""))
-    query.set("noauth", "1");
-  return query.toString();
-}
-
-function withPreview(href: string, searchParams: URLSearchParams) {
-  const query = previewQuery(searchParams);
-  return query ? `${href}${href.includes("?") ? "&" : "?"}${query}` : href;
-}
-
 function taskId(item: DoctorWorkItem) {
   return item.id.startsWith("task:")
     ? item.id.split(":").slice(2).join(":")
@@ -325,7 +311,6 @@ function Metric({
 function TaskCard({
   item,
   now,
-  searchParams,
   onOpen,
   onDragStart,
   onDrop,
@@ -335,7 +320,6 @@ function TaskCard({
 }: {
   item: DoctorWorkItem;
   now: Date;
-  searchParams: URLSearchParams;
   onOpen: () => void;
   onDragStart: () => void;
   onDrop: () => void;
@@ -385,14 +369,14 @@ function TaskCard({
               </button>
               <Link
                 role="menuitem"
-                href={withPreview(item.patient.href, searchParams)}
+                href={item.patient.href}
               >
                 Open Patient
               </Link>
               {item.sourceHref && (
                 <Link
                   role="menuitem"
-                  href={withPreview(item.sourceHref, searchParams)}
+                  href={item.sourceHref}
                 >
                   Open Source
                 </Link>
@@ -454,7 +438,6 @@ function TaskCard({
 function Kanban({
   items,
   now,
-  searchParams,
   onOpen,
   onDragStart,
   onDrop,
@@ -465,7 +448,6 @@ function Kanban({
 }: {
   items: DoctorWorkItem[];
   now: Date;
-  searchParams: URLSearchParams;
   onOpen: (item: DoctorWorkItem) => void;
   onDragStart: (item: DoctorWorkItem) => void;
   onDrop: (stage: Stage) => void;
@@ -521,7 +503,6 @@ function Kanban({
                   <TaskCard
                     item={item}
                     now={now}
-                    searchParams={searchParams}
                     key={item.id}
                     onOpen={() => onOpen(item)}
                     onDragStart={() => onDragStart(item)}
@@ -556,12 +537,10 @@ function Kanban({
 function ListView({
   items,
   now,
-  searchParams,
   onOpen,
 }: {
   items: DoctorWorkItem[];
   now: Date;
-  searchParams: URLSearchParams;
   onOpen: (item: DoctorWorkItem) => void;
 }) {
   return (
@@ -610,8 +589,8 @@ function ListView({
               <Link
                 href={
                   item.sourceHref
-                    ? withPreview(item.sourceHref, searchParams)
-                    : withPreview(item.patient.href, searchParams)
+                    ? item.sourceHref
+                    : item.patient.href
                 }
                 className="tasks-source-link"
               >
@@ -815,10 +794,8 @@ function CalendarView({
 
 function TaskIntelligence({
   data,
-  searchParams,
 }: {
   data: DoctorWorkSnapshot;
-  searchParams: URLSearchParams;
 }) {
   const recent = data.items
     .slice()
@@ -835,8 +812,8 @@ function TaskIntelligence({
         <p className="tasks-panel-footnote">Completion speed is not ranked. Clinical priority and source state remain separate.</p>
       </article>
       <article className="tasks-intelligence-panel">
-        <header><div><span className="tasks-panel-kicker">Cross-patient activity</span><h2>Recent Activity</h2></div><a href={withPreview("/dashboard/records", searchParams)} className="tasks-panel-link">Patient records <Icon name="arrow" size={13} /></a></header>
-        <div className="tasks-activity-list">{recent.length ? recent.map((item) => <a href={withPreview(item.patient.href, searchParams)} className="tasks-activity-row" key={item.id}><span className={`tasks-activity-dot ${item.priority === "critical" ? "is-critical" : ""}`}><Icon name={item.priority === "critical" ? "alert" : "check"} size={13} /></span><span><strong>{item.patient.name}</strong><small>{item.title} · {formatDate(item.updatedAt || item.createdAt)}</small></span><Icon name="arrow" size={13} /></a>) : <p className="tasks-muted-copy">No recent work activity is available.</p>}</div>
+        <header><div><span className="tasks-panel-kicker">Cross-patient activity</span><h2>Recent Activity</h2></div><Link href="/dashboard/records" className="tasks-panel-link">Patient records <Icon name="arrow" size={13} /></Link></header>
+        <div className="tasks-activity-list">{recent.length ? recent.map((item) => <a href={item.patient.href} className="tasks-activity-row" key={item.id}><span className={`tasks-activity-dot ${item.priority === "critical" ? "is-critical" : ""}`}><Icon name={item.priority === "critical" ? "alert" : "check"} size={13} /></span><span><strong>{item.patient.name}</strong><small>{item.title} · {formatDate(item.updatedAt || item.createdAt)}</small></span><Icon name="arrow" size={13} /></a>) : <p className="tasks-muted-copy">No recent work activity is available.</p>}</div>
       </article>
       <article className="tasks-intelligence-panel">
         <header><div><span className="tasks-panel-kicker">Source status</span><h2>System Integration Status</h2></div><Icon name="source" size={17} /></header>
@@ -882,7 +859,6 @@ export default function DoctorTasksCommandCenter({ initialData }: Props) {
   const [dragged, setDragged] = useState<DoctorWorkItem | null>(null);
   const deferredQuery = useDeferredValue(query);
   const [now] = useState(() => new Date());
-  const apiQuery = previewQuery(searchParams);
 
   useEffect(() => {
     if (searchParams.get("view")) return;
@@ -963,7 +939,7 @@ export default function DoctorTasksCommandCenter({ initialData }: Props) {
     setError(null);
     try {
       const response = await fetch(
-        `/api/doctor/work${apiQuery ? `?${apiQuery}` : ""}`,
+        "/api/doctor/work",
         { cache: "no-store" },
       );
       const payload = (await response.json()) as DoctorWorkSnapshot & {
@@ -1005,7 +981,7 @@ export default function DoctorTasksCommandCenter({ initialData }: Props) {
     setMenuId(null);
     try {
       const response = await fetch(
-        `/api/doctor/work/${encodeURIComponent(id)}${apiQuery ? `?${apiQuery}` : ""}`,
+        `/api/doctor/work/${encodeURIComponent(id)}`,
         {
           method: "PATCH",
           headers: { "content-type": "application/json" },
@@ -1050,7 +1026,7 @@ export default function DoctorTasksCommandCenter({ initialData }: Props) {
           ? crypto.randomUUID()
           : `task-${form.patientId}-${form.title.trim()}`;
       const response = await fetch(
-        `/api/doctor/work${apiQuery ? `?${apiQuery}` : ""}`,
+        "/api/doctor/work",
         {
           method: "POST",
           headers: {
@@ -1373,7 +1349,6 @@ export default function DoctorTasksCommandCenter({ initialData }: Props) {
         <Kanban
           items={filtered}
           now={now}
-          searchParams={searchParams}
           onOpen={setSelected}
           onDragStart={setDragged}
           onDrop={handleDrop}
@@ -1387,7 +1362,6 @@ export default function DoctorTasksCommandCenter({ initialData }: Props) {
         <ListView
           items={filtered}
           now={now}
-          searchParams={searchParams}
           onOpen={setSelected}
         />
       )}
@@ -1397,7 +1371,7 @@ export default function DoctorTasksCommandCenter({ initialData }: Props) {
       {view === "calendar" && (
         <CalendarView items={filtered} now={now} onOpen={setSelected} />
       )}
-      <TaskIntelligence data={data} searchParams={searchParams} />
+      <TaskIntelligence data={data} />
       <WorkspaceDrawer
         title="Task Details"
         open={Boolean(selected)}
@@ -1459,7 +1433,7 @@ export default function DoctorTasksCommandCenter({ initialData }: Props) {
               <p>{selected.sourceLabel}</p>
               {selected.sourceHref && (
                 <Link
-                  href={withPreview(selected.sourceHref, searchParams)}
+                  href={selected.sourceHref}
                   className="tasks-primary-button"
                 >
                   Open Source <Icon name="arrow" size={14} />
@@ -1473,7 +1447,7 @@ export default function DoctorTasksCommandCenter({ initialData }: Props) {
             )}
             <div className="tasks-detail-actions">
               <Link
-                href={withPreview(selected.patient.href, searchParams)}
+                href={selected.patient.href}
                 className="tasks-secondary-button"
               >
                 <Icon name="patient" size={14} /> Open Patient

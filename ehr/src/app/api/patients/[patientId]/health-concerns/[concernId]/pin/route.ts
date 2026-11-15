@@ -12,6 +12,7 @@ export async function POST(request: Request, { params }: { params: { patientId: 
   const pinned = !!body?.pinned;
 
   const actor = await resolveActor();
+  if (!actor) return NextResponse.json({ error: 'authentication required' }, { status: 401 });
   const updated = await setPinned(patientId, concernId, pinned, actor);
   if (!updated) return NextResponse.json({ error: 'concern not found' }, { status: 404 });
   return NextResponse.json(updated);

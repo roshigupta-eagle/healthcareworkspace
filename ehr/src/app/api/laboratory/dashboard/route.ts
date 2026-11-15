@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getLaboratoryDashboardSnapshot, type LaboratoryDashboardFilters, type LaboratoryFilter, type LaboratorySort } from '@/lib/laboratoryDashboard';
-import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
+import { LABORATORY_WORKSPACE_ROLES, resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 
 const FILTERS = new Set<LaboratoryFilter>(['all', 'needs-review', 'abnormal', 'critical', 'follow-up', 'specimen-issue']);
 const SORTS = new Set<LaboratorySort>(['most-urgent', 'newest', 'updated', 'name']);
@@ -28,13 +28,10 @@ function queryFilters(request: Request): LaboratoryDashboardFilters {
 }
 
 export async function GET(request: Request) {
-	const access = await resolveDoctorWorkspaceActor(request);
+	const access = await resolveDoctorWorkspaceActor(request, LABORATORY_WORKSPACE_ROLES);
 	if (access.response) return access.response;
-	const params = new URL(request.url).searchParams;
-	const preview = process.env.NODE_ENV !== 'production'
-		&& (['1', 'true'].includes(params.get('noauth') || '') || ['dev', 'dev-doctor', 'user-admin-khan'].includes(params.get('asUser') || ''));
 	return NextResponse.json(
-		await getLaboratoryDashboardSnapshot(access.actor!, queryFilters(request), { preview }),
+		await getLaboratoryDashboardSnapshot(access.actor!, queryFilters(request)),
 		{ headers: { 'Cache-Control': 'private, no-store, max-age=0' } },
 	);
 }

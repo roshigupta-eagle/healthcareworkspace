@@ -1,26 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { signIn } from "next-auth/react";
+import { useState } from "react";
+import { getSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import AnimatedLink from "@/components/AnimatedLink";
 import ThemeLangControlsClient from '@/components/ThemeLangControlsClient';
 import { useThemeLang } from '@/components/ThemeLangProvider';
+import { postLoginPath } from "@/lib/roleHome";
 
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { t } = useThemeLang();
-
-  useEffect(() => {
-    // Automatically redirect login page to doctor view (bypass auth in dev)
-    try {
-      router.replace('/doctor?noauth=1');
-    } catch (e) {
-      // ignore
-    }
-  }, [router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -47,7 +39,10 @@ export default function LoginPage() {
       if (/credentials/i.test(err)) setError(t('invalidCredentials'));
       else setError(err || t('invalidCredentials'));
     } else {
-      router.push("/dashboard");
+      const session = await getSession();
+      const role = (session?.user as { role?: string } | undefined)?.role;
+      const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+      router.push(postLoginPath(role, returnTo));
       router.refresh();
     }
   }

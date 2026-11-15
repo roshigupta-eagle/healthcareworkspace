@@ -1,5 +1,4 @@
 import type { AppointmentStatus, FHIRAppointment, FHIRSlot, SlotStatus } from '@/scheduling/types/fhir-scheduling';
-import { getPreviewSchedulingSnapshot } from '@/lib/previewSchedulingStore';
 
 type JsonObject = Record<string, unknown>;
 type FhirBundle = { resourceType?: string; type?: string; total?: number; entry?: Array<{ resource?: JsonObject }>; link?: Array<{ relation?: string; url?: string }> };
@@ -44,10 +43,6 @@ type SchedulingResourceRead = { resource: JsonObject; etag?: string };
 
 export function schedulingFhirBase() {
   return (process.env.FHIR_BASE_URL || process.env.NEXT_PUBLIC_FHIR_API_URL || 'http://localhost:8081/fhir').replace(/\/$/, '');
-}
-
-export function isPreviewSchedulingParams(params: URLSearchParams) {
-  return process.env.NODE_ENV !== 'production' && (['1', 'true'].includes(params.get('noauth') || '') || ['dev', 'dev-doctor'].includes(params.get('asUser') || ''));
 }
 
 function fhirHeaders(contentType?: string) {
@@ -261,8 +256,7 @@ function source(state: SchedulingSource['state'], sourceName: string, error?: un
   return { state, source: sourceName, ...(error ? { error: error instanceof Error ? error.message : 'Source unavailable.' } : {}) };
 }
 
-export async function getSchedulingSnapshot(query = '', options: { preview?: boolean } = {}): Promise<SchedulingSnapshot> {
-  if (options.preview) return getPreviewSchedulingSnapshot(query);
+export async function getSchedulingSnapshot(query = ''): Promise<SchedulingSnapshot> {
   const base = schedulingFhirBase();
   const results = await Promise.allSettled([
     fetchBundle(base, 'Appointment'),

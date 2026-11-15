@@ -1,13 +1,12 @@
 ﻿import { NextResponse } from 'next/server';
-import { getSchedulingSnapshot, isPreviewSchedulingParams } from '@/lib/schedulingData';
-import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
+import { getSchedulingSnapshot } from '@/lib/schedulingData';
+import { resolveDoctorWorkspaceActor, SCHEDULING_WORKSPACE_ROLES } from '@/lib/doctorWorkspaceAuth';
 
 export async function GET(request: Request) {
-  const access = await resolveDoctorWorkspaceActor(request);
+  const access = await resolveDoctorWorkspaceActor(request, SCHEDULING_WORKSPACE_ROLES);
   if (access.response) return access.response;
   try {
-    const params = new URL(request.url).searchParams;
-    return NextResponse.json((await getSchedulingSnapshot('', { preview: isPreviewSchedulingParams(params) })).locations);
+    return NextResponse.json((await getSchedulingSnapshot('')).locations);
   } catch {
     return NextResponse.json({ error: 'failed to fetch locations' }, { status: 500 });
   }

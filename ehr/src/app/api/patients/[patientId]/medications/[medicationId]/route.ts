@@ -7,7 +7,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ patientI
   const { patientId, medicationId } = await params;
   const patient = getPatientById(String(patientId));
   if (!patient) return NextResponse.json({ error: 'patient not found' }, { status: 404 });
-  try { await auth(); } catch { /* allow dev preview */ }
+  if (!(await auth().catch(() => null))?.user) return NextResponse.json({ error: 'authentication required' }, { status: 401 });
 
   const item = await getMedication(patientId, medicationId);
   if (!item) return NextResponse.json({ error: 'medication not found' }, { status: 404 });

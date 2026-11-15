@@ -10,26 +10,12 @@ import ConsentCard from '@/components/contact-preferences/ConsentCard';
 import VerificationHistoryTimeline from '@/components/contact-preferences/VerificationHistoryTimeline';
 import FhirResourceInfoCard from '@/components/contact-preferences/FhirResourceInfoCard';
 
-export default async function ContactPreferencesPage({ params, searchParams }: { params: any; searchParams?: any }) {
+export default async function ContactPreferencesPage({ params }: { params: any }) {
   const resolvedParams = await params;
   const id = resolvedParams?.id ?? (params && params.id);
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  let session: any = null;
-  try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    session = await auth();
-  } catch (e) {
-    // allow dev preview
-  }
-
-  if (!session && resolvedSearchParams && resolvedSearchParams.asUser && process.env.NODE_ENV !== 'production') {
-    const override = Array.isArray(resolvedSearchParams.asUser) ? resolvedSearchParams.asUser[0] : resolvedSearchParams.asUser;
-    if (override) session = { user: { id: override, name: override } };
-  }
-
-  if (!session) redirect('/login');
+  const session = await auth().catch(() => null);
+  if (!session?.user) redirect('/login');
 
   const patient = getPatientById(String(id));
   if (!patient) redirect('/dashboard/records');

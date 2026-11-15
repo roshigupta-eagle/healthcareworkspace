@@ -14,7 +14,7 @@ ServiceJWKSURL      string
 
 func Load() *Config {
 return &Config{
-Port:                 getEnv("PORT", "8084"),
+Port:                 getEnv("PORT", "8082"),
 DatabaseURL:          getEnv("DATABASE_URL", ""),
 Env:                  getEnv("ENV", "development"),
 AllowedOrigin:        getEnv("ALLOWED_ORIGIN", "http://localhost:3000"),

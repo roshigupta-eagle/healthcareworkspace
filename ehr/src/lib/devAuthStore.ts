@@ -1,6 +1,7 @@
 import { hashSync } from "bcryptjs";
+import { DEV_ACCOUNTS } from "@/lib/devAccounts";
 
-type DevUser = { id: string; email: string; passwordHash: string; name: string; role: string };
+type DevUser = { id: string; email: string; passwordHash: string; name: string; role: string; patientId?: string };
 const store: Map<string, DevUser> = new Map();
 
 export function addDevUser(u: DevUser) {
@@ -21,17 +22,11 @@ export function clearDevUsers() {
   store.clear();
 }
 
-// Seed a few convenient dev accounts when running locally so the
-// developer can sign in without needing to run an external script.
+// Seed the development accounts when running locally so the developer can
+// sign in as every role without running an external script.
 if (process.env.NODE_ENV !== "production" && store.size === 0) {
-  const seeded = [
-    { id: "dev-admin", email: "admin@example.com", password: "password123", name: "Admin User", role: "ADMIN" },
-    { id: "dev-doctor", email: "doctor@example.com", password: "password123", name: "Doctor User", role: "DOCTOR" },
-    { id: "dev-patient", email: "patient@example.com", password: "password123", name: "Patient User", role: "PATIENT" },
-  ];
-  for (const u of seeded) {
-    const passwordHash = hashSync(u.password, 10);
-    addDevUser({ id: u.id, email: u.email, passwordHash, name: u.name, role: u.role });
+  for (const u of DEV_ACCOUNTS) {
+    addDevUser({ id: u.id, email: u.email, passwordHash: hashSync(u.password, 10), name: u.name, role: u.role, patientId: u.patientId });
   }
 }
 

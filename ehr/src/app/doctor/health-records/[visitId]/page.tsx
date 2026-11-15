@@ -19,7 +19,7 @@ export default async function HealthRecordDetailPage({ params }: { params: { vis
   const session = await auth().catch(() => null);
   if (!session?.user) redirect("/login");
   const role = (session.user as any).role;
-  if (role !== "DOCTOR" && role !== "ADMIN" && role !== "NURSE") redirect("/unauthorized");
+  if (role !== "DOCTOR" && role !== "NURSE") redirect("/unauthorized");
 
   const { visitId } = params;
 

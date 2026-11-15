@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { canAccessTaskPatient, canActorUpdateTask, canCompleteTask, findCanonicalTask } from '@/lib/doctorWorkStore';
 import { addTaskNote, updateTask } from '@/lib/tasksStore';
-import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
+import { canAssignWorkToOthers, resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const access = await resolveDoctorWorkspaceActor(request);
@@ -14,7 +14,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const requestedAction = typeof body?.action === 'string' ? body.action : '';
   const action = requestedAction === 'toggleComplete' || requestedAction === 'markComplete' ? 'complete' : requestedAction;
-  if (action === 'delegate' && access.actor!.role !== 'ADMIN' && access.actor!.role !== 'DEV') return NextResponse.json({ error: 'You do not have permission to reassign this task.' }, { status: 403 });
+  if (action === 'delegate' && !canAssignWorkToOthers(access.actor!.role)) return NextResponse.json({ error: 'You do not have permission to reassign this task.' }, { status: 403 });
   if (action === 'addNote') {
     const note = body?.note && typeof body.note === 'object' ? body.note as { body?: unknown } : null;
     const noteBody = typeof note?.body === 'string' ? note.body.trim() : '';

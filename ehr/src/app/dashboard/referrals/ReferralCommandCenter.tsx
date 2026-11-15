@@ -40,7 +40,6 @@ type CreateForm = {
 
 type Props = {
   initialData: ReferralWorkspaceSnapshot;
-  preview: string;
   initialReferralId?: string;
   initialCreateOpen?: boolean;
   initialPatientId?: string;
@@ -186,10 +185,6 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
       {paths[name]}
     </svg>
   );
-}
-
-function withPreview(path: string, preview: string) {
-  return preview ? `${path}${path.includes("?") ? "&" : "?"}${preview}` : path;
 }
 
 function dateValue(value?: string) {
@@ -360,13 +355,11 @@ function MetricCard({
 
 function ReferralMenu({
   item,
-  preview,
   isOpen,
   onToggle,
   onOpen,
 }: {
   item: ReferralWorklistItem;
-  preview: string;
   isOpen: boolean;
   onToggle: () => void;
   onOpen: () => void;
@@ -391,7 +384,7 @@ function ReferralMenu({
           <button type="button" role="menuitem" onClick={onOpen}>
             Open referral
           </button>
-          <Link role="menuitem" href={withPreview(item.patient.href, preview)}>
+          <Link role="menuitem" href={item.patient.href}>
             Open patient
           </Link>
           {item.nextAction && (
@@ -407,14 +400,12 @@ function ReferralMenu({
 
 function ReferralTable({
   items,
-  preview,
   now,
   menuId,
   onOpen,
   onMenu,
 }: {
   items: ReferralWorklistItem[];
-  preview: string;
   now: Date;
   menuId: string | null;
   onOpen: (item: ReferralWorklistItem) => void;
@@ -445,7 +436,7 @@ function ReferralTable({
               <tr key={item.referralId}>
                 <td>
                   <Link
-                    href={withPreview(item.patient.href, preview)}
+                    href={item.patient.href}
                     className="ref-patient-cell"
                     aria-label={`Open patient record for ${item.patient.name}`}
                   >
@@ -514,7 +505,6 @@ function ReferralTable({
                     </button>
                     <ReferralMenu
                       item={item}
-                      preview={preview}
                       isOpen={menuId === item.referralId}
                       onToggle={() =>
                         onMenu(
@@ -539,14 +529,12 @@ function ReferralTable({
 
 function ReferralCards({
   items,
-  preview,
   now,
   menuId,
   onOpen,
   onMenu,
 }: {
   items: ReferralWorklistItem[];
-  preview: string;
   now: Date;
   menuId: string | null;
   onOpen: (item: ReferralWorklistItem) => void;
@@ -563,7 +551,7 @@ function ReferralCards({
           >
             <header>
               <Link
-                href={withPreview(item.patient.href, preview)}
+                href={item.patient.href}
                 className="ref-patient-cell"
                 aria-label={`Open patient record for ${item.patient.name}`}
               >
@@ -580,7 +568,6 @@ function ReferralCards({
               </Link>
               <ReferralMenu
                 item={item}
-                preview={preview}
                 isOpen={menuId === item.referralId}
                 onToggle={() =>
                   onMenu(menuId === item.referralId ? null : item.referralId)
@@ -720,13 +707,11 @@ function ReferralSkeleton() {
 
 function ReferralDetail({
   item,
-  preview,
   busyAction,
   onClose,
   onTransition,
 }: {
   item: ReferralWorklistItem;
-  preview: string;
   busyAction: string | null;
   onClose: () => void;
   onTransition: (
@@ -988,7 +973,7 @@ function ReferralDetail({
                 {item.linkedRecords.map((record) =>
                   record.href ? (
                     <Link
-                      href={withPreview(record.href, preview)}
+                      href={record.href}
                       key={`${record.type}-${record.id}`}
                     >
                       <Icon name="source" size={15} />
@@ -1022,7 +1007,7 @@ function ReferralDetail({
         )}
         <footer className="ref-detail-actions">
           <Link
-            href={withPreview(item.patient.href, preview)}
+            href={item.patient.href}
             className="ref-secondary-button"
           >
             <Icon name="patient" size={14} /> View patient
@@ -1067,13 +1052,11 @@ function ReferralDetail({
 
 function CreateReferralDrawer({
   patients,
-  preview,
   initialPatientId,
   onClose,
   onCreated,
 }: {
   patients: ReferralPatientSummary[];
-  preview: string;
   initialPatientId?: string;
   onClose: () => void;
   onCreated: () => void;
@@ -1111,7 +1094,7 @@ function CreateReferralDrawer({
         : `referral-${form.patientId}-${form.subject}`);
     keyRef.current = idempotencyKey;
     try {
-      const response = await fetch(withPreview("/api/referrals", preview), {
+      const response = await fetch("/api/referrals", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -1274,7 +1257,6 @@ function CreateReferralDrawer({
 
 export default function ReferralCommandCenter({
   initialData,
-  preview,
   initialReferralId,
   initialCreateOpen = false,
   initialPatientId,
@@ -1350,10 +1332,6 @@ export default function ReferralCommandCenter({
         });
         if (deferredQuery.trim()) params.set("q", deferredQuery.trim());
         if (patientScope) params.set("patientId", patientScope);
-        if (preview)
-          new URLSearchParams(preview).forEach((value, key) =>
-            params.set(key, value),
-          );
         setLoading(true);
         fetch(`/api/referrals?${params.toString()}`, {
           cache: "no-store",
@@ -1392,7 +1370,7 @@ export default function ReferralCommandCenter({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [deferredQuery, filter, patientScope, preview, query, refreshKey, sort]);
+  }, [deferredQuery, filter, patientScope, query, refreshKey, sort]);
 
   const suggestions = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -1436,10 +1414,7 @@ export default function ReferralCommandCenter({
     setError(null);
     try {
       const response = await fetch(
-        withPreview(
-          `/api/referrals/${encodeURIComponent(item.referralId)}/transition`,
-          preview,
-        ),
+        `/api/referrals/${encodeURIComponent(item.referralId)}/transition`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -1505,7 +1480,7 @@ export default function ReferralCommandCenter({
       if (!suggestion) return;
       if (suggestion.kind === "referral") setSelected(suggestion.item);
       else
-        window.location.assign(withPreview(suggestion.patient.href, preview));
+        window.location.assign(suggestion.patient.href);
       setSearchFocused(false);
       setSuggestionIndex(-1);
     }
@@ -1719,7 +1694,7 @@ export default function ReferralCommandCenter({
                     <Link
                       role="option"
                       aria-selected={suggestionIndex === index}
-                      href={withPreview(suggestion.patient.href, preview)}
+                      href={suggestion.patient.href}
                       key={`patient-${suggestion.patient.id}`}
                     >
                       <PatientAvatar patient={suggestion.patient} />
@@ -1888,7 +1863,6 @@ export default function ReferralCommandCenter({
           <>
             <ReferralTable
               items={data.items}
-              preview={preview}
               now={now}
               menuId={menuId}
               onOpen={setSelected}
@@ -1897,7 +1871,6 @@ export default function ReferralCommandCenter({
             <div className="ref-mobile-card-fallback">
               <ReferralCards
                 items={data.items}
-                preview={preview}
                 now={now}
                 menuId={menuId}
                 onOpen={setSelected}
@@ -1908,7 +1881,6 @@ export default function ReferralCommandCenter({
         ) : (
           <ReferralCards
             items={data.items}
-            preview={preview}
             now={now}
             menuId={menuId}
             onOpen={setSelected}
@@ -1920,7 +1892,6 @@ export default function ReferralCommandCenter({
         <ReferralDetail
           key={selected.referralId}
           item={selected}
-          preview={preview}
           busyAction={busyAction}
           onClose={() => setSelected(null)}
           onTransition={(action, scheduledAt) =>
@@ -1931,7 +1902,6 @@ export default function ReferralCommandCenter({
       {createOpen && (
         <CreateReferralDrawer
           patients={data.patients}
-          preview={preview}
           initialPatientId={patientScope || undefined}
           onClose={() => setCreateOpen(false)}
           onCreated={handleCreated}

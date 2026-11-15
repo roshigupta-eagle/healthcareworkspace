@@ -8,13 +8,13 @@ export const dynamic = 'force-dynamic';
 
 export default async function DoctorViewPage() {
   const session = await auth().catch(() => null);
-  if (!session?.user && process.env.NODE_ENV === 'production') redirect('/login?returnTo=%2Fdoctor');
-  const user = session?.user as { id?: string; name?: string; role?: string } | undefined;
-  const role = String(user?.role || 'DOCTOR').toUpperCase();
-  if (session?.user && !new Set(['ADMIN', 'DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER']).has(role)) redirect('/unauthorized');
+  if (!session?.user) redirect('/login?returnTo=%2Fdoctor');
+  const user = session.user as { id?: string; name?: string; role?: string };
+  const role = String(user.role || '').toUpperCase();
+  if (!new Set(['DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER']).has(role)) redirect('/unauthorized');
   const snapshot = await getDoctorViewSnapshot({
-    actorId: user?.id || 'dev-doctor',
-    actorName: user?.name || 'Doctor User',
+    actorId: user.id || '',
+    actorName: user.name || '',
     actorRole: role,
     clinic: process.env.DOCTOR_VIEW_CLINIC,
     specialty: process.env.DOCTOR_VIEW_SPECIALTY,

@@ -5,18 +5,14 @@ import { generateSummaryFromPatient, getLatestSummary, listVersions } from '@/li
 import ClinicalSummaryLayout from '@/features/clinical-summary/ClinicalSummaryLayout.server';
 
 type SearchParams = Record<string, string | string[] | undefined>;
-type SessionLike = { user?: { id?: string; name?: string; role?: string } } | null;
 
 function firstValue(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
 
 export default async function AIClinicalSummaryPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<SearchParams> }) {
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  let session: SessionLike = null;
-  try { session = await auth() as SessionLike; } catch { session = null; }
-  const asUser = firstValue(resolvedSearchParams.asUser);
-  if (!session && asUser && process.env.NODE_ENV !== 'production') session = { user: { id: asUser, name: asUser, role: 'DEV' } };
-  if (!session) redirect('/login');
+  const session = await auth().catch(() => null);
+  if (!session?.user) redirect('/login');
 
   const patient = getPatientById(String(id));
   if (!patient) redirect('/dashboard/records');
@@ -28,7 +24,7 @@ export default async function AIClinicalSummaryPage({ params, searchParams }: { 
   let latestSummary = await getLatestSummary(String(id));
   let summaryError: string | undefined;
   if (!latestSummary && simulate !== 'empty') {
-    try { latestSummary = await generateSummaryFromPatient(String(id), session.user?.id || session.user?.name || 'unknown-clinician'); }
+    try { latestSummary = await generateSummaryFromPatient(String(id), session.user.id || session.user.name || 'unknown-clinician'); }
     catch (error) { summaryError = error instanceof Error ? error.message : 'AI clinical summary generation failed.'; }
   }
 

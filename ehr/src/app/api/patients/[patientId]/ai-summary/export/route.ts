@@ -5,7 +5,7 @@ import { logAuditEvent } from '@/lib/audit';
 import { buildSummaryEvidence, listVersions, mapSummaryToFhir } from '@/lib/aiSummaryStore';
 import { resolveSession } from '@/lib/serverAuth';
 
-const EXPORT_ROLES = new Set(['ADMIN', 'DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER']);
+const EXPORT_ROLES = new Set(['DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER']);
 const SAFETY_DISCLAIMER = 'This content supports clinical review and may contain incomplete or incorrect information. Verify important findings against source records before making clinical decisions.';
 type ExportFormat = 'pdf' | 'json' | 'fhir';
 
@@ -80,7 +80,7 @@ async function handleExport(request: Request, patientId: string) {
   const session = await resolveSession(request);
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const role = String(session.user.role || '').toUpperCase();
-  if (role && !EXPORT_ROLES.has(role) && role !== 'DEV') return NextResponse.json({ error: 'Export is restricted to authorized clinical staff.' }, { status: 403 });
+  if (role && !EXPORT_ROLES.has(role)) return NextResponse.json({ error: 'Export is restricted to authorized clinical staff.' }, { status: 403 });
   const patient = getPatientById(patientId);
   if (!patient) return NextResponse.json({ error: 'patient not found' }, { status: 404 });
   let body: { versionId?: unknown; format?: unknown; includeEvidence?: unknown; includeTrends?: unknown; includePatientFriendlySummary?: unknown } = {};

@@ -1,4 +1,5 @@
 import { getMockPatients, getPatientById, type Patient } from '@/app/dashboard/records/mockPatients';
+import { canAccessPatientRecord } from '@/lib/patientCareTeam';
 import { listDocuments, type PatientDocument } from '@/lib/documentStore';
 import { listNotes } from '@/lib/doctorNotesStore';
 import { listConcerns } from '@/lib/healthConcernsStore';
@@ -161,21 +162,12 @@ export async function canCompleteTask(task: ClinicalTask) {
 }
 
 export function canActorUpdateTask(task: ClinicalTask, actor: { id: string; name: string; role: string }) {
-  if (actor.role === 'ADMIN' || actor.role === 'DEV') return true;
   if (!task.assignee) return false;
   return task.assignee.id === actor.id || task.assignee.name?.toLowerCase() === actor.name.toLowerCase();
 }
 
 export function canAccessTaskPatient(patientId: string, actor?: { id: string; name: string; role: string }) {
-  const configured = (process.env.TASK_WORKSPACE_PATIENT_IDS || '').split(',').map((value) => value.trim()).filter(Boolean);
-  if (configured.length && !configured.includes(patientId)) return false;
-  if (actor?.role === 'ADMIN') return true;
-  if (actor?.role === 'DEV' && process.env.NODE_ENV !== 'production') return true;
-  const patient = getPatientById(patientId);
-  if (!patient) return false;
-  const actorMatches = (member?: { id?: string; name?: string } | null) => Boolean(member && (member.id === actor?.id || (member.name && member.name.toLowerCase() === actor?.name.toLowerCase())));
-  if (actor && ((patient.careTeam || []).some(actorMatches) || actorMatches({ name: patient.lastAttendingDoctor }))) return true;
-  return process.env.NODE_ENV === 'test' && !patient.careTeam?.length;
+  return canAccessPatientRecord(patientId, actor);
 }
 
 export async function validateTaskSources(patientId: string, resources: ClinicalTask['relatedResources']) {

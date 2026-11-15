@@ -12,6 +12,7 @@ export async function POST(request: Request, { params }: { params: { patientId: 
   const reason = typeof body?.reason === 'string' ? body.reason : '';
 
   const actor = await resolveActor();
+  if (!actor) return NextResponse.json({ error: 'authentication required' }, { status: 401 });
   const result = await markEnteredInError(patientId, noteId, reason, actor);
   if ('error' in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);

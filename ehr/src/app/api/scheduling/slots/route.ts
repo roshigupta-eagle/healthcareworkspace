@@ -1,13 +1,12 @@
 ﻿import { NextResponse } from 'next/server';
-import { getSchedulingSnapshot, isPreviewSchedulingParams } from '@/lib/schedulingData';
-import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
+import { getSchedulingSnapshot } from '@/lib/schedulingData';
+import { resolveDoctorWorkspaceActor, SCHEDULING_WORKSPACE_ROLES } from '@/lib/doctorWorkspaceAuth';
 
 export async function GET(request: Request) {
-  const access = await resolveDoctorWorkspaceActor(request);
+  const access = await resolveDoctorWorkspaceActor(request, SCHEDULING_WORKSPACE_ROLES);
   if (access.response) return access.response;
   try {
-    const params = new URL(request.url).searchParams;
-    const snapshot = await getSchedulingSnapshot('', { preview: isPreviewSchedulingParams(params) });
+    const snapshot = await getSchedulingSnapshot('');
     return NextResponse.json(snapshot.slots);
   } catch {
     return NextResponse.json({ error: 'failed to fetch slots' }, { status: 500 });

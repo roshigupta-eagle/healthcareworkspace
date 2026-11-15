@@ -1,20 +1,20 @@
 import { NextResponse } from 'next/server';
 import { discardBookingDraft, getBookingDraft, saveBookingDraft } from '@/lib/bookingDraftStore';
 import { logAuditEvent } from '@/lib/audit';
-import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
+import { resolveDoctorWorkspaceActor, SCHEDULING_WORKSPACE_ROLES } from '@/lib/doctorWorkspaceAuth';
 
 function text(value: unknown, max = 1000) {
   return typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : undefined;
 }
 
 export async function GET(request: Request) {
-  const access = await resolveDoctorWorkspaceActor(request);
+  const access = await resolveDoctorWorkspaceActor(request, SCHEDULING_WORKSPACE_ROLES);
   if (access.response) return access.response;
   return NextResponse.json({ data: await getBookingDraft(access.actor!.id) }, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
 }
 
 export async function PUT(request: Request) {
-  const access = await resolveDoctorWorkspaceActor(request);
+  const access = await resolveDoctorWorkspaceActor(request, SCHEDULING_WORKSPACE_ROLES);
   if (access.response) return access.response;
   let body: Record<string, unknown>;
   try { body = await request.json() as Record<string, unknown>; } catch { return NextResponse.json({ error: 'Invalid booking draft.' }, { status: 400 }); }
@@ -24,7 +24,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const access = await resolveDoctorWorkspaceActor(request);
+  const access = await resolveDoctorWorkspaceActor(request, SCHEDULING_WORKSPACE_ROLES);
   if (access.response) return access.response;
   await discardBookingDraft(access.actor!.id);
   await logAuditEvent({ agentId: access.actor!.id, entityType: 'Appointment', entityId: 'booking-draft', action: 'D', outcome: 'success', description: 'Discarded appointment booking draft' });

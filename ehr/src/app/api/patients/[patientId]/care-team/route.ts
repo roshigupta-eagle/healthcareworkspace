@@ -14,9 +14,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pat
   const { patientId } = await params;
   const patient = getPatientById(String(patientId));
   if (!patient) return NextResponse.json({ error: 'patient not found' }, { status: 404 });
-  let session: Awaited<ReturnType<typeof auth>> = null;
-  try { session = await auth(); } catch {}
-  if (!session && process.env.NODE_ENV === 'production') return NextResponse.json({ error: 'authentication required' }, { status: 401 });
+  const session = await auth().catch(() => null);
+  if (!session?.user) return NextResponse.json({ error: 'authentication required' }, { status: 401 });
 
   const body = await request.json().catch(() => ({} as Record<string, unknown>));
   const name = typeof body.name === 'string' ? body.name.trim() : '';

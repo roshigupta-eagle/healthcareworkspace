@@ -144,8 +144,6 @@ export function configuredWaitThresholdMinutes(value = process.env.ENCOUNTER_WAI
 
 export function cardiologyRoleFor(actorRole: string): string | null {
   const role = actorRole.toUpperCase();
-  if (role === 'ADMIN') return 'ADMIN';
-  if (role === 'DEV') return 'CARDIOLOGIST';
   if (role === 'NURSE') return 'NURSE';
   if (['DOCTOR', 'CLINICIAN', 'PRACTITIONER'].includes(role)) return 'CARDIOLOGIST';
   if (role === 'RECEPTIONIST') return 'RECEPTIONIST';

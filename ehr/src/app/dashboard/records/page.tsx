@@ -14,10 +14,9 @@ function firstValue(value: string | string[] | undefined) {
 export default async function RecordsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const session = await auth().catch(() => null);
-  const preview = process.env.NODE_ENV !== 'production' && (Boolean(resolvedSearchParams.noauth) || ['dev', 'dev-doctor'].includes(firstValue(resolvedSearchParams.asUser) || ''));
-  if (!session && !preview) redirect('/login');
-  const role = String(session?.user?.role || 'DEV').toUpperCase();
-  if (session?.user && !['ADMIN', 'DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER', 'DEV'].includes(role)) redirect('/unauthorized');
+  if (!session?.user) redirect('/login?returnTo=%2Fdashboard%2Frecords');
+  const role = String(session.user.role || '').toUpperCase();
+  if (!['DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER'].includes(role)) redirect('/unauthorized');
 
   const initialData = getHealthRecordsResponse({ q: firstValue(resolvedSearchParams.q) });
   return <HealthRecordsWorkspace initialData={initialData} />;

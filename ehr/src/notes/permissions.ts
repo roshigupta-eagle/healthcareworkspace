@@ -8,7 +8,7 @@ import type { NoteDocument, NoteType, StaffRole } from "./types";
 
 export const NOTE_TYPE_ALLOWLIST: Record<StaffRole, NoteType[] | "all"> = {
   DOCTOR: "all",
-  ADMIN: "all",
+  ADMIN: [],
   NURSE: ["progress", "nursing", "soap", "consult"],
   PHARMACIST: ["medication-review"],
   LAB_TECH: ["lab-annotation"],
@@ -21,13 +21,13 @@ export const NOTE_TYPE_ALLOWLIST: Record<StaffRole, NoteType[] | "all"> = {
 
 /** Roles allowed to finalize (sign) a note of a given type. */
 const SIGNING_ROLES: Record<NoteType, StaffRole[]> = {
-  progress: ["DOCTOR", "NURSE", "ADMIN"],
-  soap: ["DOCTOR", "ADMIN"],
-  nursing: ["NURSE", "ADMIN"],
-  "medication-review": ["PHARMACIST", "ADMIN"],
-  "lab-annotation": ["LAB_TECH", "ADMIN"],
-  administrative: ["RECEPTIONIST", "BILLING", "PCA", "ADMIN"],
-  consult: ["DOCTOR", "ADMIN"],
+  progress: ["DOCTOR", "NURSE"],
+  soap: ["DOCTOR"],
+  nursing: ["NURSE"],
+  "medication-review": ["PHARMACIST"],
+  "lab-annotation": ["LAB_TECH"],
+  administrative: ["RECEPTIONIST", "BILLING", "PCA"],
+  consult: ["DOCTOR"],
 };
 
 function allowedTypesFor(role: StaffRole): NoteType[] | "all" {
@@ -58,9 +58,9 @@ export function canAddendum(role: StaffRole, note: Pick<NoteDocument, "type" | "
   return canAuthor(role, note.type) || canSign(role, note.type);
 }
 
-/** All staff roles can view notes; PATIENT/PENDING are excluded from staff view. */
+/** Clinical and clinical-support staff can view notes; administrators, PATIENT and PENDING are excluded. */
 export function canView(role: StaffRole): boolean {
-  return role !== "PATIENT" && role !== "PENDING";
+  return role !== "PATIENT" && role !== "PENDING" && role !== "ADMIN";
 }
 
 export function availableNoteTypesFor(role: StaffRole): NoteType[] {

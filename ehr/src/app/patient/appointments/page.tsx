@@ -1,12 +1,11 @@
 import { CalendarDays, Clock3, MapPin, Stethoscope } from 'lucide-react';
 import { PatientPortalShell } from '../PatientPortalShell';
 import { signOutOfPatientPortal } from '../actions';
-import { firstQueryValue, requirePatientPortalAccess } from '@/lib/patientPortalAccess';
+import { requirePatientPortalAccess } from '@/lib/patientPortalAccess';
 import { getPatientAppointments } from '@/lib/patientPortalData';
 
-export default async function PatientAppointmentsPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
-  const params = searchParams ? await searchParams : {};
-  const access = await requirePatientPortalAccess(firstQueryValue(params.asUser));
+export default async function PatientAppointmentsPage() {
+  const access = await requirePatientPortalAccess();
   const appointments = await getPatientAppointments(access.patientId).catch(() => []);
   const days = new Map<string, typeof appointments>();
   for (const appointment of appointments) {

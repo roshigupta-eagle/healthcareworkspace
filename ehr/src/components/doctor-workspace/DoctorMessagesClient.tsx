@@ -11,10 +11,6 @@ type ConversationSummary = DoctorWorkSnapshot['messages']['conversations'][numbe
 type Filter = 'all' | 'unread' | 'patient' | 'care-team' | 'follow-up' | 'archived';
 type NewMessageForm = { participantType: 'patient' | 'care-team'; patientId: string; participantName: string; subject: string; body: string };
 
-function withApiPreview(path: string, previewKey: string) {
-  return previewKey ? `${path}${path.includes('?') ? '&' : '?'}${previewKey}` : path;
-}
-
 function Icon({ name, size = 18 }: { name: string; size?: number }) {
   const paths: Record<string, React.ReactNode> = {
     message: <><path d="M4 5h16v11H8l-4 4z" /><path d="M8 9h8M8 13h5" /></>,
@@ -37,10 +33,6 @@ function initials(name: string) {
 
 export default function DoctorMessagesClient({ initialData, patientIdFilter, initialDraft, openNew = false }: { initialData: DoctorWorkSnapshot; patientIdFilter?: string; initialDraft?: string; openNew?: boolean }) {
   const searchParams = useSearchParams();
-  const previewParams = new URLSearchParams();
-  if (searchParams.get('asUser')) previewParams.set('asUser', searchParams.get('asUser')!);
-  else if (['1', 'true'].includes(searchParams.get('noauth') || '')) previewParams.set('noauth', '1');
-  const previewKey = previewParams.toString();
   const [conversations, setConversations] = useState<ConversationSummary[]>(initialData.messages.conversations.filter((conversation) => !patientIdFilter || conversation.patientId === patientIdFilter));
   const [counts, setCounts] = useState(initialData.messages.counts);
   const [patients] = useState<DoctorWorkPatient[]>(initialData.patients);
@@ -71,11 +63,11 @@ export default function DoctorMessagesClient({ initialData, patientIdFilter, ini
     if (!selectedId) return;
     void (async () => {
       try {
-        const response = await fetch(withApiPreview(`/api/doctor/messages/${encodeURIComponent(selectedId)}`, previewKey), { cache: 'no-store' });
+        const response = await fetch(`/api/doctor/messages/${encodeURIComponent(selectedId)}`, { cache: 'no-store' });
         const payload = await response.json() as { data?: MessageConversation; error?: string };
         if (!response.ok || !payload.data) throw new Error(payload.error || 'We could not load this conversation.');
         setSelected(payload.data);
-        await fetch(withApiPreview(`/api/doctor/messages/${encodeURIComponent(selectedId)}`, previewKey), { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'read' }) });
+        await fetch(`/api/doctor/messages/${encodeURIComponent(selectedId)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'read' }) });
         let clearedUnread = 0;
         setConversations((current) => current.map((conversation) => {
           if (conversation.id !== selectedId) return conversation;
@@ -87,13 +79,13 @@ export default function DoctorMessagesClient({ initialData, patientIdFilter, ini
         setError(caught instanceof Error ? caught.message : 'We could not load this conversation.');
       }
     })();
-  }, [selectedId, initialData.actor.id, previewKey]);
+  }, [selectedId, initialData.actor.id]);
 
   async function refresh(includeArchived = filter === 'archived') {
     setBusy('refresh');
     setError(null);
     try {
-      const response = await fetch(withApiPreview(`/api/doctor/messages${includeArchived ? '?includeArchived=true' : ''}`, previewKey), { cache: 'no-store' });
+      const response = await fetch(`/api/doctor/messages${includeArchived ? '?includeArchived=true' : ''}`, { cache: 'no-store' });
       const payload = await response.json() as { data?: ConversationSummary[]; counts?: typeof counts; error?: string };
       if (!response.ok || !payload.data || !payload.counts) throw new Error(payload.error || 'We could not load messages.');
       setConversations(payload.data.filter((conversation) => !patientIdFilter || conversation.patientId === patientIdFilter));
@@ -116,7 +108,7 @@ export default function DoctorMessagesClient({ initialData, patientIdFilter, ini
     try {
       const idempotencyKey = messageKeyRef.current || (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `message-${Date.now()}`);
       messageKeyRef.current = idempotencyKey;
-      const response = await fetch(withApiPreview('/api/doctor/messages', previewKey), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ patientId: newMessage.participantType === 'patient' ? newMessage.patientId : undefined, participantType: newMessage.participantType, participantId: patient?.id, participantName, subject: newMessage.subject.trim(), body: newMessage.body.trim(), idempotencyKey }) });
+      const response = await fetch('/api/doctor/messages', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ patientId: newMessage.participantType === 'patient' ? newMessage.patientId : undefined, participantType: newMessage.participantType, participantId: patient?.id, participantName, subject: newMessage.subject.trim(), body: newMessage.body.trim(), idempotencyKey }) });
       const payload = await response.json() as { data?: MessageConversation; error?: string };
       if (!response.ok || !payload.data) throw new Error(payload.error || 'Message could not be sent.');
       setNewOpen(false);
@@ -140,7 +132,7 @@ export default function DoctorMessagesClient({ initialData, patientIdFilter, ini
     try {
       const idempotencyKey = replyKeyRef.current || (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `reply-${selected.id}-${Date.now()}`);
       replyKeyRef.current = idempotencyKey;
-      const response = await fetch(withApiPreview(`/api/doctor/messages/${encodeURIComponent(selected.id)}`, previewKey), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ body: reply.trim(), idempotencyKey }) });
+      const response = await fetch(`/api/doctor/messages/${encodeURIComponent(selected.id)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ body: reply.trim(), idempotencyKey }) });
       const payload = await response.json() as { data?: MessageConversation; error?: string };
       if (!response.ok || !payload.data) throw new Error(payload.error || 'Message could not be sent.');
       setSelected(payload.data);
@@ -159,7 +151,7 @@ export default function DoctorMessagesClient({ initialData, patientIdFilter, ini
     if (!selected) return;
     setBusy('follow-up');
     try {
-      const response = await fetch(withApiPreview(`/api/doctor/messages/${encodeURIComponent(selected.id)}`, previewKey), { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'follow-up', requiresFollowUp: !selected.requiresFollowUp }) });
+      const response = await fetch(`/api/doctor/messages/${encodeURIComponent(selected.id)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'follow-up', requiresFollowUp: !selected.requiresFollowUp }) });
       const payload = await response.json() as { data?: MessageConversation; error?: string };
       if (!response.ok || !payload.data) throw new Error(payload.error || 'Conversation could not be updated.');
       setSelected(payload.data);

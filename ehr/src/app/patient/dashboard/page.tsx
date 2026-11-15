@@ -1,46 +1,36 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { fhirSearch } from '@/lib/fhir-client';
 import { logAuditEvent } from '@/lib/audit';
+import { getPatientClinicalSnapshot } from '@/lib/patientPortalData';
 import Link from 'next/link';
 import { PatientPortalShell } from '../PatientPortalShell';
 import { signOutOfPatientPortal } from '../actions';
 
-const PREVIEW_PATIENT_FHIR_ID = 'patient-001';
-
 async function getPatientData(patientFhirId: string, agentId: string) {
-  const [conditions, meds, appts] = await Promise.allSettled([
-    fhirSearch('Condition', { patient: patientFhirId, 'clinical-status': 'active' }),
-    fhirSearch('MedicationRequest', { patient: patientFhirId, status: 'active' }),
-    fhirSearch('Appointment', { patient: patientFhirId, status: 'booked' }),
-  ]);
+  const snapshot = await getPatientClinicalSnapshot(patientFhirId);
   await logAuditEvent({ agentId, entityType: 'Patient', entityId: patientFhirId, action: 'R', outcome: 'success', description: 'Patient viewed own dashboard' });
   return {
-    conditions: conditions.status === 'fulfilled' ? conditions.value : [],
-    medications: meds.status === 'fulfilled' ? meds.value : [],
-    appointments: appts.status === 'fulfilled' ? appts.value : [],
+    conditions: snapshot.conditions,
+    medications: snapshot.medications,
+    appointments: snapshot.patient?.upcoming ?? [],
   };
 }
 
-export default async function PatientDashboard({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
-  const params = searchParams ? await searchParams : {};
-  const rawAsUser = params.asUser;
-  const asUser = Array.isArray(rawAsUser) ? rawAsUser[0] : rawAsUser;
-  const preview = process.env.NODE_ENV !== 'production' && asUser === PREVIEW_PATIENT_FHIR_ID;
+export default async function PatientDashboard() {
   const session = await auth().catch(() => null);
-  const role = (session?.user as { role?: string } | undefined)?.role;
-  if (!session?.user && !preview) redirect('/login');
-  if (session?.user && role !== 'PATIENT') redirect('/unauthorized');
+  if (!session?.user) redirect('/login?returnTo=%2Fpatient%2Fdashboard');
+  const user = session.user as { id?: string; name?: string; role?: string; fhirId?: string };
+  if (user.role !== 'PATIENT') redirect('/unauthorized');
 
-  const patientFhirId = preview ? PREVIEW_PATIENT_FHIR_ID : ((session?.user as { fhirId?: string; id?: string } | undefined)?.fhirId ?? session?.user?.id ?? '');
-  const agentId = preview ? 'preview-patient-001' : session!.user!.id!;
-  const patientName = preview ? 'Preview Patient' : (session?.user?.name ?? 'Patient');
+  const patientFhirId = user.fhirId ?? user.id ?? '';
+  const agentId = user.id ?? '';
+  const patientName = user.name ?? 'Patient';
   const data = patientFhirId ? await getPatientData(patientFhirId, agentId) : { conditions: [], medications: [], appointments: [] };
 
   const cards = [
     { title: 'Active Conditions', count: data.conditions.length, href: '/patient/records', color: 'border-blue-400', icon: '🩺' },
     { title: 'Current Medications', count: data.medications.length, href: '/patient/records', color: 'border-purple-400', icon: '💊' },
-    { title: 'Upcoming Appointments', count: data.appointments.length, href: '/scheduling', color: 'border-green-400', icon: '📅' },
+    { title: 'Upcoming Appointments', count: data.appointments.length, href: '/patient/appointments', color: 'border-green-400', icon: '📅' },
   ];
 
   return (

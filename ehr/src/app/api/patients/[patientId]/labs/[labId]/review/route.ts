@@ -5,7 +5,7 @@ import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 import { upsertPatientRecord } from '@/lib/patientRecordStore';
 import { logAuditEvent } from '@/lib/audit';
 
-export async function POST(request: Request, { params }: { params: { patientId: string; labId: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ patientId: string; labId: string }> }) {
   const access = await resolveDoctorWorkspaceActor(request);
   if (access.response) return access.response;
 
@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: { params: { patientId: 
     await upsertPatientRecord(patient);
   } catch (err) {
     console.error('Failed to persist lab review', err);
-    return NextResponse.json({ error: 'failed to persist review' }, { status: 500 });
+    return NextResponse.json({ error: 'failed to persist review', ...(process.env.NODE_ENV !== 'production' && err instanceof Error ? { detail: err.message } : {}) }, { status: 500 });
   }
 
   try {
@@ -54,5 +54,5 @@ export async function POST(request: Request, { params }: { params: { patientId: 
   // record an audit event (dev-safe: `logAuditEvent` is a no-op in dev unless ENABLE_AUDIT=true)
   void logAuditEvent({ agentId: actorId, entityType: 'Observation', entityId: labId, action: 'U', outcome: 'success', description: `Reviewed lab ${labId} for patient ${patientId}`, detail: { patientId, reviewedBy: actorName, reviewedAt: now } });
 
-  return NextResponse.json({ ok: true, reviewedBy: actor, reviewedAt: now }, { status: 200 });
+  return NextResponse.json({ ok: true, reviewedBy: { id: actorId, name: actorName, role: access.actor.role }, reviewedAt: now }, { status: 200 });
 }

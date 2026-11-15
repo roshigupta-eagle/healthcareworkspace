@@ -18,27 +18,12 @@ import { RecentChartActivityCard } from '@/components/patient-overview/RecentCha
 import { CareGapsCard } from '@/components/patient-overview/CareGapsCard';
 import { CareTeamCard } from '@/components/patient-overview/CareTeamCard';
 
-type SearchParams = Record<string, string | string[] | undefined>;
-
-export default async function PatientDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<SearchParams> }) {
+export default async function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const id = resolvedParams.id;
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
-  let session: Awaited<ReturnType<typeof auth>> = null;
-  try {
-    session = await auth();
-  } catch {
-    // allow dev preview
-  }
-  // Support dev override via ?asUser=USER_ID (only outside production)
-  if (!session && resolvedSearchParams && resolvedSearchParams.asUser && process.env.NODE_ENV !== 'production') {
-    const override = Array.isArray(resolvedSearchParams.asUser) ? resolvedSearchParams.asUser[0] : resolvedSearchParams.asUser;
-    if (override) {
-      session = { user: { id: override, name: override } };
-    }
-  }
-  if (!session) redirect('/login');
+  const session = await auth().catch(() => null);
+  if (!session?.user) redirect('/login');
 
   const patient = getPatientById(id);
   if (!patient) {

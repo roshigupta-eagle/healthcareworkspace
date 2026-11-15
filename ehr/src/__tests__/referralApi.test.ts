@@ -61,7 +61,7 @@ function referral(overrides: Partial<Referral> = {}): Referral {
 }
 
 function createRequest(idempotencyKey = 'referral-create-key') {
-  return new Request('http://localhost/api/referrals?asUser=dev', {
+  return new Request('http://localhost/api/referrals', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -78,7 +78,7 @@ function createRequest(idempotencyKey = 'referral-create-key') {
 }
 
 function transitionRequest(body: Record<string, unknown>) {
-  return new Request('http://localhost/api/referrals/ref-1/transition?asUser=dev', {
+  return new Request('http://localhost/api/referrals/ref-1/transition', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -156,7 +156,7 @@ describe('referral API safety', () => {
 
   it('returns the authorized worklist and audits the read', async () => {
     const response = await listReferralsGet(
-      new Request('http://localhost/api/referrals?filter=urgent&asUser=dev'),
+      new Request('http://localhost/api/referrals?filter=urgent'),
     );
 
     expect(response.status).toBe(200);

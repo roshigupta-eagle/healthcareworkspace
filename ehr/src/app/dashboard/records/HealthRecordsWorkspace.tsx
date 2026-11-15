@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   useDeferredValue,
   useEffect,
@@ -192,17 +192,6 @@ function formatAppointment(
   return `${formatDate(value.date, { month: "short", day: "numeric" })} · ${value.type}`;
 }
 
-function previewQuery(searchParams: URLSearchParams) {
-  const asUser = searchParams.get("asUser");
-  return asUser
-    ? `asUser=${encodeURIComponent(asUser)}`
-    : "noauth=1&asUser=dev";
-}
-
-function withPreview(href: string, query: string) {
-  return `${href}${href.includes("?") ? "&" : "?"}${query}`;
-}
-
 function attentionClass(attention?: HealthRecordAttention) {
   if (!attention) return "";
   return attention.kind === "critical-alert"
@@ -274,15 +263,13 @@ function PatientBadges({ patient }: { patient: HealthRecordPatientSummary }) {
 
 function PatientCard({
   patient,
-  preview,
   onQuickView,
 }: {
   patient: HealthRecordPatientSummary;
-  preview: string;
   onQuickView: (patientId: string) => void;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
-  const patientHref = withPreview(patient.chartHref, preview);
+  const patientHref = patient.chartHref;
   return (
     <article
       className={`hr-patient-card ${patient.criticalAlerts > 0 ? "has-critical" : ""}`}
@@ -394,50 +381,32 @@ function PatientCard({
           {moreOpen && (
             <div className="hr-more-menu">
               <Link
-                href={withPreview(
-                  `/dashboard/encounters/new?patientId=${encodeURIComponent(patient.patientId)}`,
-                  preview,
-                )}
+                href={`/dashboard/encounters/new?patientId=${encodeURIComponent(patient.patientId)}`}
               >
                 Start Encounter
               </Link>
               <Link
-                href={withPreview(
-                  `/dashboard/records/${encodeURIComponent(patient.patientId)}/doctor-notes`,
-                  preview,
-                )}
+                href={`/dashboard/records/${encodeURIComponent(patient.patientId)}/doctor-notes`}
               >
                 View Doctor Notes
               </Link>
               <Link
-                href={withPreview(
-                  `/dashboard/records/${encodeURIComponent(patient.patientId)}/labs`,
-                  preview,
-                )}
+                href={`/dashboard/records/${encodeURIComponent(patient.patientId)}/labs`}
               >
                 View Results
               </Link>
               <Link
-                href={withPreview(
-                  `/dashboard/records/${encodeURIComponent(patient.patientId)}/documents`,
-                  preview,
-                )}
+                href={`/dashboard/records/${encodeURIComponent(patient.patientId)}/documents`}
               >
                 View Documents
               </Link>
               <Link
-                href={withPreview(
-                  `/dashboard/messages?patientId=${encodeURIComponent(patient.patientId)}`,
-                  preview,
-                )}
+                href={`/dashboard/messages?patientId=${encodeURIComponent(patient.patientId)}`}
               >
                 Message Patient
               </Link>
               <Link
-                href={withPreview(
-                  `/dashboard/tasks?patientId=${encodeURIComponent(patient.patientId)}`,
-                  preview,
-                )}
+                href={`/dashboard/tasks?patientId=${encodeURIComponent(patient.patientId)}`}
               >
                 Create Task
               </Link>
@@ -451,14 +420,12 @@ function PatientCard({
 
 function ListRow({
   patient,
-  preview,
   onQuickView,
 }: {
   patient: HealthRecordPatientSummary;
-  preview: string;
   onQuickView: (patientId: string) => void;
 }) {
-  const patientHref = withPreview(patient.chartHref, preview);
+  const patientHref = patient.chartHref;
   return (
     <div className="hr-list-row">
       <div className="hr-list-patient">
@@ -539,10 +506,8 @@ function ListRow({
 
 function RecordsIntelligence({
   data,
-  preview,
 }: {
   data: HealthRecordsResponse;
-  preview: string;
 }) {
   const recentPatients = data.data
     .filter((patient) => patient.updatedAt || patient.attention)
@@ -567,11 +532,11 @@ function RecordsIntelligence({
       <article className="hr-intelligence-panel">
         <header>
           <div><span className="hr-panel-kicker">Cross-patient activity</span><h2>Recent Activity</h2></div>
-          <Link href={withPreview("/dashboard/tasks", preview)} className="hr-panel-link">Open work <Icon name="arrow" size={13} /></Link>
+          <Link href="/dashboard/tasks" className="hr-panel-link">Open work <Icon name="arrow" size={13} /></Link>
         </header>
         <div className="hr-activity-list">
           {recentPatients.length ? recentPatients.map((patient) => (
-            <Link href={withPreview(patient.chartHref, preview)} className="hr-activity-row" key={patient.patientId}>
+            <Link href={patient.chartHref} className="hr-activity-row" key={patient.patientId}>
               <span className={`hr-activity-dot ${patient.attention?.kind === "critical-alert" ? "is-critical" : ""}`}><Icon name={patient.attention ? "alert" : "check"} size={13} /></span>
               <span><strong>{patient.displayName}</strong><small>{patient.attention?.label || "Patient record updated"} · {formatDate(patient.updatedAt)}</small></span>
               <Icon name="arrow" size={13} />
@@ -666,18 +631,16 @@ function Drawer({
 
 function QuickView({
   patientId,
-  preview,
   onClose,
 }: {
   patientId: string;
-  preview: string;
   onClose: () => void;
 }) {
   const [data, setData] = useState<HealthRecordQuickView | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/api/health-records/${encodeURIComponent(patientId)}?${preview}`, {
+    fetch(`/api/health-records/${encodeURIComponent(patientId)}`, {
       cache: "no-store",
       signal: controller.signal,
     })
@@ -696,7 +659,7 @@ function QuickView({
           );
       });
     return () => controller.abort();
-  }, [patientId, preview]);
+  }, [patientId]);
   return (
     <Drawer title="Patient Quick View" onClose={onClose}>
       {error ? (
@@ -737,25 +700,19 @@ function QuickView({
           </div>
           <div className="hr-quick-actions">
             <Link
-              href={withPreview(data.chartHref, preview)}
+              href={data.chartHref}
               className="hr-open-record"
             >
               Open Full Health Record <Icon name="arrow" size={15} />
             </Link>
             <Link
-              href={withPreview(
-                `/dashboard/encounters/new?patientId=${encodeURIComponent(data.patientId)}`,
-                preview,
-              )}
+              href={`/dashboard/encounters/new?patientId=${encodeURIComponent(data.patientId)}`}
               className="hr-quiet-action"
             >
               Start Encounter
             </Link>
             <Link
-              href={withPreview(
-                `/dashboard/messages?patientId=${encodeURIComponent(data.patientId)}`,
-                preview,
-              )}
+              href={`/dashboard/messages?patientId=${encodeURIComponent(data.patientId)}`}
               className="hr-quiet-action"
             >
               Message Patient
@@ -852,26 +809,26 @@ function QuickView({
           <section>
             <h4>Direct actions</h4>
             <div className="hr-quick-links">
-              <Link href={withPreview(`${data.chartHref}/timeline`, preview)}>
+              <Link href={`${data.chartHref}/timeline`}>
                 View Timeline
               </Link>
               <Link
-                href={withPreview(`${data.chartHref}/doctor-notes`, preview)}
+                href={`${data.chartHref}/doctor-notes`}
               >
                 View Doctor Notes
               </Link>
-              <Link href={withPreview(`${data.chartHref}/labs`, preview)}>
+              <Link href={`${data.chartHref}/labs`}>
                 View Results
               </Link>
               <Link
-                href={withPreview(`${data.chartHref}/medications`, preview)}
+                href={`${data.chartHref}/medications`}
               >
                 View Medications
               </Link>
-              <Link href={withPreview(`${data.chartHref}/documents`, preview)}>
+              <Link href={`${data.chartHref}/documents`}>
                 View Documents
               </Link>
-              <Link href={withPreview(`${data.chartHref}/care-gaps`, preview)}>
+              <Link href={`${data.chartHref}/care-gaps`}>
                 View Care Gaps
               </Link>
             </div>
@@ -883,11 +840,9 @@ function QuickView({
 }
 
 function CreatePatientDrawer({
-  preview,
   onClose,
   onCreated,
 }: {
-  preview: string;
   onClose: () => void;
   onCreated: (patientId: string) => void;
 }) {
@@ -917,7 +872,7 @@ function CreatePatientDrawer({
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch(`/api/health-records?${preview}`, {
+      const response = await fetch("/api/health-records", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ...form, confirmDuplicate }),
@@ -983,10 +938,7 @@ function CreatePatientDrawer({
                 <small>{match.status}</small>
               </div>
               <Link
-                href={withPreview(
-                  `/dashboard/records/${encodeURIComponent(match.patientId)}`,
-                  preview,
-                )}
+                href={`/dashboard/records/${encodeURIComponent(match.patientId)}`}
                 className="hr-open-record"
               >
                 Open Existing Record
@@ -1105,8 +1057,6 @@ function CreatePatientDrawer({
 
 export default function HealthRecordsWorkspace({ initialData }: Props) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const preview = previewQuery(searchParams);
   const [filters, setFilters] = useState<Filters>({
     q: "",
     status: "",
@@ -1154,9 +1104,6 @@ export default function HealthRecordsWorkspace({ initialData }: Props) {
     query.set("sort", filters.sort);
     query.set("page", String(filters.page));
     query.set("pageSize", "25");
-    if (preview.includes("asUser="))
-      query.set("asUser", preview.split("asUser=")[1]);
-    else if (preview) query.set("noauth", "1");
     const loadingTimer = window.setTimeout(() => setLoading(true), 0);
     fetch(`/api/health-records?${query.toString()}`, {
       cache: "no-store",
@@ -1198,7 +1145,6 @@ export default function HealthRecordsWorkspace({ initialData }: Props) {
     filters.organization,
     filters.sort,
     filters.page,
-    preview,
   ]);
   function updateFilter(name: keyof Filters, value: string | boolean) {
     setFilters((current) => ({ ...current, [name]: value, page: 1 }));
@@ -1225,12 +1171,7 @@ export default function HealthRecordsWorkspace({ initialData }: Props) {
   }
   function openCreated(patientId: string) {
     setCreateOpen(false);
-    router.push(
-      withPreview(
-        `/dashboard/records/${encodeURIComponent(patientId)}`,
-        preview,
-      ),
-    );
+    router.push(`/dashboard/records/${encodeURIComponent(patientId)}`);
   }
   const activeFilters = [
     { key: "risk", label: filters.risk ? `${filters.risk} Risk` : "" },
@@ -1308,7 +1249,7 @@ export default function HealthRecordsWorkspace({ initialData }: Props) {
                 setSearchOpen(false);
               }
               if (event.key === "Enter" && selectedSearch[0])
-                router.push(withPreview(selectedSearch[0].chartHref, preview));
+                router.push(selectedSearch[0].chartHref);
             }}
             placeholder="Search by patient name, MRN, DOB, phone, or email..."
             aria-label="Search by patient name, MRN, DOB, phone, or email"
@@ -1329,7 +1270,7 @@ export default function HealthRecordsWorkspace({ initialData }: Props) {
                   aria-selected={false}
                   key={patient.patientId}
                   onClick={() =>
-                    router.push(withPreview(patient.chartHref, preview))
+                    router.push(patient.chartHref)
                   }
                 >
                   <PatientAvatar patient={patient} />
@@ -1520,7 +1461,6 @@ export default function HealthRecordsWorkspace({ initialData }: Props) {
             <PatientCard
               key={patient.patientId}
               patient={patient}
-              preview={preview}
               onQuickView={setQuickViewId}
             />
           ))}
@@ -1539,13 +1479,12 @@ export default function HealthRecordsWorkspace({ initialData }: Props) {
             <ListRow
               key={patient.patientId}
               patient={patient}
-              preview={preview}
               onQuickView={setQuickViewId}
             />
           ))}
         </section>
       )}
-      <RecordsIntelligence data={data} preview={preview} />
+      <RecordsIntelligence data={data} />
       {!loading && !data.data.length && (
         <div className="hr-empty">
           <span className="hr-empty-icon">
@@ -1602,13 +1541,11 @@ export default function HealthRecordsWorkspace({ initialData }: Props) {
       {quickViewId && (
         <QuickView
           patientId={quickViewId}
-          preview={preview}
           onClose={() => setQuickViewId(null)}
         />
       )}
       {createOpen && (
         <CreatePatientDrawer
-          preview={preview}
           onClose={() => setCreateOpen(false)}
           onCreated={openCreated}
         />

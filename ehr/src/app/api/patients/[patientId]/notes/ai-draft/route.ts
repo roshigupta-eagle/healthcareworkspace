@@ -91,11 +91,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ pat
   const { patientId } = await params;
   const patient = getPatientById(String(patientId));
   if (!patient) return NextResponse.json({ error: 'patient not found' }, { status: 404 });
-  let session: Awaited<ReturnType<typeof auth>> = null;
-  try { session = await auth(); } catch {}
-  if (!session && process.env.NODE_ENV === 'production') return NextResponse.json({ error: 'authentication required' }, { status: 401 });
+  const session = await auth().catch(() => null);
+  if (!session?.user) return NextResponse.json({ error: 'authentication required' }, { status: 401 });
   const role = typeof (session?.user as { role?: unknown } | undefined)?.role === 'string' ? String((session?.user as { role: string }).role).toUpperCase() : undefined;
-  if (role && !new Set(['ADMIN', 'DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER']).has(role)) return NextResponse.json({ error: 'clinical AI drafting is restricted to authorized clinicians' }, { status: 403 });
+  if (role && !new Set(['DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER']).has(role)) return NextResponse.json({ error: 'clinical AI drafting is restricted to authorized clinicians' }, { status: 403 });
 
   const body = await request.json().catch(() => ({} as Record<string, unknown>));
   const instruction = typeof body.instruction === 'string' ? body.instruction.trim() : '';

@@ -36,7 +36,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
             const isValidEarly = await compare(credentials.password as string, devUserEarly.passwordHash);
             if (!isValidEarly) return null;
-            return { id: devUserEarly.id, email: devUserEarly.email, name: devUserEarly.name, role: devUserEarly.role };
+            return { id: devUserEarly.id, email: devUserEarly.email, name: devUserEarly.name, role: devUserEarly.role, patientId: devUserEarly.patientId };
           }
         }
 
@@ -53,11 +53,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           const isValid = await compare(credentials.password as string, devUser.passwordHash);          console.log("[auth] password compare result:", isValid);
           if (!isValid) return null;
-          return { id: devUser.id, email: devUser.email, name: devUser.name, role: devUser.role };
+          return { id: devUser.id, email: devUser.email, name: devUser.name, role: devUser.role, patientId: devUser.patientId };
         }
 
         try {
-          const user = await prisma.user.findUnique({ where: { email: credentials.email as string } });
+          const user = await prisma.user.findUnique({ where: { email: credentials.email as string }, include: { patient: { select: { id: true } } } });
           if (!user) return null;
 
           // GAP-001 fix: Reject PENDING users
@@ -67,7 +67,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           const isValid = await compare(credentials.password as string, user.passwordHash);
           if (!isValid) return null;
-          return { id: user.id, email: user.email, name: user.name, role: user.role };
+          return { id: user.id, email: user.email, name: user.name, role: user.role, patientId: user.patient?.id };
         } catch (dbErr) {
           // In development, fall back to in-memory dev users if DB fails to connect
           if (process.env.NODE_ENV === "production") throw dbErr;
@@ -89,7 +89,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           const isValid = await compare(credentials.password as string, devUser.passwordHash);          console.log("[auth] DB fallback password compare result:", isValid);
           if (!isValid) return null;
-          return { id: devUser.id, email: devUser.email, name: devUser.name, role: devUser.role };
+          return { id: devUser.id, email: devUser.email, name: devUser.name, role: devUser.role, patientId: devUser.patientId };
         }
       },
     }),
@@ -99,6 +99,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.role = user.role;
         token.id = user.id;
+        token.patientId = user.patientId;
       }
       return token;
     },
@@ -106,6 +107,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.role = token.role as string;
         session.user.id = token.id as string;
+        session.user.patientId = token.patientId as string | undefined;
       }
       return session;
     },

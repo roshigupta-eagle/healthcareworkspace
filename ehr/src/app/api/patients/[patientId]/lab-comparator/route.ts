@@ -92,7 +92,7 @@ export async function GET(
   const usesCanonicalFhir = Boolean(process.env.FHIR_SERVER_URL);
   const correlationId = request.headers.get('x-correlation-id') ?? crypto.randomUUID();
 
-  if (!session && process.env.NODE_ENV === 'production') {
+  if (!session?.user) {
     return problem(401, 'unauthorized', 'Unauthorized', 'A valid clinical session is required.', false, correlationId);
   }
 

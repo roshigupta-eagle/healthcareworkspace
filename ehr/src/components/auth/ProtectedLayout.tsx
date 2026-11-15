@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
 import ApplicationLoadingScreen from '@/components/loading/ApplicationLoadingScreen';
 import AuthenticationErrorState from '@/components/loading/AuthenticationErrorState';
 
@@ -13,8 +12,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const noAuth = !!(searchParams && (searchParams.get('noauth') === '1' || searchParams.get('noauth') === 'true'));
 
   useEffect(() => {
     let cancelled = false;
@@ -51,7 +48,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     }
   }, [status, router, pathname]);
 
-  if (noAuth) return <>{children}</>;
   if (status === 'initializing') return <ApplicationLoadingScreen />;
   if (status === 'error') return <AuthenticationErrorState />;
   if (status === 'authenticated') return <>{children}</>;

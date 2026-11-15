@@ -55,9 +55,15 @@ async function readFile(): Promise<Patient[]> {
 
 async function writeFile(items: Patient[]) {
   await fsPromises.mkdir(path.dirname(PATIENTS_FILE), { recursive: true });
-  const temporaryPath = `${PATIENTS_FILE}.${process.pid}.tmp`;
-  await fsPromises.writeFile(temporaryPath, JSON.stringify({ items }, null, 2), 'utf8');
-  await fsPromises.rename(temporaryPath, PATIENTS_FILE);
+  const serialized = JSON.stringify({ items }, null, 2);
+  const temporaryPath = `${PATIENTS_FILE}.${process.pid}.${randomUUID()}.tmp`;
+  await fsPromises.writeFile(temporaryPath, serialized, 'utf8');
+  try {
+    await fsPromises.rename(temporaryPath, PATIENTS_FILE);
+  } catch {
+    await fsPromises.writeFile(PATIENTS_FILE, serialized, 'utf8');
+    await fsPromises.unlink(temporaryPath).catch(() => undefined);
+  }
 }
 
 function normalized(value?: string) {

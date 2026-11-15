@@ -174,8 +174,7 @@ function referralItem(referral: Referral, patient: ReferralPatientSummary): Refe
 }
 
 export async function getReferralWorkspace(actor: DoctorWorkspaceActor, filters: ReferralWorkspaceFilters = {}, now = new Date()): Promise<ReferralWorkspaceSnapshot> {
-  const preview = process.env.NODE_ENV !== 'production' && actor.role === 'DEV';
-  const directory = await getCanonicalPatientDirectory({ preview });
+  const directory = await getCanonicalPatientDirectory();
   if (directory.source.state !== 'ready') {
     return { generatedAt: now.toISOString(), items: [], total: 0, page: 1, pageSize: 25, pageCount: 1, metrics: { open: 0, needsAction: 0, urgent: 0, awaitingSpecialist: 0, patientsWithReferrals: 0, overdue: 0 }, patients: [], source: { state: 'unavailable', label: directory.source.label, error: directory.source.error } };
   }

@@ -176,7 +176,7 @@ export function buildReferralServiceRequest(referral: Referral) {
 export function transitionReferral(referral: Referral, action: ReferralTransitionAction, actor: ReferralActor, now = new Date()): { businessState: ReferralBusinessState; status: 'draft' | 'active' | 'completed' | 'revoked'; event: ReferralEvent } {
   const transition = availableReferralTransitions(referral.businessState).find((candidate) => candidate.action === action);
   if (!transition) throw new Error('REFERRAL_INVALID_TRANSITION');
-  if (action === 'cancel' && !['ADMIN', 'DEV'].includes(actor.role)) throw new Error('REFERRAL_TRANSITION_FORBIDDEN');
+  if (action === 'cancel' && !['ADMIN'].includes(actor.role)) throw new Error('REFERRAL_TRANSITION_FORBIDDEN');
   const eventAt = now.toISOString();
   return {
     businessState: transition.nextState,

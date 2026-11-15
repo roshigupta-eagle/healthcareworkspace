@@ -1,21 +1,18 @@
 ﻿import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { SCHEDULING_WORKSPACE_ROLES } from '@/lib/doctorWorkspaceAuth';
 import { getSchedulingSnapshot } from '@/lib/schedulingData';
-import { getCanonicalPatientDirectory, scopeSchedulingSnapshot } from '@/lib/patientDirectory';
 import AppointmentsWorkspace from '@/app/dashboard/appointments/AppointmentsWorkspace';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SchedulingPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const preview = process.env.NODE_ENV !== 'production' && (Boolean(resolvedSearchParams.noauth) || ['dev', 'dev-doctor'].includes(Array.isArray(resolvedSearchParams.asUser) ? resolvedSearchParams.asUser[0] || '' : resolvedSearchParams.asUser || ''));
-  let session = await auth().catch(() => null);
-  if (!session && preview) session = { user: { id: 'dev-doctor', name: 'Doctor User', role: 'DOCTOR' } } as typeof session;
-  if (!session) redirect('/login');
-  const role = String(session.user?.role || 'DOCTOR').toUpperCase();
-  if (!['ADMIN', 'DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER', 'DEV'].includes(role)) redirect('/unauthorized');
+  const session = await auth().catch(() => null);
+  if (!session?.user) redirect('/login?returnTo=%2Fscheduling');
+  const role = String(session.user.role || '').toUpperCase();
+  if (!SCHEDULING_WORKSPACE_ROLES.has(role)) redirect('/unauthorized');
   const query = typeof resolvedSearchParams.q === 'string' ? resolvedSearchParams.q : '';
-  const snapshot = await getSchedulingSnapshot(query, { preview });
-  const directory = await getCanonicalPatientDirectory({ preview });
-  return <AppointmentsWorkspace initialData={scopeSchedulingSnapshot(snapshot, directory, preview)} includeMonth />;
+  const snapshot = await getSchedulingSnapshot(query);
+  return <AppointmentsWorkspace initialData={snapshot} includeMonth />;
 }

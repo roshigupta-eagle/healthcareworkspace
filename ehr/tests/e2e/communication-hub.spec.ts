@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { signInAs } from './support/signIn';
 
-const COMMUNICATION_URL = '/communication?asUser=dev&conversationId=conv-pharmacy';
+const COMMUNICATION_URL = '/communication?conversationId=conv-pharmacy';
 
 async function preventCommunicationWrites(
   page: Page,
@@ -35,12 +36,16 @@ async function preventCommunicationWrites(
 }
 
 test.describe('Communication Hub', () => {
-  test('uses the canonical dev preview, truthfully labels Video, and clears a stale thread on Email', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
+    await signInAs(page, 'doctor');
+  });
+
+  test('uses the signed-in clinician, truthfully labels Video, and clears a stale thread on Email', async ({ page }) => {
     await preventCommunicationWrites(page);
     await page.goto(COMMUNICATION_URL, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByRole('heading', { name: 'Communication Hub', exact: true })).toBeVisible();
-    await expect(page.locator('.communication-hub-session')).toContainText('Dr. Maya Chen');
+    await expect(page.locator('.communication-hub-session')).toContainText('Doctor User');
     await expect(page.locator('[aria-label="Provider status"]')).toContainText('Video provider not configured');
 
     const activeConversation = page.locator('[aria-label="Active conversation"]');
@@ -60,9 +65,10 @@ test.describe('Communication Hub', () => {
     await expect(activeConversation).toContainText('Follow-up appointment');
   });
 
-  test('renders authorized call history and device readiness without asserting an active media session', async ({ page, request }) => {
+  test('renders authorized call history and device readiness without asserting an active media session', async ({ page }) => {
+    const request = page.request;
     await preventCommunicationWrites(page);
-    await page.goto('/communication?asUser=dev&channel=call&folder=calls', { waitUntil: 'domcontentloaded' });
+    await page.goto('/communication?channel=call&folder=calls', { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByRole('heading', { name: 'Call control and history', exact: true })).toBeVisible();
     await expect(page.getByText('This workspace is not an emergency service.', { exact: true })).toBeVisible();
@@ -81,7 +87,7 @@ test.describe('Communication Hub', () => {
     await expect(firstCall).toBeVisible();
 
     const deviceCheck = page.getByRole('link', { name: 'Run device check', exact: true }).first();
-    await expect(deviceCheck).toHaveAttribute('href', /\/telehealth\/calls\/[^/]+\/device-check\?asUser=dev/);
+    await expect(deviceCheck).toHaveAttribute('href', /\/telehealth\/calls\/[^/]+\/device-check/);
     await deviceCheck.click();
     await expect(page.getByRole('heading', { name: 'Device check', exact: true })).toBeVisible();
     await expect(page.getByText('Media sessions are not configured in this environment.', { exact: true })).toBeVisible();
@@ -93,16 +99,15 @@ test.describe('Communication Hub', () => {
     await expect(page.getByRole('button', { name: 'Preview camera for 10 seconds', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Play speaker test tone', exact: true })).toBeVisible();
 
-    const missingCall = await request.get('/api/communication/v1/calls/not-a-real-call?asUser=dev');
+    const missingCall = await request.get('/api/communication/v1/calls/not-a-real-call');
     expect(missingCall.status()).toBe(404);
 
-    await page.goto('/telehealth/calls/not-a-real-call/device-check?asUser=dev', { waitUntil: 'domcontentloaded' });
+    await page.goto('/telehealth/calls/not-a-real-call/device-check', { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('This page could not be found.', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Device check', exact: true })).toHaveCount(0);
   });
 
-  test('preserves the preview actor for a draft and reports saved only after a successful response', async ({ page }) => {
-    let draftRequestUrl = '';
+  test('reports a draft as saved only after a successful response', async ({ page }) => {
     let beginDraftRequest: (() => void) | undefined;
     let releaseDraftResponse: (() => void) | undefined;
     const draftRequestStarted = new Promise<void>((resolve) => {
@@ -113,7 +118,6 @@ test.describe('Communication Hub', () => {
     });
 
     await preventCommunicationWrites(page, async (route) => {
-      draftRequestUrl = route.request().url();
       beginDraftRequest?.();
       await draftResponseReleased;
       await route.fulfill({
@@ -133,7 +137,6 @@ test.describe('Communication Hub', () => {
     const draftStatus = page.locator('.communication-hub-draft-status');
     await expect(draftStatus).toHaveText(/Saving draft/);
     await expect(draftStatus).not.toHaveText(/Draft saved/);
-    expect(new URL(draftRequestUrl).searchParams.get('asUser')).toBe('dev');
 
     if (!releaseDraftResponse) throw new Error('The mocked draft response was not ready to release.');
     releaseDraftResponse();
@@ -141,7 +144,7 @@ test.describe('Communication Hub', () => {
     await expect(draftStatus).toHaveText(/Draft saved/);
   });
 
-  test('makes a preview draft-save failure visible instead of claiming success', async ({ page }) => {
+  test('makes a draft-save failure visible instead of claiming success', async ({ page }) => {
     await preventCommunicationWrites(page, async (route) => {
       await route.fulfill({
         status: 503,
@@ -255,7 +258,8 @@ test.describe('Communication Hub', () => {
     await expect(page.getByText('Not visible to the patient', { exact: true })).toBeVisible();
   });
 
-  test('rejects browser-supplied or forged attachment metadata without creating a communication', async ({ request }) => {
+  test('rejects browser-supplied or forged attachment metadata without creating a communication', async ({ page }) => {
+    const request = page.request;
     const basePayload = {
       recipientId: 'org-maple-pharmacy',
       patientId: 'patient-001',
@@ -264,21 +268,21 @@ test.describe('Communication Hub', () => {
       channel: 'secure_message',
     };
 
-    const legacy = await request.post('/api/communication/v1/conversations?asUser=dev', {
+    const legacy = await request.post('/api/communication/v1/conversations', {
       headers: { 'Idempotency-Key': 'e2e-legacy-attachment' },
       data: { ...basePayload, idempotencyKey: 'e2e-legacy-attachment', attachments: [{ filename: 'forged.pdf' }] },
     });
     expect(legacy.status()).toBe(400);
     await expect(legacy.json()).resolves.toMatchObject({ code: 'VALIDATION_FAILED' });
 
-    const forged = await request.post('/api/communication/v1/conversations?asUser=dev', {
+    const forged = await request.post('/api/communication/v1/conversations', {
       headers: { 'Idempotency-Key': 'e2e-forged-attachment' },
       data: { ...basePayload, idempotencyKey: 'e2e-forged-attachment', attachmentIds: ['forged-by-browser'] },
     });
     expect(forged.status()).toBe(422);
     await expect(forged.json()).resolves.toMatchObject({ code: 'ATTACHMENT_NOT_FOUND' });
 
-    const forgedReply = await request.post('/api/communication/v1/conversations/conv-pharmacy?asUser=dev', {
+    const forgedReply = await request.post('/api/communication/v1/conversations/conv-pharmacy', {
       headers: { 'Idempotency-Key': 'e2e-forged-reply-attachment' },
       data: { recipientId: 'org-maple-pharmacy', bodyText: 'This reply is intentionally invalid.', idempotencyKey: 'e2e-forged-reply-attachment', attachmentIds: ['forged-by-browser'] },
     });
@@ -286,15 +290,16 @@ test.describe('Communication Hub', () => {
     await expect(forgedReply.json()).resolves.toMatchObject({ code: 'ATTACHMENT_NOT_FOUND' });
   });
 
-  test('denies a conversation detail request outside the selected patient context', async ({ request }) => {
-    const response = await request.get('/api/communication/v1/conversations/conv-pharmacy?asUser=dev&patientId=patient-002');
+  test('denies a conversation detail request outside the selected patient context', async ({ page }) => {
+    const response = await page.request.get('/api/communication/v1/conversations/conv-pharmacy?patientId=patient-002');
 
     expect(response.status()).toBe(404);
     await expect(response.json()).resolves.toMatchObject({ code: 'CONVERSATION_NOT_FOUND' });
   });
 
-  test('rejects mismatched patient scope before draft, attachment, or voicemail changes', async ({ request }) => {
-    const draft = await request.post('/api/communication/v1/drafts?asUser=dev&patientId=patient-001', {
+  test('rejects mismatched patient scope before draft, attachment, or voicemail changes', async ({ page }) => {
+    const request = page.request;
+    const draft = await request.post('/api/communication/v1/drafts?patientId=patient-001', {
       data: {
         id: 'e2e-patient-scope-draft',
         revision: 0,
@@ -307,7 +312,7 @@ test.describe('Communication Hub', () => {
     expect(draft.status()).toBe(422);
     await expect(draft.json()).resolves.toMatchObject({ code: 'PATIENT_CONTEXT_MISMATCH' });
 
-    const attachment = await request.post('/api/communication/v1/attachments/presign?asUser=dev&patientId=patient-001', {
+    const attachment = await request.post('/api/communication/v1/attachments/presign?patientId=patient-001', {
       data: {
         filename: 'scope-mismatch.pdf',
         contentType: 'application/pdf',
@@ -318,7 +323,7 @@ test.describe('Communication Hub', () => {
     expect(attachment.status()).toBe(422);
     await expect(attachment.json()).resolves.toMatchObject({ code: 'PATIENT_CONTEXT_MISMATCH' });
 
-    const voicemail = await request.patch('/api/communication/v1/voicemails/vm-patient-1?asUser=dev&patientId=patient-002', {
+    const voicemail = await request.patch('/api/communication/v1/voicemails/vm-patient-1?patientId=patient-002', {
       headers: { 'Idempotency-Key': 'e2e-patient-scope-voicemail' },
       data: { action: 'review' },
     });

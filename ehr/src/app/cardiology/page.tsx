@@ -2,8 +2,8 @@ import React from 'react';
 import { CardiovascularDashboard } from '@/cardiology/components/CardiovascularDashboard';
 import type { CardiologyDashboard as DashboardType } from '@/cardiology/types/fhir-domain';
 import { CardiologyRole, CardiovascularVisitState, VisitPriority, RoomType } from '@/cardiology/types/fhir-domain';
+import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
-import { getAllMockUsers } from '@/cardiology/services/api.mock';
 
 function generateMockDashboard(): DashboardType {
   const byState = Object.values(CardiovascularVisitState).reduce((acc, s) => {
@@ -87,43 +87,15 @@ function generateMockDashboard(): DashboardType {
   return dashboard;
 }
 
-export default async function Page({ searchParams }: { searchParams?: any }) {
+export default async function Page() {
   const dashboard = generateMockDashboard();
 
-  let userId = 'u-1';
-  let userName = 'Dr. Heart';
-  let userRole = CardiologyRole.CARDIOLOGIST;
-
-  // Prefer real session if available
-  try {
-    // auth() returns session when NextAuth is configured
-    // In dev this may be null
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    const session = await auth();
-    if (session?.user?.id) {
-      userId = session.user.id as string;
-      userName = session.user.name || userName;
-      // session may include role in custom claims
-      if ((session as any)?.user?.role) userRole = (session as any).user.role;
-    }
-  } catch (err) {
-    // ignore if auth not available
-  }
-
-  // Allow dev override via ?asUser=USER_ID
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  if (resolvedSearchParams && resolvedSearchParams.asUser) {
-    const override = Array.isArray(resolvedSearchParams.asUser) ? resolvedSearchParams.asUser[0] : resolvedSearchParams.asUser;
-    const all = getAllMockUsers();
-    if (override && all[override]) {
-      userId = override;
-      userName = all[override].name;
-      userRole = all[override].role;
-    } else if (override) {
-      userId = override;
-    }
-  }
+  const session = await auth().catch(() => null);
+  if (!session?.user?.id) redirect('/login?returnTo=%2Fcardiology');
+  const userId = session.user.id as string;
+  const userName = session.user.name || 'Clinician';
+  const sessionRole = (session.user as { role?: string }).role;
+  const userRole = (sessionRole as unknown as CardiologyRole | undefined) ?? CardiologyRole.CARDIOLOGIST;
 
   return (
     <div className="p-6">

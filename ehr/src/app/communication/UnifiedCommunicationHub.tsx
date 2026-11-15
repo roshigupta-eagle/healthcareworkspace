@@ -110,9 +110,7 @@ function initials(value: string) {
 
 function previewParams(searchParams: URLSearchParams) {
   const params = new URLSearchParams();
-  const asUser = searchParams.get('asUser');
   const patientId = searchParams.get('patientId');
-  if (asUser) params.set('asUser', asUser);
   if (patientId) params.set('patientId', patientId);
   return params;
 }

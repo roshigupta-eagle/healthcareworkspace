@@ -1,11 +1,8 @@
  'use client';
-const USE_CLIENT = 'use client';
-
 import React, {
   useDeferredValue,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 import { useRouter } from 'next/navigation';
@@ -168,14 +165,6 @@ const TIME_RANGES: Array<{
   { id: '2y', label: '2Y' },
   { id: 'all', label: 'All' },
 ];
-
-const STATUS_PRIORITY: Record<LabInterpretation, number> = {
-  critical: 4,
-  abnormal: 3,
-  indeterminate: 2,
-  normal: 1,
-};
-
 
 function slugify(value: string): string {
   return value
@@ -983,9 +972,9 @@ export default function LabResultsIntelligenceClient({
         );
 
         if (sourceUnavailable) {
-          setLabs([]);
-          setSelectedId('');
-          setErrorMessage('The canonical laboratory source is unavailable. No results were substituted.');
+          setLabs(initialLabs);
+          setSelectedId((current) => initialLabs.some((lab) => lab.id === current) ? current : initialLabs[0]?.id ?? '');
+          setErrorMessage('The laboratory comparison is unavailable. Showing the results already loaded for this patient.');
           return;
         }
 
@@ -1011,12 +1000,12 @@ export default function LabResultsIntelligenceClient({
       })
       .catch((error: unknown) => {
         if (isCurrent) {
-          setLabs([]);
-          setSelectedId('');
+          setLabs(initialLabs);
+          setSelectedId((current) => initialLabs.some((lab) => lab.id === current) ? current : initialLabs[0]?.id ?? '');
           setErrorMessage(
             error instanceof Error
-              ? error.message
-              : 'The laboratory comparison could not be loaded.',
+              ? `${error.message} Showing the results already loaded for this patient.`
+              : 'The laboratory comparison could not be loaded. Showing the results already loaded for this patient.',
           );
         }
       });
@@ -1024,7 +1013,7 @@ export default function LabResultsIntelligenceClient({
     return () => {
       isCurrent = false;
     };
-  }, [initialSelectedLabId, patient.id]);
+  }, [initialLabs, initialSelectedLabId, patient.id]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {

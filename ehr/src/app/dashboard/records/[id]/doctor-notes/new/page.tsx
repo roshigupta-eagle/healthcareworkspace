@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getPatientById } from "../../../mockPatients";
 import { getNote } from "@/lib/doctorNotesStore";
 import { resolveActor } from "@/lib/noteActor";
@@ -29,6 +30,7 @@ export default async function NewNotePage({ params, searchParams }: { params: an
   }
 
   const currentUser = await resolveActor();
+  if (!currentUser) redirect('/login');
   const initialNote = noteId ? await getNote(id, noteId) : null;
 
   return (

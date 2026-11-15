@@ -23,6 +23,7 @@ export async function PATCH(request: Request, { params }: { params: { patientId:
   if (!Number.isFinite(expectedVersion)) return NextResponse.json({ error: 'version is required for optimistic concurrency' }, { status: 400 });
 
   const actor = await resolveActor();
+  if (!actor) return NextResponse.json({ error: 'authentication required' }, { status: 401 });
   const patch: any = {};
   if (body.clinicalStatus) patch.clinicalStatus = body.clinicalStatus;
   if (body.attentionStatus) patch.attentionStatus = body.attentionStatus;

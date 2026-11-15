@@ -35,6 +35,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pa
   if (status === 'completed' && !(await canCompleteTask(task))) return NextResponse.json({ error: 'Complete the linked source workflow before completing this task.' }, { status: 409 });
 
   const actor = await resolveActor();
+  if (!actor) return NextResponse.json({ error: 'authentication required' }, { status: 401 });
   const updated = await updateTask(
     patientId,
     taskId,

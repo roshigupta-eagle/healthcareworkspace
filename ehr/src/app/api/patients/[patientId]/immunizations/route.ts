@@ -34,11 +34,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   const patient = getPatientById(String(patientId));
   if (!patient) return NextResponse.json({ error: 'patient not found' }, { status: 404 });
 
-  let session: Awaited<ReturnType<typeof auth>> = null;
-  try {
-    session = await auth();
-  } catch {}
-  if (!session && process.env.NODE_ENV === 'production') {
+  const session = await auth().catch(() => null);
+  if (!session?.user) {
     return NextResponse.json({ error: 'authentication required' }, { status: 401 });
   }
 

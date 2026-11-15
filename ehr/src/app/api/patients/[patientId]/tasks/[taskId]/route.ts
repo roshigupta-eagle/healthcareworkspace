@@ -2,7 +2,7 @@
 import { getTask, updateTask } from '@/lib/tasksStore';
 import { getPatientById } from '@/app/dashboard/records/mockPatients';
 import { canAccessTaskPatient, canActorUpdateTask, canCompleteTask, findCanonicalTask } from '@/lib/doctorWorkStore';
-import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
+import { canAssignWorkToOthers, resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 
 function isOpen(status?: string) {
   return !['completed', 'cancelled', 'entered-in-error', 'failed', 'rejected'].includes((status || '').toLowerCase());
@@ -37,7 +37,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ patien
 
   // Simple action handling: patch fields directly or apply workflow transitions
   const action = typeof body.action === 'string' ? body.action : '';
-  if (['assign', 'reassign'].includes(action) && access.actor!.role !== 'ADMIN' && access.actor!.role !== 'DEV') return NextResponse.json({ error: 'You do not have permission to reassign this task.' }, { status: 403 });
+  if (['assign', 'reassign'].includes(action) && !canAssignWorkToOthers(access.actor!.role)) return NextResponse.json({ error: 'You do not have permission to reassign this task.' }, { status: 403 });
   if (!isOpen(found.task.status) && ['start', 'complete', 'defer', 'hold', 'resume', 'reset'].includes(action)) return NextResponse.json({ error: 'This task is no longer open.' }, { status: 409 });
   if (action === 'complete' && !(await canCompleteTask(found.task))) return NextResponse.json({ error: 'Complete the linked source workflow before completing this task.' }, { status: 409 });
   const patch: Record<string, unknown> = {};

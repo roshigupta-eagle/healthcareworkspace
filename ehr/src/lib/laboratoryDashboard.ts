@@ -326,10 +326,9 @@ function sourceFromDirectory(source: PatientDirectorySource): LaboratorySource {
 export async function getLaboratoryDashboardSnapshot(
   actor: LaboratoryActor,
   filters: LaboratoryDashboardFilters = {},
-  options: { preview?: boolean } = {},
 ): Promise<LaboratoryDashboardSnapshot> {
   const generatedAt = new Date().toISOString();
-  const directoryResult = await getCanonicalPatientDirectory({ preview: options.preview }).catch((error: unknown) => ({ patients: [], source: { state: 'unavailable' as const, label: 'Patient directory', error: error instanceof Error ? error.message : 'Patient directory is unavailable.' } }));
+  const directoryResult = await getCanonicalPatientDirectory().catch((error: unknown) => ({ patients: [], source: { state: 'unavailable' as const, label: 'Patient directory', error: error instanceof Error ? error.message : 'Patient directory is unavailable.' } }));
   const patientDirectory = sourceFromDirectory(directoryResult.source);
   const localPatients = new Map(getMockPatients().map((patient) => [patient.id, patient]));
   const authorizedPatients = directoryResult.patients

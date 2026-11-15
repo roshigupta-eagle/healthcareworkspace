@@ -1,14 +1,11 @@
 ﻿import { NextResponse } from 'next/server';
 import { logAuditEvent } from '@/lib/audit';
-import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
+import { resolveDoctorWorkspaceActor, SCHEDULING_WORKSPACE_ROLES } from '@/lib/doctorWorkspaceAuth';
 import { rescheduleFhirAppointment } from '@/lib/schedulingMutation';
-import { reschedulePreviewAppointment } from '@/lib/previewSchedulingStore';
-import { isPreviewSchedulingParams } from '@/lib/schedulingData';
 
 export async function POST(request: Request) {
-  const access = await resolveDoctorWorkspaceActor(request);
+  const access = await resolveDoctorWorkspaceActor(request, SCHEDULING_WORKSPACE_ROLES);
   if (access.response) return access.response;
-  const preview = isPreviewSchedulingParams(new URL(request.url).searchParams);
   let body: { appointmentId?: unknown; newSlotId?: unknown };
   try {
     body = await request.json() as { appointmentId?: unknown; newSlotId?: unknown };
@@ -19,7 +16,7 @@ export async function POST(request: Request) {
   const newSlotId = typeof body.newSlotId === 'string' ? body.newSlotId.trim() : '';
   if (!appointmentId || !newSlotId) return NextResponse.json({ error: 'appointmentId and newSlotId are required' }, { status: 400 });
   try {
-    const appointment = preview ? await reschedulePreviewAppointment(appointmentId, newSlotId) : await rescheduleFhirAppointment(appointmentId, newSlotId);
+    const appointment = await rescheduleFhirAppointment(appointmentId, newSlotId);
     if (!appointment) return NextResponse.json({ success: false, message: 'Appointment not found.' }, { status: 404 });
     await logAuditEvent({ agentId: access.actor!.id, entityType: 'Appointment', entityId: appointmentId, action: 'U', outcome: 'success', description: 'Rescheduled appointment from Scheduling workspace' });
     return NextResponse.json({ success: true, appointment });

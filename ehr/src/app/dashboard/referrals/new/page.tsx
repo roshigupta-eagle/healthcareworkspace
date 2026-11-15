@@ -13,7 +13,7 @@ export default async function NewReferralPage({
 }) {
   const params = searchParams ? await searchParams : {};
   const query = new URLSearchParams({ new: '1' });
-  for (const key of ['patientId', 'asUser', 'noauth']) {
+  for (const key of ['patientId']) {
     const value = firstValue(params[key]);
     if (value) query.set(key, value);
   }

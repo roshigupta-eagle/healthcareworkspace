@@ -2,34 +2,41 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import SearchBar from './SearchBarClient';
 import ThemeLangControlsClient from './ThemeLangControlsClient';
 import CommandPaletteClient from './CommandPaletteClient';
+import { subscribeToPatientRecordChanges } from '@/lib/patientRecordSync';
 
 type HeaderSession = { user?: { name?: string; tenant?: string } } | null;
 
 export default function GlobalHeader({ session, role }: { session?: HeaderSession; role?: string }) {
   const [unread, setUnread] = useState(0);
+  const router = useRouter();
   const [syncStatus] = useState({ ok: true, last: '2 min ago' });
   const tenant = session?.user?.tenant || 'Maple Health';
-  const searchParams = useSearchParams();
-  const noAuth = !!(searchParams && (searchParams.get('noauth') === '1' || searchParams.get('noauth') === 'true'));
-  const previewUser = searchParams?.get('asUser');
-  const homeHref = noAuth ? `/dashboard?noauth=1${searchParams.get('asUser') ? `&asUser=${encodeURIComponent(searchParams.get('asUser')!)}` : '&asUser=dev'}` : '/dashboard';
-  const notificationsHref = noAuth ? '/dashboard/tasks?noauth=1' : '/dashboard/tasks';
+  const homeHref = '/dashboard';
+  const notificationsHref = '/dashboard/tasks';
 
   useEffect(() => {
-    if (!noAuth && role !== 'DOCTOR' && role !== 'ADMIN' && role !== 'NURSE' && role !== 'CLINICIAN' && role !== 'PRACTITIONER') return;
+    if (role !== 'DOCTOR' && role !== 'NURSE' && role !== 'CLINICIAN' && role !== 'PRACTITIONER') return;
     let active = true;
-    const query = noAuth || previewUser ? `?noauth=1&asUser=${encodeURIComponent(previewUser || 'dev')}` : '';
-    fetch(`/api/doctor-work-summary${query}`, { cache: 'no-store' }).then(async (response) => {
+    fetch('/api/doctor-work-summary', { cache: 'no-store' }).then(async (response) => {
       if (!response.ok) return;
       const data = await response.json() as { messages?: { unread?: number } };
       if (active) setUnread(data.messages?.unread || 0);
     }).catch(() => undefined);
     return () => { active = false; };
-  }, [noAuth, previewUser, role]);
+  }, [role]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToPatientRecordChanges(() => router.refresh());
+    const interval = window.setInterval(() => router.refresh(), 30_000);
+    return () => {
+      unsubscribe();
+      window.clearInterval(interval);
+    };
+  }, [router]);
 
   
 

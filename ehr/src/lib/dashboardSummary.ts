@@ -241,15 +241,15 @@ function sortAttention(left: DashboardAttentionItem, right: DashboardAttentionIt
   return priorityRank[left.priority] - priorityRank[right.priority] || (validDate(left.dueAt || left.at) || Number.MAX_SAFE_INTEGER) - (validDate(right.dueAt || right.at) || Number.MAX_SAFE_INTEGER);
 }
 
-function visibleOrders(snapshot: OrderSnapshot, work: DoctorWorkSnapshot | null, actor: DashboardActor) {
-  if (actor.role === 'DEV' || actor.role === 'ADMIN' || process.env.NODE_ENV !== 'production') return snapshot.data;
+function visibleOrders(snapshot: OrderSnapshot, work: DoctorWorkSnapshot | null) {
+  if (process.env.NODE_ENV !== 'production') return snapshot.data;
   const allowedPatients = new Set(work?.patients.map((patient) => patient.id) || []);
   return snapshot.data.filter((order) => order.patientId && allowedPatients.has(order.patientId));
 }
 
-export async function getDashboardSummary(actor: DashboardActor, now = new Date(), options: { preview?: boolean } = {}): Promise<DashboardSummary> {
+export async function getDashboardSummary(actor: DashboardActor, now = new Date()): Promise<DashboardSummary> {
   const timeZone = formatTimeZone(process.env.DOCTOR_VIEW_TIME_ZONE || process.env.NEXT_PUBLIC_CLINIC_TIME_ZONE || 'America/Toronto');
-  const [scheduleResult, workResult, communicationResult] = await Promise.allSettled([getSchedulingSnapshot('', { preview: options.preview }), getDoctorWorkSnapshot(actor.id, actor.name, actor.role), getCommunicationHubSnapshot({ id: actor.id, name: actor.name, role: actor.role })]);
+  const [scheduleResult, workResult, communicationResult] = await Promise.allSettled([getSchedulingSnapshot(''), getDoctorWorkSnapshot(actor.id, actor.name, actor.role), getCommunicationHubSnapshot({ id: actor.id, name: actor.name, role: actor.role })]);
   const schedule = settled(scheduleResult, 'FHIR R4 Appointment and scheduling directory');
   const work = settled(workResult, 'Roshi clinical work read model');
   const communications = settled(communicationResult, 'Roshi Communication Hub');
@@ -262,7 +262,7 @@ export async function getDashboardSummary(actor: DashboardActor, now = new Date(
   const profile = roleInfo(actor.role);
 
   const allowedSchedulePatients = new Set(work.value?.patients.map((patient) => patient.id) || []);
-  const scheduleAppointments = (schedule.value?.appointments || []).filter((appointment) => process.env.NODE_ENV !== 'production' ? Boolean(appointment.patientId && allowedSchedulePatients.has(appointment.patientId)) : actor.role === 'ADMIN' || Boolean(appointment.patientId && allowedSchedulePatients.has(appointment.patientId)));
+  const scheduleAppointments = (schedule.value?.appointments || []).filter((appointment) => Boolean(appointment.patientId && allowedSchedulePatients.has(appointment.patientId)));
   const todayAppointments = scheduleAppointments.filter((appointment) => sameDay(appointment.start, now, timeZone) && !CLOSED_APPOINTMENT_STATUSES.has(normalized(appointment.status))).sort((left, right) => (validDate(left.start) || 0) - (validDate(right.start) || 0));
   const scheduleItems = todayAppointments.map(scheduleProjection);
   const next = scheduleItems.find((appointment) => (validDate(appointment.end || appointment.start) || 0) >= now.getTime()) || scheduleItems[0];
@@ -274,7 +274,7 @@ export async function getDashboardSummary(actor: DashboardActor, now = new Date(
   const documentationItems = workItems.filter((item) => (item.source === 'note' || item.source === 'document') && isOpenWorkItem(item));
   const taskItems = workItems.filter((item) => item.source === 'task' && isOpenWorkItem(item));
   const communicationsItems = (communications.value?.conversations || []).map(communicationItem);
-  const visibleOrderRecords = visibleOrders(orderSnapshot, work.value, actor);
+  const visibleOrderRecords = visibleOrders(orderSnapshot, work.value);
   const orderItems = visibleOrderRecords.map(orderProjection);
   const openOrders = visibleOrderRecords.filter((order) => !['completed', 'revoked', 'entered-in-error'].includes(order.fhirStatus));
   const actionOrders = visibleOrderRecords.filter((order) => order.workflowStatus === 'Needs Signature' || order.workflowStatus === 'Delivery Issue' || order.result.reviewStatus === 'needs-review');

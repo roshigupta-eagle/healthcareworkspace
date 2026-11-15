@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 
 function ShortcutIcon({ name }: { name: string }) {
   const paths: Record<string, React.ReactNode> = {
@@ -18,9 +17,5 @@ function ShortcutIcon({ name }: { name: string }) {
 }
 
 export default function DoctorViewShortcuts({ refreshing, status, onRefresh }: { refreshing: boolean; status?: string | null; onRefresh: () => void }) {
-  const searchParams = useSearchParams();
-  const preview = process.env.NODE_ENV !== 'production' && Boolean(searchParams.get('noauth') || searchParams.get('asUser'));
-  const previewQuery = searchParams.get('asUser') ? `asUser=${encodeURIComponent(searchParams.get('asUser')!)}` : 'noauth=1&asUser=dev';
-  const href = (path: string) => preview ? `${path}${path.includes('?') ? '&' : '?'}${previewQuery}` : path;
-  return <div className="doctor-view-shortcuts" aria-label="Clinical workspace shortcuts"><div className="doctor-view-shortcut-links"><Link href={href('/dashboard/records')} className="doctor-view-shortcut"><ShortcutIcon name="users" />Patients</Link><Link href={href('/dashboard/encounters')} className="doctor-view-shortcut"><ShortcutIcon name="encounters" />Encounters</Link><Link href={href('/dashboard/appointments')} className="doctor-view-shortcut"><ShortcutIcon name="calendar" />Appointments</Link><Link href={href('/dashboard/orders')} className="doctor-view-shortcut"><ShortcutIcon name="orders" />Orders</Link><Link href={href('/dashboard/records')} className="doctor-view-shortcut"><ShortcutIcon name="records" />Health Records</Link><Link href={href('/dashboard/documents?tab=needs-review')} className="doctor-view-shortcut"><ShortcutIcon name="documents" />Documents</Link></div><div className="doctor-view-shortcut-utility"><button type="button" onClick={onRefresh} disabled={refreshing} className="doctor-view-shortcut doctor-view-shortcut-refresh" title="Refresh Doctor View"><ShortcutIcon name="refresh" />{refreshing ? 'Refreshing...' : 'Refresh'}</button>{status && <span className="doctor-view-refresh-status" role="status">{status}</span>}</div></div>;
+  return <div className="doctor-view-shortcuts" aria-label="Clinical workspace shortcuts"><div className="doctor-view-shortcut-links"><Link href="/dashboard/records" className="doctor-view-shortcut"><ShortcutIcon name="users" />Patients</Link><Link href="/dashboard/encounters" className="doctor-view-shortcut"><ShortcutIcon name="encounters" />Encounters</Link><Link href="/dashboard/appointments" className="doctor-view-shortcut"><ShortcutIcon name="calendar" />Appointments</Link><Link href="/dashboard/orders" className="doctor-view-shortcut"><ShortcutIcon name="orders" />Orders</Link><Link href="/dashboard/records" className="doctor-view-shortcut"><ShortcutIcon name="records" />Health Records</Link><Link href="/dashboard/documents?tab=needs-review" className="doctor-view-shortcut"><ShortcutIcon name="documents" />Documents</Link></div><div className="doctor-view-shortcut-utility"><button type="button" onClick={onRefresh} disabled={refreshing} className="doctor-view-shortcut doctor-view-shortcut-refresh" title="Refresh Doctor View"><ShortcutIcon name="refresh" />{refreshing ? 'Refreshing...' : 'Refresh'}</button>{status && <span className="doctor-view-refresh-status" role="status">{status}</span>}</div></div>;
 }

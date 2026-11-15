@@ -1,14 +1,14 @@
 ﻿import { NextResponse } from 'next/server';
-import { getSchedulingSnapshot, isPreviewSchedulingParams } from '@/lib/schedulingData';
-import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
+import { getSchedulingSnapshot } from '@/lib/schedulingData';
+import { resolveDoctorWorkspaceActor, SCHEDULING_WORKSPACE_ROLES } from '@/lib/doctorWorkspaceAuth';
 
 export async function GET(req: Request) {
-  const access = await resolveDoctorWorkspaceActor(req);
+  const access = await resolveDoctorWorkspaceActor(req, SCHEDULING_WORKSPACE_ROLES);
   if (access.response) return access.response;
   try {
     const url = new URL(req.url);
     const q = url.searchParams;
-    const snapshot = await getSchedulingSnapshot('', { preview: isPreviewSchedulingParams(q) });
+    const snapshot = await getSchedulingSnapshot('');
     const practitionerId = q.get('practitionerId');
     const locationId = q.get('locationId');
     const serviceType = q.get('serviceType');

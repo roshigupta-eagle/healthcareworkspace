@@ -19,7 +19,7 @@ describe('clinical task workflow safety', () => {
     const assigned = task({ assignee: { id: 'doctor-1', name: 'Dr. Chen' } });
     expect(canActorUpdateTask(assigned, { id: 'doctor-1', name: 'Dr. Chen', role: 'DOCTOR' })).toBe(true);
     expect(canActorUpdateTask(assigned, { id: 'doctor-2', name: 'Dr. Lee', role: 'DOCTOR' })).toBe(false);
-    expect(canActorUpdateTask(assigned, { id: 'admin-1', name: 'Admin', role: 'ADMIN' })).toBe(true);
+    expect(canActorUpdateTask(assigned, { id: 'admin-1', name: 'Admin', role: 'ADMIN' })).toBe(false);
   });
 
   it('maps patient and source references into the FHIR Task projection', () => {

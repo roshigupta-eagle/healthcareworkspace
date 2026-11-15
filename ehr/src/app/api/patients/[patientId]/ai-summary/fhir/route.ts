@@ -7,7 +7,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ patientI
   const session = await resolveSession(req);
   if (!session || !session.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const role = String(session.user.role || '').toUpperCase();
-  if (role && !new Set(['ADMIN', 'DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER', 'DEV']).has(role)) return NextResponse.json({ error: 'FHIR preview is restricted to authorized clinical staff.' }, { status: 403 });
+  if (role && !new Set(['DOCTOR', 'NURSE', 'CLINICIAN', 'PRACTITIONER']).has(role)) return NextResponse.json({ error: 'FHIR preview is restricted to authorized clinical staff.' }, { status: 403 });
   try {
     const url = new URL(req.url);
     const versionId = url.searchParams.get('versionId') || undefined;

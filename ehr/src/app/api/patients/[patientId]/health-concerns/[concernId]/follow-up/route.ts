@@ -3,7 +3,7 @@ import { getPatientById } from '@/app/dashboard/records/mockPatients';
 import { getConcern, attachFollowUpTask } from '@/lib/healthConcernsStore';
 import { createTask, deleteTask, getTask } from '@/lib/tasksStore';
 import { canAccessTaskPatient } from '@/lib/doctorWorkStore';
-import { resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
+import { canAssignWorkToOthers, resolveDoctorWorkspaceActor } from '@/lib/doctorWorkspaceAuth';
 
 export async function POST(request: Request, { params }: { params: { patientId: string; concernId: string } }) {
   const access = await resolveDoctorWorkspaceActor(request);
@@ -28,7 +28,7 @@ export async function POST(request: Request, { params }: { params: { patientId: 
   const instructions = typeof body?.instructions === 'string' ? body.instructions : '';
 
   const actor = access.actor!;
-  if (assigneeName && assigneeName.toLowerCase() !== actor.name.toLowerCase() && actor.role !== 'ADMIN' && actor.role !== 'DEV') return NextResponse.json({ error: 'You do not have permission to assign work to another clinician.' }, { status: 403 });
+  if (assigneeName && assigneeName.toLowerCase() !== actor.name.toLowerCase() && !canAssignWorkToOthers(actor.role)) return NextResponse.json({ error: 'You do not have permission to assign work to another clinician.' }, { status: 403 });
   const task = await createTask(
     patientId,
     {
